@@ -1,126 +1,791 @@
 <script setup lang="ts">
-// 商品详情页组件逻辑
+import { ref, onMounted, computed } from 'vue'
+import { useRoute } from 'vue-router'
+import { getProductDetail } from '@/api/modules/product'
+import type { Product } from '@/types/product'
+
+// 路由信息
+const route = useRoute()
+const productId = computed(() => route.params.id as string)
+
+// 商品数据
+const product = ref<Product>({
+  id: '',
+  name: '',
+  price: 0,
+  description: '',
+  images: [],
+  categoryId: '',
+  categoryName: ''
+})
+
+// 轮播图当前索引
+const currentImageIndex = ref(0)
+
+// 商品数量
+const quantity = ref(1)
+
+// 已选规格
+const selectedSpecs = ref<Record<string, string>>({})
+
+// 规格选项 - 修改为使用英文键名
+const specsOptions = [
+  { name: 'color', label: '颜色', options: ['红色', '蓝色', '黑色', '白色'] },
+  { name: 'size', label: '尺寸', options: ['XS', 'S', 'M', 'L', 'XL'] }
+]
+
+// 选择规格
+const selectSpec = (specName: string, option: string) => {
+  selectedSpecs.value[specName] = option
+}
+
+// 加入购物车
+const addToCart = () => {
+  // 检查是否选择了所有规格
+  const allSpecsSelected = specsOptions.every(spec => 
+    selectedSpecs.value[spec.name] !== undefined && selectedSpecs.value[spec.name] !== ''
+  )
+  
+  if (!allSpecsSelected) {
+    alert('请选择完整的商品规格')
+    return
+  }
+  
+  alert(`已成功加入购物车：${product.value.name} x ${quantity.value}`)
+}
+
+// 立即购买
+const buyNow = () => {
+  // 检查是否选择了所有规格
+  const allSpecsSelected = specsOptions.every(spec => 
+    selectedSpecs.value[spec.name] !== undefined && selectedSpecs.value[spec.name] !== ''
+  )
+  
+  if (!allSpecsSelected) {
+alert('请选择完整的商品规格')
+    return
+  }
+  
+  alert(`准备购买：${product.value.name} x ${quantity.value}`)
+}
+
+// 轮播图切换
+const handleImageChange = (index: number) => {
+  currentImageIndex.value = index
+}
+
+// 数量变更
+const handleQuantityChange = (type: 'increase' | 'decrease') => {
+  if (type === 'increase') {
+    quantity.value++
+  } else if (type === 'decrease' && quantity.value > 1) {
+    quantity.value--
+  }
+}
+
+// 获取商品数据
+const fetchProductData = async () => {
+  try {
+    // 由于是模拟环境，使用模拟数据
+    product.value = {
+      id: productId.value,
+      name: 'Apple iPhone 15 Pro Max 256GB 原色钛金属 移动联通电信5G双卡双待手机',
+      price: 9999,
+      description: 'iPhone 15 Pro Max 采用航空级钛金属设计，配备 A17 Pro 芯片，搭载 4800 万像素主摄系统，支持 USB-C 充电，带来前所未有的强大性能和拍摄体验。',
+      images: [
+        'https://img.alicdn.com/imgextra/i4/O1CN01Qf1Z7C1hQmJ0Kj7Iq_!!6000000004368-0-picassoopen.jpg',
+        'https://img.alicdn.com/imgextra/i2/O1CN01Bw9mUu1hQmJ4qZJ14_!!6000000004372-0-picassoopen.jpg',
+        'https://img.alicdn.com/imgextra/i1/O1CN01G47N5g1hQmJ460xNf_!!6000000004371-0-picassoopen.jpg',
+        'https://img.alicdn.com/imgextra/i3/O1CN01L8VJcM1hQmKzK3W8P_!!6000000004370-0-picassoopen.jpg'
+      ],
+      categoryId: 'electronics',
+      categoryName: '手机数码'
+    }
+    
+    // 初始化默认规格
+    specsOptions.forEach(spec => {
+      if (spec.options.length > 0) {
+        selectedSpecs.value[spec.name] = spec.options[0] || ''
+      }
+    })
+    
+    // 实际项目中应该调用API获取数据
+    // const response = await getProductDetail(productId.value)
+    // product.value = response.data
+  } catch (error) {
+    console.error('获取商品详情失败:', error)
+  }
+}
+
+// 生命周期钩子
+onMounted(() => {
+  fetchProductData()
+})
 </script>
 
 <template>
   <div class="product-detail-page">
-    <header class="header">
-      <h1>商品详情页</h1>
-    </header>
-    <main class="main-content">
-      <section class="product-gallery">
-        <p>商品图片展示区域</p>
-      </section>
-      <section class="product-info">
-        <h2>商品名称</h2>
-        <p class="price">¥99.00</p>
-        <div class="actions">
-          <button class="add-to-cart">加入购物车</button>
-          <button class="buy-now">立即购买</button>
+    <!-- 商品图片轮播 -->
+    <section class="product-gallery">
+      <div class="main-image-wrapper">
+        <img 
+          v-for="(image, index) in product.images" 
+          :key="index"
+          :src="image" 
+          :alt="`${product.name} - 图片${index + 1}`"
+          class="main-image" 
+          :class="{ active: index === currentImageIndex }"
+        />
+      </div>
+      
+      <!-- 缩略图列表 -->
+      <div class="thumbnail-list">
+        <div 
+          v-for="(image, index) in product.images" 
+          :key="index"
+          class="thumbnail-item" 
+          :class="{ active: index === currentImageIndex }"
+          @click="handleImageChange(index)"
+        >
+          <img :src="image" :alt="`缩略图${index + 1}`" />
         </div>
-      </section>
-      <section class="product-description">
-        <h3>商品描述</h3>
-        <p>这是商品的详细描述信息。</p>
-      </section>
-    </main>
+      </div>
+    </section>
+
+    <!-- 商品信息 -->
+    <section class="product-info">
+      <!-- 商品标题 -->
+      <h1 class="product-title">{{ product.name }}</h1>
+      
+      <!-- 价格区域 -->
+      <div class="price-section">
+        <div class="price-main">
+          <span class="price-symbol">¥</span>
+          <span class="price-value">{{ product.price }}</span>
+        </div>
+        <div class="price-extra">
+          <span class="price-tag">促销价</span>
+        </div>
+      </div>
+      
+      <!-- 销量信息 -->
+      <div class="sales-info">
+        <span>月销 {{ Math.floor(Math.random() * 1000) + 100 }} 件</span>
+      </div>
+      
+      <!-- 规格选择 -->
+      <div class="specs-section">
+        <div 
+          v-for="spec in specsOptions" 
+          :key="spec.name" 
+          class="spec-group"
+        >
+          <span class="spec-name">{{ spec.label }}:</span>
+          <div class="spec-options">
+            <button 
+              v-for="option in spec.options" 
+              :key="option"
+              class="spec-option"
+              :class="{ active: selectedSpecs[spec.name] === option }"
+              @click="selectSpec(spec.name, option)"
+            >
+              {{ option }}
+            </button>
+          </div>
+        </div>
+      </div>
+      
+      <!-- 数量选择 -->
+      <div class="quantity-section">
+        <span class="quantity-label">数量:</span>
+        <div class="quantity-control">
+          <button class="quantity-btn" @click="handleQuantityChange('decrease')" :disabled="quantity <= 1">-
+          </button>
+          <span class="quantity-value">{{ quantity }}</span>
+          <button class="quantity-btn" @click="handleQuantityChange('increase')">+
+          </button>
+        </div>
+      </div>
+      
+      <!-- 优惠信息 -->
+      <div class="promotion-section">
+        <div class="promotion-item">
+          <span class="promotion-tag">优惠券</span>
+          <span class="promotion-desc">满1000减50，满2000减100</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- 操作按钮 -->
+    <section class="action-buttons">
+      <button class="add-to-cart-btn" @click="addToCart">加入购物车</button>
+      <button class="buy-now-btn" @click="buyNow">立即购买</button>
+    </section>
+
+    <!-- 商品详情标签页 -->
+    <section class="product-tabs">
+      <div class="tabs-header">
+        <div class="tab-item active">商品详情</div>
+        <div class="tab-item">规格参数</div>
+        <!-- 删除了用户评价标签 -->
+      </div>
+      
+      <!-- 商品详情内容 -->
+      <div class="tab-content">
+        <div class="detail-content">
+          <h3>商品描述</h3>
+          <p>{{ product.description }}</p>
+          
+          <!-- 详情图片 -->
+          <div class="detail-images">
+            <img 
+              v-for="(image, index) in product.images" 
+              :key="`detail-${index}`"
+              :src="image" 
+              :alt="`详情图片${index + 1}`" 
+              class="detail-image"
+            />
+          </div>
+          
+          <!-- 规格参数 -->
+          <div class="specs-table">
+            <h3>规格参数</h3>
+            <table>
+              <tbody>
+                <tr>
+                  <td class="spec-label">品牌</td>
+                  <td>Apple</td>
+                </tr>
+                <tr>
+                  <td class="spec-label">型号</td>
+                  <td>iPhone 15 Pro Max</td>
+                </tr>
+                <tr>
+                  <td class="spec-label">存储容量</td>
+                  <td>256GB</td>
+                </tr>
+                <tr>
+                  <td class="spec-label">颜色</td>
+                  <td>原色钛金属</td>
+                </tr>
+                <tr>
+                  <td class="spec-label">网络制式</td>
+                  <td>5G全网通</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 删除了推荐商品（猜你喜欢）部分 -->
   </div>
 </template>
 
 <style scoped lang="scss">
-// 商品详情页组件局部样式
-$primary-color: #ff5000;
-$text-primary: #333;
-$text-secondary: #666;
-$border-color: #ddd;
-$gray-light: #f5f5f5;
-$white: #fff;
-$secondary-color: #ff9900;
+@import '@/styles/variables.scss';
 
-@mixin flex-center {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-}
-
-@mixin button-style($bg-color: $primary-color, $text-color: $white) {
-  background-color: $bg-color;
-  color: $text-color;
-  border: none;
-  padding: 10px 20px;
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 14px;
-  
-  &:hover {
-    opacity: 0.9;
-  }
-}
-
+// 淘宝商品详情页样式
 .product-detail-page {
-  padding: 20px;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  background-color: $gray-light;
+  padding-bottom: 80px; // 为底部操作栏留出空间
   
-  .header {
-    text-align: center;
-    margin-bottom: 30px;
+  // 商品图片轮播
+  .product-gallery {
+    background-color: $white;
+    padding: 20px;
+    margin-bottom: 10px;
     
-    h1 {
-      color: $primary-color;
-      font-size: 24px;
+    .main-image-wrapper {
+      position: relative;
+      height: 400px;
+      overflow: hidden;
+      margin-bottom: 15px;
+      
+      .main-image {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        object-fit: contain;
+        opacity: 0;
+        transition: opacity 0.3s ease;
+        
+        &.active {
+          opacity: 1;
+        }
+      }
+    }
+    
+    .thumbnail-list {
+      display: flex;
+      gap: 10px;
+      overflow-x: auto;
+      padding-bottom: 10px;
+      
+      .thumbnail-item {
+        flex-shrink: 0;
+        width: 80px;
+        height: 80px;
+        border: 2px solid transparent;
+        border-radius: $border-radius-sm;
+        overflow: hidden;
+        cursor: pointer;
+        transition: border-color 0.3s;
+        
+        &.active {
+          border-color: $primary-color;
+        }
+        
+        img {
+          width: 100%;
+          height: 100%;
+          object-fit: cover;
+        }
+      }
     }
   }
   
-  .main-content {
-    .product-gallery {
-      background-color: $gray-light;
-      height: 300px;
-      @include flex-center;
-      margin-bottom: 30px;
-      border-radius: 8px;
+  // 商品信息
+  .product-info {
+    background-color: $white;
+    padding: 20px;
+    margin-bottom: 10px;
+    
+    .product-title {
+      font-size: $font-size-xlarge;
+      font-weight: 500;
+      color: $text-primary;
+      margin-bottom: 15px;
+      line-height: 1.4;
     }
     
-    .product-info {
-      margin-bottom: 30px;
-      
-      h2 {
-        font-size: 20px;
-        margin-bottom: 10px;
-        color: $text-primary;
-      }
-      
-      .price {
-        font-size: 24px;
-        color: $primary-color;
-        font-weight: bold;
-        margin-bottom: 20px;
-      }
-      
-      .actions {
+    .price-section {
+      display: flex;
+      align-items: baseline;
+      margin-bottom: 15px;
+      .price-main {
         display: flex;
-        gap: 15px;
+        align-items: baseline;
         
-        .add-to-cart {
-          @include button-style($secondary-color);
-          flex: 1;
+        .price-symbol {
+          font-size: $font-size-medium;
+          color: $primary-color;
+          margin-right: 2px;
         }
         
-        .buy-now {
-          @include button-style();
-          flex: 1;
+        .price-value {
+          font-size: 30px;
+          font-weight: bold;
+          color: $primary-color;
+        }
+      }
+      
+      .price-extra {
+        margin-left: 10px;
+        
+        .price-tag {
+          background-color: $primary-color;
+          color: $white;
+          padding: 2px 6px;
+          font-size: $font-size-small;
+          border-radius: $border-radius-sm;
         }
       }
     }
     
-    .product-description {
-      h3 {
-        font-size: 16px;
-        margin-bottom: 10px;
-        color: $text-primary;
+    .sales-info {
+      color: $text-secondary;
+      font-size: $font-size-base;
+      margin-bottom: 20px;
+      display: flex;
+      gap: 20px;
+    }
+    
+    .specs-section {
+      margin-bottom: 20px;
+      
+      .spec-group {
+        display: flex;
+        align-items: center;
+        margin-bottom: 15px;
+        
+        .spec-name {
+          width: 80px;
+          color: $text-secondary;
+          font-size: $font-size-base;
+        }
+        
+        .spec-options {
+          flex: 1;
+          display: flex;
+          flex-wrap: wrap;
+          gap: 10px;
+          
+          .spec-option {
+            padding: 8px 16px;
+            border: 1px solid $border-color;
+            background-color: $white;
+            border-radius: $border-radius-sm;
+            cursor: pointer;
+            font-size: $font-size-base;
+            transition: all 0.3s;
+            
+            &:hover {
+              border-color: $primary-color;
+            }
+            
+            &.active {
+              border-color: $primary-color;
+              color: $primary-color;
+              background-color: rgba($primary-color, 0.05);
+            }
+          }
+        }
+      }
+    }
+    
+    .quantity-section {
+      display: flex;
+      align-items: center;
+      margin-bottom: 20px;
+      
+      .quantity-label {
+        width: 80px;
+        color: $text-secondary;
+        font-size: $font-size-base;
       }
       
-      p {
+      .quantity-control {
+        display: flex;
+        align-items: center;
+        
+        .quantity-btn {
+          width: 32px;
+          height: 32px;
+          border: 1px solid $border-color;
+          background-color: $white;
+          cursor: pointer;
+          font-size: 18px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          
+          &:first-child {
+            border-top-left-radius: $border-radius-sm;
+            border-bottom-left-radius: $border-radius-sm;
+          }
+          
+          &:last-child {
+            border-top-right-radius: $border-radius-sm;
+            border-bottom-right-radius: $border-radius-sm;
+          }
+          
+          &:disabled {
+            color: $text-disabled;
+            cursor: not-allowed;
+          }
+        }
+        
+        .quantity-value {
+          width: 50px;
+          height: 32px;
+          border-top: 1px solid $border-color;
+          border-bottom: 1px solid $border-color;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-size: $font-size-base;
+        }
+      }
+    }
+    
+    .promotion-section {
+      
+      .promotion-item {
+        display: flex;
+        align-items: center;
+        margin-bottom: 10px;
+        
+        .promotion-tag {
+          background-color: rgba($primary-color, 0.1);
+          color: $primary-color;
+          padding: 2px 8px;
+          font-size: $font-size-small;
+          border-radius: $border-radius-sm;
+          margin-right: 10px;
+        }
+        
+        .promotion-desc {
+          color: $text-secondary;
+          font-size: $font-size-base;
+        }
+      }
+    }
+  }
+  
+  // 操作按钮
+  .action-buttons {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 60px;
+    background-color: $white;
+    display: flex;
+    gap: 10px;
+    padding: 10px 20px;
+    box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.05);
+    z-index: 100;
+    
+    button {
+      flex: 1;
+      height: 100%;
+      border: none;
+      border-radius: 25px;
+      font-size: $font-size-medium;
+      font-weight: 500;
+      cursor: pointer;
+      transition: opacity 0.3s;
+      
+      &:hover {
+        opacity: 0.9;
+      }
+    }
+    
+    .add-to-cart-btn {
+      background-color: $secondary-color;
+      color: $white;
+    }
+    
+    .buy-now-btn {
+      background-color: $primary-color;
+      color: $white;
+    }
+  }
+  
+  // 商品详情标签页
+  .product-tabs {
+    background-color: $white;
+    margin-top: 80px; // 为固定的操作按钮留出空间
+    
+    .tabs-header {
+      display: flex;
+      border-bottom: 1px solid $border-color;
+      position: sticky;
+      top: 0;
+      background-color: $white;
+      z-index: 10;
+      
+      .tab-item {
+        flex: 1;
+        text-align: center;
+        padding: 15px 0;
+        font-size: $font-size-medium;
         color: $text-secondary;
-        line-height: 1.6;
+        cursor: pointer;
+        position: relative;
+        transition: color 0.3s;
+        
+        &:hover {
+          color: $primary-color;
+        }
+        
+        &.active {
+          color: $primary-color;
+          font-weight: 500;
+          
+          &::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 30%;
+            width: 40%;
+            height: 3px;
+            background-color: $primary-color;
+            border-radius: 3px;
+          }
+        }
+      }
+    }
+    
+    .tab-content {
+      padding: 20px;
+      
+      .detail-content {
+        
+        h3 {
+          font-size: $font-size-large;
+          color: $text-primary;
+          margin-bottom: 15px;
+          padding-bottom: 10px;
+          border-bottom: 1px solid $border-color;
+        }
+        
+        p {
+          color: $text-secondary;
+          line-height: 1.6;
+          margin-bottom: 20px;
+        }
+        
+        .detail-images {
+          margin-bottom: 30px;
+          
+          .detail-image {
+            width: 100%;
+            margin-bottom: 10px;
+            border-radius: $border-radius-md;
+          }
+        }
+        
+        .specs-table {
+          margin-bottom: 30px;
+          
+          table {
+            width: 100%;
+            border-collapse: collapse;
+            
+            tr {
+              border-bottom: 1px solid $border-color;
+              
+              &:last-child {
+                border-bottom: none;
+              }
+            }
+            
+            td {
+              padding: 12px 0;
+              
+              &.spec-label {
+                width: 100px;
+                color: $text-secondary;
+                font-size: $font-size-base;
+              }
+              
+              &:last-child {
+                color: $text-primary;
+                font-size: $font-size-base;
+              }
+            }
+          }
+        }
+        
+        .reviews-section {
+          
+          .review-item {
+            padding: 20px 0;
+            border-bottom: 1px solid $border-color;
+            
+            &:last-child {
+              border-bottom: none;
+            }
+            
+            .review-header {
+              display: flex;
+              align-items: center;
+              margin-bottom: 10px;
+              
+              .user-name {
+                font-weight: 500;
+                color: $text-primary;
+                margin-right: 15px;
+              }
+              
+              .rating {
+                display: flex;
+                margin-right: auto;
+                
+                .star {
+                  width: 16px;
+                  height: 16px;
+                  margin-right: 2px;
+                  background-color: $gray;
+                  clip-path: polygon(50% 0%, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%);
+                  
+                  &.filled {
+                    background-color: $secondary-color;
+                  }
+                }
+              }
+              
+              .review-date {
+                color: $text-disabled;
+                font-size: $font-size-small;
+              }
+            }
+            
+            .review-content {
+              color: $text-secondary;
+              line-height: 1.6;
+            }
+          }
+        }
+      }
+    }
+  }
+  
+  // 推荐商品
+  .recommended-products {
+    background-color: $white;
+    margin-top: 10px;
+    padding: 20px;
+    
+    h3 {
+      font-size: $font-size-large;
+      color: $text-primary;
+      margin-bottom: 20px;
+    }
+    
+    .recommended-list {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 15px;
+      
+      .recommended-item {
+        background-color: $white;
+        border-radius: $border-radius-md;
+        overflow: hidden;
+        transition: transform 0.3s, box-shadow 0.3s;
+        
+        &:hover {
+          transform: translateY(-2px);
+          box-shadow: $box-shadow-hover;
+        }
+        
+        .rec-product-image {
+          height: 150px;
+          overflow: hidden;
+          
+          img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+          }
+        }
+        
+        .rec-product-info {
+          padding: 10px;
+          
+          .rec-product-title {
+            font-size: $font-size-base;
+            color: $text-primary;
+            margin-bottom: 5px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+          }
+          
+          .rec-product-price {
+            font-size: $font-size-medium;
+            color: $primary-color;
+            font-weight: 500;
+          }
+        }
       }
     }
   }
