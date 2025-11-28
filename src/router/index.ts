@@ -4,11 +4,7 @@ import Home from '../views/home/Home.vue'
 import ProductDetail from '../views/product/ProductDetail.vue'
 import Cart from '../views/cart/Cart.vue'
 import Checkout from '../views/checkout/Checkout.vue'
-
-// 创建临时的我的页面组件
-const Profile = {
-  template: '<div class="page-container"><h1>我的页面</h1><p>这里是个人中心内容</p></div>'
-}
+import Profile from '../views/profile/Profile.vue'
 
 const routes = [
   {
