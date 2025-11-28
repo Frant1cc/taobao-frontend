@@ -40,24 +40,24 @@ const orderItems = ref<OrderItem[]>([
 // 收货地址列表
 const addresses = ref<Address[]>([
   {
-    id: '1',
-    name: '张三',
-    phone: '138****8888',
-    province: '北京市',
-    city: '北京市',
-    district: '朝阳区',
-    detail: '建国门外大街1号国贸大厦A座1001室',
-    isDefault: true
+    address_id: 1,
+    user_id: 1001,
+    full_address: '北京市朝阳区建国门外大街1号国贸大厦A座1001室',
+    recipient_name: '张三',
+    phone: '13800138000',
+    is_default: true,
+    create_time: '2024-01-15 10:30:00',
+    update_time: '2024-01-15 10:30:00'
   },
   {
-    id: '2',
-    name: '李四',
-    phone: '139****9999',
-    province: '上海市',
-    city: '上海市',
-    district: '浦东新区',
-    detail: '陆家嘴环路1000号金茂大厦',
-    isDefault: false
+    address_id: 2,
+    user_id: 1001,
+    full_address: '上海市浦东新区陆家嘴环路1000号金茂大厦',
+    recipient_name: '李四',
+    phone: '13900139000',
+    is_default: false,
+    create_time: '2024-01-20 14:20:00',
+    update_time: '2024-01-20 14:20:00'
   }
 ]);
 
@@ -110,7 +110,7 @@ const addAddress = () => {
 const handleAddressSubmit = (formData: AddressFormData) => {
   if (editingAddress.value) {
     // 修改地址
-    const index = addresses.value.findIndex(addr => addr.id === editingAddress.value!.id);
+    const index = addresses.value.findIndex(addr => addr.address_id === editingAddress.value!.address_id);
     if (index !== -1) {
       addresses.value[index] = {
         ...editingAddress.value,
@@ -118,21 +118,24 @@ const handleAddressSubmit = (formData: AddressFormData) => {
       };
       
       // 如果修改的是当前选中的地址，更新选中地址
-      if (selectedAddress.value && selectedAddress.value.id === editingAddress.value.id) {
+      if (selectedAddress.value && selectedAddress.value.address_id === editingAddress.value.address_id) {
         selectedAddress.value = addresses.value[index];
       }
     }
   } else {
     // 添加新地址
     const newAddress: Address = {
-      id: Date.now().toString(),
-      ...formData
+      address_id: Date.now(),
+      user_id: 1001,
+      ...formData,
+      create_time: new Date().toISOString().slice(0, 19).replace('T', ' '),
+      update_time: new Date().toISOString().slice(0, 19).replace('T', ' ')
     };
     
     // 如果设置为默认地址，取消其他地址的默认状态
-    if (formData.isDefault) {
+    if (formData.is_default) {
       addresses.value.forEach(addr => {
-        addr.isDefault = false;
+        addr.is_default = false;
       });
     }
     
@@ -193,19 +196,19 @@ onMounted(() => {
       <div class="address-list">
         <div 
           v-for="address in addresses" 
-          :key="address.id"
+          :key="address.address_id"
           class="address-item"
-:class="{ active: selectedAddress && selectedAddress.id === address.id }"
+:class="{ active: selectedAddress && selectedAddress.address_id === address.address_id }"
           @click="selectAddress(address)"
         >
           <div class="address-info">
             <div class="address-header">
-              <span class="receiver">{{ address.name }}</span>
+              <span class="receiver">{{ address.recipient_name }}</span>
               <span class="phone">{{ address.phone }}</span>
-              <span v-if="address.isDefault" class="default-tag">默认</span>
+              <span v-if="address.is_default" class="default-tag">默认</span>
             </div>
             <div class="address-detail">
-              {{ address.province }}{{ address.city }}{{ address.district }}{{ address.detail }}
+              {{ address.full_address }}
             </div>
           </div>
           <div class="address-actions">

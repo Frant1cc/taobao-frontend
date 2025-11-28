@@ -10,10 +10,10 @@
     <form @submit.prevent="handleSubmit" class="address-form">
       <!-- 收货人姓名 -->
       <div class="form-group">
-        <label for="name" class="form-label">收货人</label>
+        <label for="recipient_name" class="form-label">收货人</label>
         <input
-          id="name"
-          v-model="formData.name"
+          id="recipient_name"
+          v-model="formData.recipient_name"
           type="text"
           placeholder="请输入收货人姓名"
           class="form-input"
@@ -35,101 +35,17 @@
         />
       </div>
 
-      <!-- 省市区选择 -->
+      <!-- 完整地址 -->
       <div class="form-group">
-        <label class="form-label">所在地区</label>
-        <div class="region-selector">
-          <select v-model="formData.province" class="region-select" required>
-            <option value="">请选择省份</option>
-            <option value="北京市">北京市</option>
-            <option value="上海市">上海市</option>
-            <option value="广东省">广东省</option>
-            <option value="浙江省">浙江省</option>
-            <option value="江苏省">江苏省</option>
-          </select>
-          <select v-model="formData.city" class="region-select" required>
-            <option value="">请选择城市</option>
-            <option v-if="formData.province === '北京市'" value="北京市">北京市</option>
-            <option v-if="formData.province === '上海市'" value="上海市">上海市</option>
-            <option v-if="formData.province === '广东省'" value="广州市">广州市</option>
-            <option v-if="formData.province === '广东省'" value="深圳市">深圳市</option>
-            <option v-if="formData.province === '浙江省'" value="杭州市">杭州市</option>
-            <option v-if="formData.province === '浙江省'" value="宁波市">宁波市</option>
-            <option v-if="formData.province === '江苏省'" value="南京市">南京市</option>
-            <option v-if="formData.province === '江苏省'" value="苏州市">苏州市</option>
-          </select>
-          <select v-model="formData.district" class="region-select" required>
-            <option value="">请选择区县</option>
-            <option v-if="formData.city === '北京市'" value="朝阳区">朝阳区</option>
-            <option v-if="formData.city === '北京市'" value="海淀区">海淀区</option>
-            <option v-if="formData.city === '上海市'" value="浦东新区">浦东新区</option>
-            <option v-if="formData.city === '上海市'" value="徐汇区">徐汇区</option>
-            <option v-if="formData.city === '广州市'" value="天河区">天河区</option>
-            <option v-if="formData.city === '广州市'" value="越秀区">越秀区</option>
-            <option v-if="formData.city === '深圳市'" value="南山区">南山区</option>
-            <option v-if="formData.city === '深圳市'" value="福田区">福田区</option>
-            <option v-if="formData.city === '杭州市'" value="西湖区">西湖区</option>
-            <option v-if="formData.city === '杭州市'" value="上城区">上城区</option>
-            <option v-if="formData.city === '南京市'" value="玄武区">玄武区</option>
-            <option v-if="formData.city === '南京市'" value="鼓楼区">鼓楼区</option>
-          </select>
-        </div>
-      </div>
-
-      <!-- 详细地址 -->
-      <div class="form-group">
-        <label for="detail" class="form-label">详细地址</label>
+        <label for="full_address" class="form-label">完整地址</label>
         <textarea
-          id="detail"
-          v-model="formData.detail"
-          placeholder="请输入详细地址"
+          id="full_address"
+          v-model="formData.full_address"
+          placeholder="请输入完整的收货地址，包括省市区和详细地址"
           class="form-textarea"
           rows="3"
           required
         ></textarea>
-      </div>
-
-      <!-- 地址标签 -->
-      <div class="form-group">
-        <label class="form-label">地址标签</label>
-        <div class="tag-selector">
-          <label class="tag-option">
-            <input
-              type="radio"
-              v-model="formData.tag"
-              value="家"
-              class="tag-radio"
-            />
-            <span class="tag-label">家</span>
-          </label>
-          <label class="tag-option">
-            <input
-              type="radio"
-              v-model="formData.tag"
-              value="公司"
-              class="tag-radio"
-            />
-            <span class="tag-label">公司</span>
-          </label>
-          <label class="tag-option">
-            <input
-              type="radio"
-              v-model="formData.tag"
-              value="学校"
-              class="tag-radio"
-            />
-            <span class="tag-label">学校</span>
-          </label>
-          <label class="tag-option">
-            <input
-              type="radio"
-              v-model="formData.tag"
-              value="其他"
-              class="tag-radio"
-            />
-            <span class="tag-label">其他</span>
-          </label>
-        </div>
       </div>
 
       <!-- 设为默认地址 -->
@@ -137,7 +53,7 @@
         <label class="checkbox-label">
           <input
             type="checkbox"
-            v-model="formData.isDefault"
+            v-model="formData.is_default"
             class="checkbox-input"
           />
           <span class="checkbox-custom"></span>
@@ -178,14 +94,10 @@ const emit = defineEmits<Emits>()
 
 // 表单数据
 const formData = ref<AddressFormData>({
-  name: '',
+  recipient_name: '',
   phone: '',
-  province: '',
-  city: '',
-  district: '',
-  detail: '',
-  isDefault: false,
-  tag: undefined
+  full_address: '',
+  is_default: false
 })
 
 // 计算属性
@@ -196,26 +108,18 @@ const submitText = computed(() => props.address ? '保存修改' : '添加地址
 watch(() => props.address, (newAddress) => {
   if (newAddress) {
     formData.value = {
-      name: newAddress.name,
+      recipient_name: newAddress.recipient_name,
       phone: newAddress.phone,
-      province: newAddress.province,
-      city: newAddress.city,
-      district: newAddress.district,
-      detail: newAddress.detail,
-      isDefault: newAddress.isDefault,
-      tag: newAddress.tag
+      full_address: newAddress.full_address,
+      is_default: newAddress.is_default
     }
   } else {
     // 重置表单
     formData.value = {
-      name: '',
+      recipient_name: '',
       phone: '',
-      province: '',
-      city: '',
-      district: '',
-      detail: '',
-      isDefault: false,
-      tag: undefined
+      full_address: '',
+      is_default: false
     }
   }
 }, { immediate: true })
@@ -229,7 +133,7 @@ const handleClose = () => {
 // 提交表单
 const handleSubmit = () => {
   // 表单验证
-  if (!formData.value.name.trim()) {
+  if (!formData.value.recipient_name.trim()) {
     alert('请输入收货人姓名')
     return
   }
@@ -239,13 +143,8 @@ const handleSubmit = () => {
     return
   }
   
-  if (!formData.value.province || !formData.value.city || !formData.value.district) {
-    alert('请选择完整的省市区')
-    return
-  }
-  
-  if (!formData.value.detail.trim()) {
-    alert('请输入详细地址')
+  if (!formData.value.full_address.trim()) {
+    alert('请输入完整地址')
     return
   }
   

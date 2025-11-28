@@ -222,64 +222,24 @@ onMounted(() => {
       <button class="buy-now-btn" @click="buyNow">立即购买</button>
     </section>
 
-    <!-- 商品详情标签页 -->
-    <section class="product-tabs">
-      <div class="tabs-header">
-        <div class="tab-item active">商品详情</div>
-        <div class="tab-item">规格参数</div>
-        <!-- 删除了用户评价标签 -->
-      </div>
-      
-      <!-- 商品详情内容 -->
-      <div class="tab-content">
-        <div class="detail-content">
-          <h3>商品描述</h3>
-          <p>{{ product.description }}</p>
-          
-          <!-- 详情图片 -->
-          <div class="detail-images">
-            <img 
-              v-for="(image, index) in product.images" 
-              :key="`detail-${index}`"
-              :src="image" 
-              :alt="`详情图片${index + 1}`" 
-              class="detail-image"
-            />
-          </div>
-          
-          <!-- 规格参数 -->
-          <div class="specs-table">
-            <h3>规格参数</h3>
-            <table>
-              <tbody>
-                <tr>
-                  <td class="spec-label">品牌</td>
-                  <td>Apple</td>
-                </tr>
-                <tr>
-                  <td class="spec-label">型号</td>
-                  <td>iPhone 15 Pro Max</td>
-                </tr>
-                <tr>
-                  <td class="spec-label">存储容量</td>
-                  <td>256GB</td>
-                </tr>
-                <tr>
-                  <td class="spec-label">颜色</td>
-                  <td>原色钛金属</td>
-                </tr>
-                <tr>
-                  <td class="spec-label">网络制式</td>
-                  <td>5G全网通</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
+    <!-- 商品详情 -->
+    <section class="product-detail-section">
+      <div class="detail-content">
+        <h3 class="detail-section-title">商品详情</h3>
+        <p class="product-description">{{ product.description }}</p>
+        
+        <!-- 详情图片 -->
+        <div class="detail-images">
+          <img 
+            v-for="(image, index) in product.images" 
+            :key="`detail-${index}`"
+            :src="image" 
+            :alt="`详情图片${index + 1}`" 
+            class="detail-image"
+          />
         </div>
       </div>
     </section>
-
-    <!-- 删除了推荐商品（猜你喜欢）部分 -->
   </div>
 </template>
 
@@ -566,111 +526,42 @@ onMounted(() => {
       }
     }
   
-  // 商品详情标签页
-  .product-tabs {
+  // 商品详情区域
+  .product-detail-section {
     background-color: #ffffff;
     margin-top: 80px; // 为固定的操作按钮留出空间
+    padding: 0;
     
-    .tabs-header {
-      display: flex;
-      border-bottom: 1px solid #e0e0e0;
-      position: sticky;
-      top: 0;
-      background-color: #ffffff;
-      z-index: 10;
-      
-      .tab-item {
-        flex: 1;
-        text-align: center;
-        padding: 15px 0;
-        font-size: 16px;
-        color: #666666;
-        cursor: pointer;
-        position: relative;
-        transition: color 0.3s;
-        
-        &:hover {
-          color: #ff5021;
-        }
-        
-        &.active {
-          color: #ff5021;
-          font-weight: 500;
-          
-          &::after {
-            content: '';
-            position: absolute;
-            bottom: 0;
-            left: 30%;
-            width: 40%;
-            height: 3px;
-            background-color: #ff5021;
-            border-radius: 3px;
-          }
-        }
-      }
-    }
-    
-    .tab-content {
+    .detail-content {
       padding: 20px;
       
-      .detail-content {
+      .detail-section-title {
+        font-size: 20px;
+        color: #333333;
+        margin-bottom: 20px;
+        padding-bottom: 15px;
+        border-bottom: 2px solid #ff5021;
+        font-weight: 600;
+      }
+      
+      .product-description {
+        color: #666666;
+        line-height: 1.6;
+        margin-bottom: 25px;
+        font-size: 15px;
+      }
+      
+      .detail-images {
+        margin-bottom: 30px;
         
-        h3 {
-          font-size: 18px;
-          color: #333333;
-          margin-bottom: 15px;
-          padding-bottom: 10px;
-          border-bottom: 1px solid #e0e0e0;
+        .detail-image {
+          width: 100%;
+          margin-bottom: 10px;
+          border-radius: 8px;
         }
+      }
         
-        p {
-          color: #666666;
-          line-height: 1.6;
-          margin-bottom: 20px;
-        }
-        
-        .detail-images {
-          margin-bottom: 30px;
-          
-          .detail-image {
-            width: 100%;
-            margin-bottom: 10px;
-            border-radius: 8px;
-          }
-        }
-        
-        .specs-table {
-          margin-bottom: 30px;
-          
-          table {
-            width: 100%;
-            border-collapse: collapse;
-            
-            tr {
-              border-bottom: 1px solid #e0e0e0;
-              
-              &:last-child {
-                border-bottom: none;
-              }
-            }
-            
-            td {
-              padding: 12px 0;
-              
-              &.spec-label {
-                width: 100px;
-                color: #666666;
-                font-size: 14px;
-              }
-              
-              &:last-child {
-                color: #333333;
-                font-size: 14px;
-              }
-            }
-          }
-        }
+
         
         .reviews-section {
           
@@ -788,5 +679,4 @@ onMounted(() => {
       }
     }
   }
-}
 </style>
