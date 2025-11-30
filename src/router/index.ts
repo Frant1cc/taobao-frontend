@@ -11,6 +11,10 @@ import AddressManagement from '../views/profile/AddressManagement.vue'
 import SecuritySettings from '../views/profile/SecuritySettings.vue'
 // @ts-ignore
 import OrderList from '../views/profile/OrderList.vue'
+// @ts-ignore
+import Login from '../views/auth/Login.vue'
+// @ts-ignore
+import Register from '../views/auth/Register.vue'
 
 const routes = [
   {
@@ -62,6 +66,16 @@ const routes = [
     name: 'OrderList',
     component: OrderList
   },
+  {
+    path: '/login',
+    name: 'Login',
+    component: Login
+  },
+  {
+    path: '/register',
+    name: 'Register',
+    component: Register
+  }
 ]
 
 const router = createRouter({

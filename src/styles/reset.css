@@ -1,0 +1,139 @@
+/* CSS Reset - 清除浏览器默认样式 */
+
+/* 1. 使用更直观的盒模型 */
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+/* 2. 移除默认边距 */
+* {
+  margin: 0;
+  padding: 0;
+}
+
+/* 3. 设置默认字体和行高 */
+html {
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  line-height: 1.5;
+  -webkit-text-size-adjust: 100%;
+}
+
+/* 4. 移除列表样式 */
+ul, ol {
+  list-style: none;
+}
+
+/* 5. 移除链接下划线 */
+a {
+  text-decoration: none;
+  color: inherit;
+}
+
+/* 6. 移除按钮和输入框的默认样式 */
+button, input, select, textarea {
+  font-family: inherit;
+  font-size: inherit;
+  line-height: inherit;
+  border: none;
+  background: none;
+  outline: none;
+}
+
+/* 7. 移除按钮的默认样式 */
+button {
+  cursor: pointer;
+}
+
+/* 8. 移除图片边框 */
+img {
+  border-style: none;
+  max-width: 100%;
+  height: auto;
+}
+
+/* 9. 移除表格边框和间距 */
+table {
+  border-collapse: collapse;
+  border-spacing: 0;
+}
+
+/* 10. 移除表单元素的默认样式 */
+input, textarea, select {
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+}
+
+/* 11. 移除文本域的可调整大小 */
+textarea {
+  resize: vertical;
+}
+
+/* 12. 设置一致的滚动行为 */
+html {
+  scroll-behavior: smooth;
+}
+
+/* 13. 设置一致的焦点样式 */
+:focus {
+  outline: 2px solid #007bff;
+  outline-offset: 2px;
+}
+
+/* 14. 移除引号的默认样式 */
+blockquote, q {
+  quotes: none;
+}
+
+blockquote::before, blockquote::after,
+q::before, q::after {
+  content: '';
+  content: none;
+}
+
+/* 15. 设置一致的字体渲染 */
+body {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+/* 16. 移除媒体元素的默认样式 */
+audio, canvas, iframe, img, svg, video {
+  vertical-align: middle;
+}
+
+/* 17. 设置一致的占位符颜色 */
+input::placeholder, textarea::placeholder {
+  color: #6c757d;
+  opacity: 1;
+}
+
+/* 18. 移除数字输入框的上下箭头 */
+input[type="number"]::-webkit-outer-spin-button,
+input[type="number"]::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+input[type="number"] {
+  -moz-appearance: textfield;
+}
+
+/* 19. 设置一致的选中文本样式 */
+::selection {
+  background-color: #007bff;
+  color: white;
+}
+
+/* 20. 设置根元素的基础样式 */
+:root {
+  --primary-color: #ff6b35;
+  --secondary-color: #6c757d;
+  --success-color: #28a745;
+  --danger-color: #dc3545;
+  --warning-color: #ffc107;
+  --info-color: #17a2b8;
+  --light-color: #f8f9fa;
+  --dark-color: #343a40;
+}

@@ -124,15 +124,6 @@ import { ElMessage } from 'element-plus'
 const router = useRouter()
 const route = useRoute()
 
-// 页面标题映射
-const pageTitleMap = {
-  '待付款': '待付款',
-  '待发货': '待发货',
-  '待收货': '待收货',
-  '待评价': '待评价',
-  '退款/售后': '退款/售后',
-  '已完成': '已完成'
-}
 
 // 订单状态映射
 const statusMap = {

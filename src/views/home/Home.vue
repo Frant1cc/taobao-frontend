@@ -152,6 +152,10 @@ const handleSearch = () => {
   <div class="home-page">
     <header class="header">
       <h1>欢迎来到黄启华首页</h1>
+      <div class="header-actions">
+        <router-link to="/login" class="auth-btn login-btn">登录</router-link>
+        <router-link to="/register" class="auth-btn register-btn">注册</router-link>
+      </div>
       <div class="search-container">
         <input 
           type="text" 
@@ -254,6 +258,8 @@ const handleSearch = () => {
 </template>
 
 <style scoped lang="scss">
+@use "sass:color";
+
 // 首页组件局部样式
 $primary-color: #ff5000;
 $text-primary: #333;
@@ -291,6 +297,7 @@ $white: #fff;
   .header {
     text-align: center;
     margin-bottom: 30px;
+    position: relative;
     
     h1 {
       color: $primary-color;
@@ -298,6 +305,44 @@ $white: #fff;
       margin-top: -5px; // 向上移动6px
     }
     
+    .header-actions {
+      position: absolute;
+      top: 0;
+      right: 0;
+      display: flex;
+      gap: 10px;
+      
+      .auth-btn {
+        padding: 8px 16px;
+        border-radius: 4px;
+        text-decoration: none;
+        font-size: 14px;
+        font-weight: 500;
+        transition: all 0.3s ease;
+        
+        &.login-btn {
+          background-color: transparent;
+          color: $primary-color;
+          border: 1px solid $primary-color;
+          
+          &:hover {
+            background-color: $primary-color;
+            color: $white;
+          }
+        }
+        
+        &.register-btn {
+          background-color: $primary-color;
+          color: $white;
+          border: 1px solid $primary-color;
+          
+          &:hover {
+            background-color: color.adjust($primary-color, $lightness: -10%);
+            border-color: color.adjust($primary-color, $lightness: -10%);
+          }
+        }
+      }
+    }
     .search-container {
       display: flex;
       justify-content: center;
