@@ -92,8 +92,8 @@ const router = useRouter()
 // 订单点击事件处理
 const handleOrderClick = (status: string) => {
   console.log(`点击了订单状态: ${status}`)
-  // 这里可以添加跳转到对应订单列表页面的逻辑
-  // 例如：router.push(`/orders?status=${status}`)
+  // 跳转到对应订单列表页面
+  router.push(`/profile/orders?status=${status}`)
 }
 
 // 菜单项点击事件处理
@@ -106,8 +106,7 @@ const handleMenuClick = (menu: string) => {
       router.push('/profile/addresses')
       break
     case '账户安全':
-      console.log('跳转到账户安全设置页面')
-      // router.push('/security')
+      router.push('/profile/security')
       break
     case '账号绑定':
       console.log('跳转到账号绑定页面')
@@ -120,12 +119,6 @@ const handleMenuClick = (menu: string) => {
     default:
       console.log(`点击了菜单项: ${menu}`)
   }
-}
-
-// 淘宝特色功能点击事件
-const handleFeatureClick = (feature: string) => {
-  console.log(`点击了特色功能: ${feature}`)
-  // 这里可以添加跳转到对应功能页面的逻辑
 }
 
 // 确认退出登录

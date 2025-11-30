@@ -6,7 +6,11 @@ import Cart from '../views/cart/Cart.vue'
 import Checkout from '../views/checkout/Checkout.vue'
 import Profile from '../views/profile/Profile.vue'
 import ProfileEdit from '../views/profile/ProfileEdit.vue'
+// @ts-ignore
 import AddressManagement from '../views/profile/AddressManagement.vue'
+import SecuritySettings from '../views/profile/SecuritySettings.vue'
+// @ts-ignore
+import OrderList from '../views/profile/OrderList.vue'
 
 const routes = [
   {
@@ -47,6 +51,16 @@ const routes = [
     path: '/profile/addresses',
     name: 'AddressManagement',
     component: AddressManagement
+  },
+  {
+    path: '/profile/security',
+    name: 'SecuritySettings',
+    component: SecuritySettings
+  },
+  {
+    path: '/profile/orders',
+    name: 'OrderList',
+    component: OrderList
   },
 ]
 

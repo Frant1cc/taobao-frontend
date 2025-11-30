@@ -97,38 +97,6 @@
         </div>
       </div>
 
-      <!-- 手机号码 -->
-      <div class="form-section">
-        <div class="section-header">
-          <h3 class="section-title">手机号码</h3>
-        </div>
-        <div class="input-section">
-          <input 
-            v-model="userInfo.phone" 
-            type="tel" 
-            class="phone-input"
-            placeholder="请输入手机号码"
-            maxlength="20"
-          />
-        </div>
-      </div>
-
-      <!-- 邮箱地址 -->
-      <div class="form-section">
-        <div class="section-header">
-          <h3 class="section-title">邮箱地址</h3>
-        </div>
-        <div class="input-section">
-          <input 
-            v-model="userInfo.email" 
-            type="email" 
-            class="email-input"
-            placeholder="请输入邮箱地址"
-            maxlength="100"
-          />
-        </div>
-      </div>
-
       <!-- 保存按钮 -->
       <div class="action-section">
         <button class="save-btn" @click="saveProfile">保存修改</button>
@@ -169,18 +137,6 @@ const changeAvatar = () => {
 const saveProfile = () => {
   if (!userInfo.value.username.trim()) {
     ElMessage.error('用户名不能为空')
-    return
-  }
-  
-  // 验证手机号码格式
-  if (userInfo.value.phone && !/^1[3-9]\d{9}$/.test(userInfo.value.phone)) {
-    ElMessage.error('请输入正确的手机号码格式')
-    return
-  }
-  
-  // 验证邮箱格式
-  if (userInfo.value.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(userInfo.value.email)) {
-    ElMessage.error('请输入正确的邮箱格式')
     return
   }
   
