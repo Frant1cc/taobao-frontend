@@ -15,9 +15,26 @@ export interface RegisterParams {
 
 // 登录响应数据
 export interface LoginResponse {
-  userId: number
   account: string
   username: string
+  userType: string
   token: string
+}
+
+// 用户详细信息
+export interface UserInfo {
+  userId: number
+  account: string
+  password: string
+  userType: string
+  status: string
+  username: string | null
+  gender: string | null
+  birthday: string | null
+  phone: string | null
+  email: string | null
+  avatarUrl: string | null
+  createTime: string
+  updateTime: string
 }
 

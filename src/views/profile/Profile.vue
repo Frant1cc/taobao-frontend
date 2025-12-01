@@ -4,10 +4,10 @@
     <div class="profile-header">
       <div class="user-info">
         <div class="avatar">
-          <img src="@/assets/vue.svg" alt="用户头像" />
+          <img :src="avatarUrl" alt="用户头像" />
         </div>
         <div class="user-details">
-          <h3 class="username">{{ userStore.username || '淘宝用户' }}</h3>
+          <h3 class="username">{{ displayName }}</h3>
           <p class="user-level">普通会员</p>
         </div>
       </div>
@@ -84,12 +84,36 @@
 </template>
 
 <script setup lang="ts">
+import { computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessageBox } from 'element-plus'
 import { useUserStore } from '@/stores/user'
+import { getUserInfo } from '@/api/modules/user'
+import defaultAvatar from '@/assets/vue.svg'
 
 const router = useRouter()
 const userStore = useUserStore()
+
+// 计算属性：显示用户名或默认名称
+const displayName = computed(() => {
+  return userStore.userInfo?.username || userStore.userInfo?.account || '淘宝用户'
+})
+
+// 计算属性：显示头像URL或默认头像
+const avatarUrl = computed(() => {
+  return userStore.userInfo?.avatarUrl || defaultAvatar
+})
+
+// 在组件挂载时获取用户详细信息
+onMounted(async () => {
+  try {
+    const response = await getUserInfo()
+    // 更新用户store中的用户信息
+    userStore.setUserInfo(response.data)
+  } catch (error) {
+    console.error('获取用户信息失败:', error)
+  }
+})
 
 // 订单点击事件处理
 const handleOrderClick = (status: string) => {

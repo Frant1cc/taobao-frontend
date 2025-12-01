@@ -9,13 +9,30 @@ interface UserInfo {
   username: string
   email?: string
   phone?: string
-  avatar?: string
+  avatarUrl?: string
   create_time?: string
   update_time?: string
 }
 
+// 完整的用户信息类型定义
+interface FullUserInfo {
+  userId: number
+  account: string
+  password: string
+  userType: string
+  status?: string
+  username: string | null
+  gender?: string | null
+  birthday?: string | null
+  phone?: string | null
+  email?: string | null
+  avatarUrl?: string | null
+  createTime?: string
+  updateTime?: string
+}
+
 interface UserState {
-  userInfo: UserInfo | null
+  userInfo: UserInfo | FullUserInfo | null
   token: string | null
 }
 
@@ -36,11 +53,12 @@ export const useUserStore = defineStore('user', {
       localStorage.setItem('authToken', token)
     },
     
-    setUserInfo(userInfo: LoginResponse) {
+    setUserInfo(userInfo: LoginResponse ) {
+      // 保存必要的用户信息到store
       this.userInfo = {
-        userId: userInfo.userId,
         account: userInfo.account,
-        username: userInfo.username
+        username: userInfo.username || userInfo.account || '',
+        userType: userInfo.userType
       }
       
       // 保存完整信息到本地存储
