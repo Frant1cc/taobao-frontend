@@ -1,8 +1,27 @@
 <script setup lang="ts">
 import { ref, reactive, computed, onMounted } from 'vue';
-import { useRouter, useRoute } from 'vue-router';
+import { useRouter } from 'vue-router';
 import AddressEditor from '@/components/AddressEditor.vue';
-import type { Address, AddressFormData } from '@/types/user';
+
+// 地址相关类型定义
+interface Address {
+  address_id: number
+  user_id: number
+  full_address: string
+  recipient_name: string
+  phone: string
+  is_default: boolean
+  create_time: string
+  update_time: string
+}
+
+// 地址表单数据类型定义
+interface AddressFormData {
+  full_address: string
+  recipient_name: string
+  phone: string
+  is_default: boolean
+}
 
 // 订单商品类型定义
 interface OrderItem {
@@ -15,7 +34,6 @@ interface OrderItem {
 }
 
 const router = useRouter();
-const route = useRoute();
 
 // 模拟订单数据（实际项目中应从购物车传递）
 const orderItems = ref<OrderItem[]>([
@@ -72,7 +90,7 @@ const editingAddress = ref<Address | undefined>(undefined);
 const paymentMethod = ref('alipay');
 
 // 优惠券
-const coupon = ref('');
+// const coupon = ref('');
 
 // 运费
 const shippingFee = computed(() => {
@@ -110,7 +128,7 @@ const addAddress = () => {
 const handleAddressSubmit = (formData: AddressFormData) => {
   if (editingAddress.value) {
     // 修改地址
-    const index = addresses.value.findIndex(addr => addr.address_id === editingAddress.value!.address_id);
+    const index = addresses.value.findIndex((addr: Address) => addr.address_id === editingAddress.value!.address_id);
     if (index !== -1) {
       addresses.value[index] = {
         ...editingAddress.value,
@@ -134,7 +152,7 @@ const handleAddressSubmit = (formData: AddressFormData) => {
     
     // 如果设置为默认地址，取消其他地址的默认状态
     if (formData.is_default) {
-      addresses.value.forEach(addr => {
+      addresses.value.forEach((addr: Address) => {
         addr.is_default = false;
       });
     }

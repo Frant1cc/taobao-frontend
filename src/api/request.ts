@@ -1,5 +1,5 @@
 // 封装axios请求
-import axios, { type AxiosRequestConfig, type AxiosResponse, type AxiosError } from 'axios'
+import axios, { type AxiosResponse, type AxiosError } from 'axios'
 import { BASE_URL, TIMEOUT, HEADERS } from './config'
 
 // 创建axios实例

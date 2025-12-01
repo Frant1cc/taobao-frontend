@@ -1,6 +1,4 @@
 <script setup lang="ts">
-import { ref } from 'vue';
-import { useUserStore } from '@/stores/user';
 import { reactive, computed } from 'vue';
 import { useRouter } from 'vue-router';
 import type { CartItem } from '@/types/cart';

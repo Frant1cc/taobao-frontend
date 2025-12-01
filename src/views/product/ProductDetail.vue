@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue'
 import { useRoute } from 'vue-router'
-import { getProductDetail } from '@/api/modules/product'
 import type { Product } from '@/types/product'
 
 // 路由信息
@@ -108,10 +107,6 @@ const fetchProductData = async () => {
         selectedSpecs.value[spec.name] = spec.options[0] || ''
       }
     })
-    
-    // 实际项目中应该调用API获取数据
-    // const response = await getProductDetail(productId.value)
-    // product.value = response.data
   } catch (error) {
     console.error('获取商品详情失败:', error)
   }

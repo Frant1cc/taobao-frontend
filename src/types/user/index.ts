@@ -12,3 +12,4 @@ export interface RegisterParams {
   password: string
   userType: 'operator' | 'merchant' | 'customer' | 'visitor';
 }
+

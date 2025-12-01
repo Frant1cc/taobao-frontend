@@ -76,7 +76,26 @@
 
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
-import type { Address, AddressFormData } from '@/types/user'
+
+// 地址相关类型定义
+interface Address {
+  address_id: number
+  user_id: number
+  full_address: string
+  recipient_name: string
+  phone: string
+  is_default: boolean
+  create_time: string
+  update_time: string
+}
+
+// 地址表单数据类型定义
+interface AddressFormData {
+  full_address: string
+  recipient_name: string
+  phone: string
+  is_default: boolean
+}
 
 interface Props {
   address?: Address

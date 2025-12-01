@@ -1,6 +1,17 @@
 import { defineStore } from 'pinia'
 import { getUserInfo } from '@/api/modules/user'
-import type { UserInfo } from '@/types/user'
+
+// 用户信息类型定义
+interface UserInfo {
+  id: number
+  account: string
+  username: string
+  email?: string
+  phone?: string
+  avatar?: string
+  create_time: string
+  update_time: string
+}
 
 interface UserState {
   userInfo: UserInfo | null

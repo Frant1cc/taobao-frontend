@@ -230,6 +230,7 @@ const handleRegister = async () => {
   try {
     // 创建不包含 confirmPassword 的数据对象
     const { confirmPassword, ...formData } = registerForm.value
+    console.log('formData', formData)
     
     // 模拟注册API调用，只发送不包含 confirmPassword 的数据
     await new Promise(resolve => setTimeout(resolve, 1500))

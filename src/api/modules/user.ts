@@ -19,3 +19,4 @@ export function register(data: RegisterParams) {
     data
   })
 }
+

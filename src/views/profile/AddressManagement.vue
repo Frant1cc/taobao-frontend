@@ -88,7 +88,26 @@ import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import AddressEditor from '@/components/AddressEditor.vue'
-import type { Address, AddressFormData } from '@/types/user'
+
+// 地址相关类型定义
+interface Address {
+  address_id: number
+  user_id: number
+  full_address: string
+  recipient_name: string
+  phone: string
+  is_default: boolean
+  create_time: string
+  update_time: string
+}
+
+// 地址表单数据类型定义
+interface AddressFormData {
+  full_address: string
+  recipient_name: string
+  phone: string
+  is_default: boolean
+}
 
 const router = useRouter()
 
@@ -161,7 +180,7 @@ const deleteAddress = async (addressId: number) => {
     )
     
     // 执行删除操作
-    addressList.value = addressList.value.filter(addr => addr.address_id !== addressId)
+    addressList.value = addressList.value.filter((addr: Address) => addr.address_id !== addressId)
     ElMessage.success('地址删除成功')
   } catch {
     // 用户取消删除
@@ -170,7 +189,7 @@ const deleteAddress = async (addressId: number) => {
 
 // 设为默认地址
 const setDefaultAddress = (addressId: number) => {
-  addressList.value = addressList.value.map(addr => ({
+  addressList.value = addressList.value.map((addr: Address) => ({
     ...addr,
     is_default: addr.address_id === addressId
   }))
@@ -181,7 +200,7 @@ const setDefaultAddress = (addressId: number) => {
 const handleAddressSubmit = (formData: AddressFormData) => {
   if (editingAddress.value) {
     // 编辑模式
-    const index = addressList.value.findIndex(addr => addr.address_id === editingAddress.value!.address_id)
+    const index = addressList.value.findIndex((addr: Address) => addr.address_id === editingAddress.value!.address_id)
     if (index !== -1) {
       addressList.value[index] = {
         address_id: editingAddress.value!.address_id,
