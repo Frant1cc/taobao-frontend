@@ -1,0 +1,735 @@
+<template>
+  <div class="merchant-orders">
+    <!-- 页面标题 -->
+    <div class="page-header">
+      <h2>订单管理</h2>
+      <div class="header-actions">
+        <!-- 移除导出订单和批量打印功能 -->
+      </div>
+    </div>
+
+    <!-- 订单状态筛选 -->
+    <div class="order-status-tabs">
+      <el-tabs v-model="activeStatus" @tab-click="handleTabChange">
+        <el-tab-pane label="全部订单" name="all" />
+        <el-tab-pane label="待付款" name="pending" />
+        <el-tab-pane label="待发货" name="toShip" />
+        <el-tab-pane label="已发货" name="shipped" />
+        <el-tab-pane label="已完成" name="completed" />
+        <el-tab-pane label="已取消" name="cancelled" />
+      </el-tabs>
+    </div>
+
+    <!-- 搜索和筛选 -->
+    <el-card class="filter-card">
+      <div class="filter-row">
+        <el-input
+          v-model="searchKeyword"
+          placeholder="搜索订单号、买家昵称..."
+          prefix-icon="Search"
+          style="width: 300px"
+        />
+        <el-date-picker
+          v-model="dateRange"
+          type="daterange"
+          range-separator="至"
+          start-placeholder="开始日期"
+          end-placeholder="结束日期"
+          style="width: 240px"
+        />
+        <el-select v-model="filterPayment" placeholder="支付方式" style="width: 120px">
+          <el-option label="全部" value="" />
+          <el-option label="支付宝" value="alipay" />
+          <el-option label="微信支付" value="wechat" />
+          <el-option label="银行卡" value="bank" />
+        </el-select>
+        <el-button type="primary" @click="handleSearch">搜索</el-button>
+        <el-button @click="handleReset">重置</el-button>
+      </div>
+    </el-card>
+
+    <!-- 批量操作 -->
+    <div class="batch-actions" v-if="selectedOrders.length > 0">
+      <el-alert
+        :title="`已选择 ${selectedOrders.length} 个订单`"
+        type="info"
+        :closable="false"
+        show-icon
+      >
+        <template #default>
+          <el-button size="small" @click="handleBatchShip">批量发货</el-button>
+          <el-button size="small" @click="clearSelection">取消选择</el-button>
+        </template>
+      </el-alert>
+    </div>
+
+    <!-- 订单列表 -->
+    <el-card>
+      <el-table
+        :data="filteredOrders"
+        style="width: 100%"
+        @selection-change="handleSelectionChange"
+      >
+        <el-table-column type="selection" width="55" />
+        <el-table-column label="订单信息" min-width="300">
+          <template #default="{ row }">
+            <div class="order-info">
+              <div class="order-number">
+                <strong>{{ row.orderNumber }}</strong>
+                <el-tag :type="getStatusType(row.status)" size="small">
+                  {{ getStatusText(row.status) }}
+                </el-tag>
+              </div>
+              <div class="order-time">{{ row.createTime }}</div>
+              <div class="buyer-info">买家：{{ row.buyerName }}</div>
+            </div>
+          </template>
+        </el-table-column>
+        <el-table-column label="商品信息" min-width="250">
+          <template #default="{ row }">
+            <div class="product-list">
+              <div 
+                v-for="product in row.products" 
+                :key="product.id"
+                class="product-item"
+              >
+                <el-image
+                  :src="product.image"
+                  :alt="product.name"
+                  fit="cover"
+                  class="product-image"
+                />
+                <div class="product-details">
+                  <div class="product-name">{{ product.name }}</div>
+                  <div class="product-spec">规格：{{ product.spec }}</div>
+                  <div class="product-quantity">x{{ product.quantity }}</div>
+                </div>
+              </div>
+            </div>
+          </template>
+        </el-table-column>
+        <el-table-column label="金额" width="120">
+          <template #default="{ row }">
+            <div class="amount-info">
+              <div class="total-amount">¥{{ row.totalAmount }}</div>
+              <div class="payment-method">{{ getPaymentText(row.paymentMethod) }}</div>
+            </div>
+          </template>
+        </el-table-column>
+        <el-table-column label="收货信息" width="200">
+          <template #default="{ row }">
+            <div class="shipping-info">
+              <div class="receiver">{{ row.receiverName }}</div>
+              <div class="phone">{{ row.receiverPhone }}</div>
+              <div class="address">{{ row.receiverAddress }}</div>
+            </div>
+          </template>
+        </el-table-column>
+        <el-table-column label="操作" width="180" fixed="right">
+          <template #default="{ row }">
+            <div class="action-buttons">
+              <el-button 
+                v-if="row.status === 'toShip'" 
+                type="primary" 
+                size="small"
+                @click="handleShip(row)"
+              >
+                发货
+              </el-button>
+              <el-button 
+                v-if="row.status === 'shipped'" 
+                size="small"
+                @click="handleViewTracking(row)"
+              >
+                查看物流
+              </el-button>
+              <el-button size="small" @click="handleViewDetail(row)">
+                详情
+              </el-button>
+              <el-button 
+                v-if="row.status === 'pending'" 
+                size="small" 
+                type="danger"
+                @click="handleCancel(row)"
+              >
+                取消
+              </el-button>
+            </div>
+          </template>
+        </el-table-column>
+      </el-table>
+
+      <!-- 分页 -->
+      <div class="pagination-container">
+        <el-pagination
+          v-model:current-page="currentPage"
+          v-model:page-size="pageSize"
+          :page-sizes="[10, 20, 50, 100]"
+          :total="total"
+          layout="total, sizes, prev, pager, next, jumper"
+        />
+      </div>
+    </el-card>
+
+    <!-- 发货对话框 -->
+    <el-dialog
+      v-model="showShipDialog"
+      title="订单发货"
+      width="500px"
+    >
+      <el-form :model="shipForm" label-width="80px">
+        <el-form-item label="物流公司">
+          <el-select v-model="shipForm.logisticsCompany" placeholder="请选择物流公司">
+            <el-option label="顺丰速运" value="sf" />
+            <el-option label="圆通速递" value="yt" />
+            <el-option label="中通快递" value="zt" />
+            <el-option label="韵达快递" value="yd" />
+            <el-option label="申通快递" value="st" />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="运单号">
+          <el-input v-model="shipForm.trackingNumber" placeholder="请输入运单号" />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="showShipDialog = false">取消</el-button>
+        <el-button type="primary" @click="handleConfirmShip">
+          确认发货
+        </el-button>
+      </template>
+    </el-dialog>
+  </div>
+</template>
+
+<script setup lang="ts">
+import { ref, computed } from 'vue'
+import {
+  Search
+} from '@element-plus/icons-vue'
+
+interface OrderProduct {
+  id: string
+  name: string
+  image: string
+  spec: string
+  quantity: number
+  price: number
+}
+
+interface Order {
+  id: string
+  orderNumber: string
+  status: string
+  createTime: string
+  buyerName: string
+  products: OrderProduct[]
+  totalAmount: number
+  paymentMethod: string
+  receiverName: string
+  receiverPhone: string
+  receiverAddress: string
+}
+
+// 状态筛选
+const activeStatus = ref('all')
+
+// 搜索和筛选
+const searchKeyword = ref('')
+const dateRange = ref([])
+const filterPayment = ref('')
+
+// 分页
+const currentPage = ref(1)
+const pageSize = ref(10)
+const total = ref(0)
+
+// 批量操作
+const selectedOrders = ref<Order[]>([])
+
+// 对话框控制
+const showShipDialog = ref(false)
+const shippingOrder = ref<Order | null>(null)
+const shipForm = ref({
+  logisticsCompany: '',
+  trackingNumber: ''
+})
+
+// 模拟订单数据
+const orders = ref<Order[]>([
+  {
+    id: '1',
+    orderNumber: '202412150001',
+    status: 'toShip',
+    createTime: '2024-12-15 10:30:25',
+    buyerName: '张先生',
+    products: [
+      {
+        id: '1',
+        name: '新款智能手机',
+        image: 'https://via.placeholder.com/60x60',
+        spec: '黑色 128GB',
+        quantity: 1,
+        price: 2999
+      }
+    ],
+    totalAmount: 2999,
+    paymentMethod: 'alipay',
+    receiverName: '张三',
+    receiverPhone: '138****1234',
+    receiverAddress: '北京市朝阳区xxx街道xxx号'
+  },
+  {
+    id: '2',
+    orderNumber: '202412150002',
+    status: 'shipped',
+    createTime: '2024-12-15 09:15:42',
+    buyerName: '李女士',
+    products: [
+      {
+        id: '2',
+        name: '无线蓝牙耳机',
+        image: 'https://via.placeholder.com/60x60',
+        spec: '白色',
+        quantity: 2,
+        price: 399
+      }
+    ],
+    totalAmount: 798,
+    paymentMethod: 'wechat',
+    receiverName: '李四',
+    receiverPhone: '139****5678',
+    receiverAddress: '上海市浦东新区xxx路xxx号'
+  },
+  {
+    id: '3',
+    orderNumber: '202412150003',
+    status: 'completed',
+    createTime: '2024-12-14 16:20:18',
+    buyerName: '王先生',
+    products: [
+      {
+        id: '3',
+        name: '笔记本电脑',
+        image: 'https://via.placeholder.com/60x60',
+        spec: '银色 i7 16GB',
+        quantity: 1,
+        price: 5999
+      }
+    ],
+    totalAmount: 5999,
+    paymentMethod: 'bank',
+    receiverName: '王五',
+    receiverPhone: '137****9012',
+    receiverAddress: '广州市天河区xxx大道xxx号'
+  }
+])
+
+// 计算属性：过滤订单
+const filteredOrders = computed(() => {
+  let filtered = orders.value
+  
+  if (activeStatus.value !== 'all') {
+    filtered = filtered.filter(order => order.status === activeStatus.value)
+  }
+  
+  if (searchKeyword.value) {
+    filtered = filtered.filter(order => 
+      order.orderNumber.includes(searchKeyword.value) || 
+      order.buyerName.includes(searchKeyword.value)
+    )
+  }
+  
+  if (filterPayment.value) {
+    filtered = filtered.filter(order => order.paymentMethod === filterPayment.value)
+  }
+  
+  total.value = filtered.length
+  const start = (currentPage.value - 1) * pageSize.value
+  const end = start + pageSize.value
+  return filtered.slice(start, end)
+})
+
+// 方法
+const handleTabChange = () => {
+  currentPage.value = 1
+}
+
+const handleSearch = () => {
+  currentPage.value = 1
+}
+
+const handleReset = () => {
+  searchKeyword.value = ''
+  dateRange.value = []
+  filterPayment.value = ''
+  currentPage.value = 1
+}
+
+const handleSelectionChange = (selection: Order[]) => {
+  selectedOrders.value = selection
+}
+
+const handleBatchShip = () => {
+  // 批量发货逻辑
+  console.log('批量发货:', selectedOrders.value)
+}
+
+const clearSelection = () => {
+  selectedOrders.value = []
+}
+
+const handleShip = (order: Order) => {
+  shippingOrder.value = order
+  showShipDialog.value = true
+}
+
+const handleConfirmShip = () => {
+  // 确认发货逻辑
+  if (shippingOrder.value) {
+    shippingOrder.value.status = 'shipped'
+  }
+  showShipDialog.value = false
+  shipForm.value = {
+    logisticsCompany: '',
+    trackingNumber: ''
+  }
+  shippingOrder.value = null
+}
+
+const handleViewTracking = (order: Order) => {
+  // 查看物流逻辑
+  console.log('查看物流:', order)
+}
+
+const handleViewDetail = (order: Order) => {
+  // 查看详情逻辑
+  console.log('查看详情:', order)
+}
+
+const handleCancel = (order: Order) => {
+  // 取消订单逻辑
+  order.status = 'cancelled'
+}
+
+const getStatusType = (status: string) => {
+  const statusMap: { [key: string]: string } = {
+    'pending': 'warning',
+    'toShip': 'primary',
+    'shipped': 'success',
+    'completed': 'info',
+    'cancelled': 'danger'
+  }
+  return statusMap[status] || 'info'
+}
+
+const getStatusText = (status: string) => {
+  const statusMap: { [key: string]: string } = {
+    'pending': '待付款',
+    'toShip': '待发货',
+    'shipped': '已发货',
+    'completed': '已完成',
+    'cancelled': '已取消'
+  }
+  return statusMap[status] || '未知'
+}
+
+const getPaymentText = (payment: string) => {
+  const paymentMap: { [key: string]: string } = {
+    'alipay': '支付宝',
+    'wechat': '微信支付',
+    'bank': '银行卡'
+  }
+  return paymentMap[payment] || '其他'
+}
+</script>
+
+<style scoped lang="scss">
+@use "sass:color";
+
+// 使用客户端相同的颜色主题
+$primary-color: #ff5000;
+$text-primary: #333;
+$text-secondary: #666;
+$border-color: #ddd;
+$gray-light: #f5f5f5;
+$white: #fff;
+
+// 统一的焦点样式修复类
+.no-focus {
+  &:focus,
+  &:focus-visible {
+    outline: none !important;
+    box-shadow: none !important;
+  }
+}
+
+.merchant-orders {
+  .page-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 24px;
+
+    h2 {
+      margin: 0;
+      color: $text-primary;
+    }
+
+    .header-actions {
+      display: flex;
+      gap: 12px;
+    }
+  }
+
+  .order-status-tabs {
+    margin-bottom: 16px;
+
+    :deep(.el-tabs__header) {
+      margin: 0;
+    }
+  }
+
+  .filter-card {
+    margin-bottom: 16px;
+
+    .filter-row {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+    }
+  }
+
+  .batch-actions {
+    margin-bottom: 16px;
+
+    :deep(.el-alert) {
+      padding: 8px 16px;
+
+      .el-alert__content {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+      }
+    }
+  }
+
+  .order-info {
+    .order-number {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 4px;
+    }
+
+    .order-time {
+      font-size: 12px;
+      color: $text-secondary;
+      margin-bottom: 4px;
+    }
+
+    .buyer-info {
+      font-size: 12px;
+      color: $text-secondary;
+    }
+  }
+
+  .product-list {
+    .product-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 4px 0;
+
+      &:not(:last-child) {
+        border-bottom: 1px solid #f0f0f0;
+      }
+
+      .product-image {
+        width: 40px;
+        height: 40px;
+        border-radius: 4px;
+        object-fit: cover;
+      }
+
+      .product-details {
+        flex: 1;
+
+        .product-name {
+          font-size: 12px;
+          margin-bottom: 2px;
+        }
+
+        .product-spec {
+          font-size: 11px;
+          color: $text-secondary;
+          margin-bottom: 2px;
+        }
+
+        .product-quantity {
+          font-size: 11px;
+          color: $text-secondary;
+        }
+      }
+    }
+  }
+
+  .amount-info {
+    .total-amount {
+      font-weight: 600;
+      margin-bottom: 4px;
+    }
+
+    .payment-method {
+      font-size: 12px;
+      color: $text-secondary;
+    }
+  }
+
+  .shipping-info {
+    .receiver {
+      font-weight: 500;
+      margin-bottom: 2px;
+    }
+
+    .phone {
+      font-size: 12px;
+      color: $text-secondary;
+      margin-bottom: 2px;
+    }
+
+    .address {
+      font-size: 12px;
+      color: $text-secondary;
+    }
+  }
+
+  .action-buttons {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+  }
+
+  .pagination-container {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 16px;
+    padding: 16px 0;
+  }
+  
+  .el-table {
+    // 移除纵向滚动条
+    :deep(.el-table__body-wrapper) {
+      overflow-x: auto !important;
+      overflow-y: hidden !important;
+    }
+    
+    // 确保内容区域高度自适应
+    :deep(.el-table__body) {
+      overflow-y: visible !important;
+    }
+    
+    // 移除表格内所有元素的焦点边框
+    :deep(*) {
+      // 表格行
+      .el-table__row {
+        &:focus {
+          outline: none !important;
+        }
+        
+        &.current-row {
+          // 当前行样式（如果有需要）
+        }
+      }
+      
+      // 表格单元格
+      .el-table__cell {
+        &:focus {
+          outline: none !important;
+          box-shadow: none !important;
+        }
+      }
+      
+      // 表格内的按钮
+      .el-button {
+        @extend .no-focus;
+        
+        // 按钮悬停效果
+        &:hover {
+          border-color: $primary-color !important;
+          color: $primary-color !important;
+        }
+      }
+      
+      // 表格内的标签
+      .el-tag {
+        @extend .no-focus;
+      }
+      
+      // 表格内的图片
+      .el-image {
+        @extend .no-focus;
+      }
+      
+      // 可点击的商品名称
+      .clickable {
+        @extend .no-focus;
+        cursor: pointer;
+        transition: color 0.2s;
+        
+        &:hover {
+          color: $primary-color;
+          text-decoration: underline;
+        }
+      }
+    }
+    
+    // 移除表格选中状态的焦点边框
+    :deep(.el-table__row) {
+      // 选中行
+      &.current-row {
+        &:focus {
+          outline: none !important;
+        }
+      }
+      
+      // 勾选框
+      .el-checkbox {
+        &:focus {
+          outline: none !important;
+        }
+        
+        :deep(.el-checkbox__inner) {
+          &:focus {
+            outline: none !important;
+          }
+        }
+      }
+    }
+    
+    // 移除表格排序按钮的焦点边框
+    :deep(.caret-wrapper) {
+      &:focus {
+        outline: none !important;
+      }
+    }
+    
+    // 移除表格过滤按钮的焦点边框
+    :deep(.el-table__column-filter-trigger) {
+      @extend .no-focus;
+    }
+    
+    // 移除表格展开按钮的焦点边框
+    :deep(.el-table__expand-icon) {
+      @extend .no-focus;
+    }
+  }
+  
+  // 可选：固定表头，内容区域自动高度
+  .el-table--scrollable-y {
+    :deep(.el-table__body-wrapper) {
+      max-height: none !important;
+      overflow-y: hidden !important;
+    }
+  }
+}
+</style>

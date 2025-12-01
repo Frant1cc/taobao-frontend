@@ -1,0 +1,174 @@
+/* Element Plus 主题色覆盖 */
+:root {
+  --el-color-primary: #ff5000;
+  --el-color-primary-light-3: #ff7d33;
+  --el-color-primary-light-5: #ff9a66;
+  --el-color-primary-light-7: #ffb899;
+  --el-color-primary-light-8: #ffd6cc;
+  --el-color-primary-light-9: #fff2ec;
+  --el-color-primary-dark-2: #e64800;
+  
+  /* 成功、警告、危险等颜色也可以根据需要进行调整 */
+  --el-color-success: #67c23a;
+  --el-color-warning: #e6a23c;
+  --el-color-danger: #f56c6c;
+  --el-color-error: #f56c6c;
+  --el-color-info: #909399;
+}
+
+/* 按钮样式覆盖 */
+.el-button--primary {
+  background-color: var(--el-color-primary);
+  border-color: var(--el-color-primary);
+}
+
+.el-button--primary:hover,
+.el-button--primary:focus {
+  background-color: var(--el-color-primary-light-3);
+  border-color: var(--el-color-primary-light-3);
+}
+
+.el-button--primary:active {
+  background-color: var(--el-color-primary-dark-2);
+  border-color: var(--el-color-primary-dark-2);
+}
+
+/* 输入框焦点样式 */
+.el-input .el-input__wrapper.is-focus {
+  box-shadow: 0 0 0 1px var(--el-color-primary) inset;
+}
+
+/* 选择器样式 */
+.el-select .el-input.is-focus .el-input__wrapper {
+  box-shadow: 0 0 0 1px var(--el-color-primary) inset;
+}
+
+/* 单选框样式 */
+.el-radio__input.is-checked .el-radio__inner {
+  background-color: var(--el-color-primary);
+  border-color: var(--el-color-primary);
+}
+
+.el-radio-button__orig-radio:checked + .el-radio-button__inner {
+  background-color: var(--el-color-primary);
+  border-color: var(--el-color-primary);
+  color: #fff;
+}
+
+/* 复选框样式 */
+.el-checkbox__input.is-checked .el-checkbox__inner {
+  background-color: var(--el-color-primary);
+  border-color: var(--el-color-primary);
+}
+
+/* 开关样式 */
+.el-switch.is-checked .el-switch__core {
+  background-color: var(--el-color-primary);
+}
+
+/* 标签样式 */
+.el-tag {
+  --el-tag-bg-color: var(--el-color-primary-light-9);
+  --el-tag-border-color: var(--el-color-primary-light-8);
+  --el-tag-hover-color: var(--el-color-primary);
+}
+
+.el-tag--primary {
+  --el-tag-text-color: var(--el-color-primary);
+}
+
+/* 表格样式 */
+.el-table {
+  --el-table-header-bg-color: var(--el-color-primary-light-9);
+}
+
+.el-table th {
+  background-color: var(--el-table-header-bg-color);
+}
+
+.el-table__row--striped {
+  background-color: var(--el-color-primary-light-9);
+}
+
+/* 分页样式 */
+.el-pagination.is-background .el-pager li:not(.is-disabled).is-active {
+  background-color: var(--el-color-primary);
+}
+
+/* 菜单样式 */
+.el-menu-item.is-active {
+  color: var(--el-color-primary);
+}
+
+.el-sub-menu__title:hover,
+.el-menu-item:hover {
+  background-color: var(--el-color-primary-light-9);
+  color: var(--el-color-primary);
+}
+
+/* 卡片样式 */
+.el-card {
+  --el-card-border-color: #e4e7ed;
+}
+
+/* 对话框样式 */
+.el-dialog__headerbtn:hover .el-dialog__close {
+  color: var(--el-color-primary);
+}
+
+/* 消息框样式 */
+.el-message {
+  --el-message-bg-color: var(--el-color-primary-light-9);
+  --el-message-border-color: var(--el-color-primary-light-8);
+  --el-message-text-color: var(--el-color-primary);
+}
+
+.el-message--success {
+  --el-message-bg-color: #f0f9eb;
+  --el-message-border-color: #e1f3d8;
+  --el-message-text-color: #67c23a;
+}
+
+.el-message--warning {
+  --el-message-bg-color: #fdf6ec;
+  --el-message-border-color: #faecd8;
+  --el-message-text-color: #e6a23c;
+}
+
+.el-message--error {
+  --el-message-bg-color: #fef0f0;
+  --el-message-border-color: #fde2e2;
+  --el-message-text-color: #f56c6c;
+}
+
+/* 警告框样式 */
+.el-alert--info {
+  --el-alert-bg-color: var(--el-color-primary-light-9);
+  --el-alert-border-color: var(--el-color-primary-light-8);
+  --el-alert-text-color: var(--el-color-primary);
+}
+
+/* 下拉菜单样式 */
+.el-dropdown-menu__item:focus,
+.el-dropdown-menu__item:not(.is-disabled):hover {
+  background-color: var(--el-color-primary-light-9);
+  color: var(--el-color-primary);
+}
+
+/* 日期选择器样式 */
+.el-date-table td.current:not(.disabled) .el-date-table-cell__text {
+  background-color: var(--el-color-primary);
+}
+
+.el-date-table td.today .el-date-table-cell__text {
+  color: var(--el-color-primary);
+}
+
+/* 上传组件样式 */
+.el-upload--picture-card:hover {
+  border-color: var(--el-color-primary);
+}
+
+.el-upload-list__item:hover {
+  background-color: var(--el-color-primary-light-9);
+}

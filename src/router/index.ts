@@ -15,6 +15,15 @@ import OrderList from '../views/profile/OrderList.vue'
 import Login from '../views/auth/Login.vue'
 // @ts-ignore
 import Register from '../views/auth/Register.vue'
+// 商家端相关组件
+import MerchantLayout from '../views/merchant/MerchantLayout.vue'
+import Dashboard from '../views/merchant/Dashboard.vue'
+import Products from '../views/merchant/Products.vue'
+import Orders from '../views/merchant/Orders.vue'
+import Analytics from '../views/merchant/Analytics.vue'
+import Settings from '../views/merchant/Settings.vue'
+import MerchantAuth from '../views/merchant/MerchantAuth.vue'
+import MerchantRegister from '../views/merchant/MerchantRegister.vue'
 
 const routes = [
   {
@@ -75,6 +84,56 @@ const routes = [
     path: '/register',
     name: 'Register',
     component: Register
+  },
+  {
+    path: '/merchant/auth',
+    name: 'MerchantAuth',
+    component: MerchantAuth,
+    meta: { title: '商家登录' }
+  },
+  {
+    path: '/merchant/register',
+    name: 'MerchantRegister',
+    component: MerchantRegister,
+    meta: { title: '商家注册' }
+  },
+  {
+    path: '/merchant',
+    name: 'Merchant',
+    component: MerchantLayout,
+    redirect: '/merchant/dashboard',
+    children: [
+      {
+        path: 'dashboard',
+        name: 'MerchantDashboard',
+        component: Dashboard,
+        meta: { title: '商家工作台' }
+      },
+      {
+        path: 'products',
+        name: 'MerchantProducts',
+        component: Products,
+        meta: { title: '商品管理' }
+      },
+      {
+        path: 'orders',
+        name: 'MerchantOrders',
+        component: Orders,
+        meta: { title: '订单管理' }
+      },
+      {
+        path: 'analytics',
+        name: 'MerchantAnalytics',
+        component: Analytics,
+        meta: { title: '数据分析' }
+      },
+      {
+        path: 'settings',
+        name: 'MerchantSettings',
+        component: Settings,
+        meta: { title: '店铺设置' }
+      }
+    ]
   }
 ]
 
