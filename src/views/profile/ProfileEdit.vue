@@ -319,6 +319,17 @@ onMounted(() => {
   border-color: #ff5021;
 }
 
+/* 字符计数样式 */
+.char-count {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 14px;
+  color: #999;
+  opacity: 0.8;
+}
+
 
 
 /* 性别选择区域 */

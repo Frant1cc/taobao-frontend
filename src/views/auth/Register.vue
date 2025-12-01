@@ -81,7 +81,7 @@
           
 
           <!-- 用户协议 -->
-          <div class="agreement">
+          <div class="agreement" :class="{ required: agreementRequired }">
             <label class="agreement-label">
               <input type="checkbox" v-model="registerForm.agreed" required />
               <span class="agreement-text">我已阅读并同意</span>
@@ -92,7 +92,7 @@
           </div>
 
           <!-- 注册按钮 -->
-          <button type="submit" class="submit-btn" :disabled="loading">
+          <button type="submit" class="submit-btn" :disabled="loading || !registerForm.agreed">
             {{ loading ? '注册中...' : '注册' }}
           </button>
         </form>
@@ -130,6 +130,7 @@ const confirmPasswordError = ref('')
 
 const showPassword = ref(false)
 const loading = ref(false)
+const agreementRequired = ref(false)
 
 // 验证方法
 const validateUsername = () => {
@@ -201,6 +202,9 @@ const togglePasswordVisibility = () => {
 
 
 const handleRegister = async () => {
+  // 重置协议高亮状态
+  agreementRequired.value = false;
+  
   // 验证所有字段
   const validations = [
     validateUsername(),
@@ -216,6 +220,8 @@ const handleRegister = async () => {
 
   if (!registerForm.value.agreed) {
     ElMessage.error('请同意用户协议和隐私政策')
+    // 高亮显示用户协议部分
+    agreementRequired.value = true;
     return
   }
 
@@ -430,9 +436,41 @@ const goToHome = () => {
   white-space: nowrap;
 }
 
-.agreement-label input {
-  margin-right: 6px;
-  width: auto;
+.agreement.required {
+  color: #ff5021;
+}
+
+.agreement.required .agreement-label {
+  color: #ff5021;
+}
+
+.agreement.required .agreement-text {
+  color: #ff5021;
+}
+
+.agreement-label input[type="checkbox"] {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 16px;
+  height: 16px;
+  border: 2px solid #ddd;
+  border-radius: 3px;
+  position: relative;
+  cursor: pointer;
+  margin-right: 8px;
+}
+
+.agreement-label input[type="checkbox"]:checked::before {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%) rotate(45deg);
+  width: 5px;
+  height: 10px;
+  border: solid #ff5021;
+  border-width: 0 2px 2px 0;
+  display: block;
 }
 
 .agreement-text {
