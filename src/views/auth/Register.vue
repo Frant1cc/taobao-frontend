@@ -1,5 +1,15 @@
 <template>
   <div class="auth-page">
+    <!-- 页面头部 -->
+    <div class="auth-header">
+      <div class="header-content">
+        <div class="back-btn" @click="goToHome">
+          <i class="back-icon">←</i>
+          <span class="back-text">首页</span>
+        </div>
+      </div>
+    </div>
+
     <!-- 注册表单 -->
     <div class="auth-container">
       <div class="auth-form">
@@ -68,38 +78,16 @@
             <div v-if="confirmPasswordError" class="error-message">{{ confirmPasswordError }}</div>
           </div>
 
-          <!-- 验证码 -->
-          <div class="form-group">
-            <label for="captcha">验证码</label>
-            <div class="captcha-input">
-              <input
-                id="captcha"
-                v-model="registerForm.captcha"
-                type="text"
-                placeholder="请输入验证码"
-                required
-                maxlength="6"
-              />
-              <button 
-                type="button" 
-                class="captcha-btn" 
-                :disabled="captchaCooldown > 0"
-                @click="sendCaptcha"
-              >
-                {{ captchaCooldown > 0 ? `${captchaCooldown}s后重发` : '获取验证码' }}
-              </button>
-            </div>
-            <div v-if="captchaError" class="error-message">{{ captchaError }}</div>
-          </div>
+          
 
           <!-- 用户协议 -->
           <div class="agreement">
             <label class="agreement-label">
               <input type="checkbox" v-model="registerForm.agreed" required />
-              <span>我已阅读并同意</span>
+              <span class="agreement-text">我已阅读并同意</span>
             </label>
             <a href="#" class="agreement-link" @click.prevent="showAgreement">《用户协议》</a>
-            <span>和</span>
+            <span class="agreement-text">和</span>
             <a href="#" class="agreement-link" @click.prevent="showPrivacy">《隐私政策》</a>
           </div>
 
@@ -131,7 +119,6 @@ const registerForm = ref({
   phone: '',
   password: '',
   confirmPassword: '',
-  captcha: '',
   agreed: false
 })
 
@@ -140,11 +127,9 @@ const usernameError = ref('')
 const phoneError = ref('')
 const passwordError = ref('')
 const confirmPasswordError = ref('')
-const captchaError = ref('')
 
 const showPassword = ref(false)
 const loading = ref(false)
-const captchaCooldown = ref(0)
 
 // 验证方法
 const validateUsername = () => {
@@ -213,23 +198,7 @@ const togglePasswordVisibility = () => {
   showPassword.value = !showPassword.value
 }
 
-const sendCaptcha = async () => {
-  if (!validatePhone()) {
-    ElMessage.error('请输入正确的手机号')
-    return
-  }
 
-  // 模拟发送验证码
-  captchaCooldown.value = 60
-  const timer = setInterval(() => {
-    captchaCooldown.value--
-    if (captchaCooldown.value <= 0) {
-      clearInterval(timer)
-    }
-  }, 1000)
-
-  ElMessage.success('验证码已发送到您的手机')
-}
 
 const handleRegister = async () => {
   // 验证所有字段
@@ -245,11 +214,6 @@ const handleRegister = async () => {
     return
   }
 
-  if (!registerForm.value.captcha) {
-    ElMessage.error('请输入验证码')
-    return
-  }
-
   if (!registerForm.value.agreed) {
     ElMessage.error('请同意用户协议和隐私政策')
     return
@@ -258,7 +222,10 @@ const handleRegister = async () => {
   loading.value = true
   
   try {
-    // 模拟注册API调用
+    // 创建不包含 confirmPassword 的数据对象
+    const { confirmPassword, ...formData } = registerForm.value
+    
+    // 模拟注册API调用，只发送不包含 confirmPassword 的数据
     await new Promise(resolve => setTimeout(resolve, 1500))
     
     // 模拟注册成功
@@ -284,6 +251,10 @@ const showPrivacy = () => {
 const goToLogin = () => {
   router.push('/login')
 }
+
+const goToHome = () => {
+  router.push('/home')
+}
 </script>
 
 <style scoped>
@@ -298,13 +269,19 @@ const goToLogin = () => {
   padding: 20px 0;
 }
 
+/* 页面头部样式 */
+.auth-header {
+  background: transparent;
+  padding: 20px 0;
+  position: relative;
+  height: 60px;
+}
+
 .header-content {
-  max-width: 400px;
-  margin: 0 auto;
-  padding: 0 20px;
-  display: flex;
-  justify-content: center;
-  align-items: center;
+  position: absolute;
+  top: 20px;
+  left: 40px;
+  z-index: 100;
 }
 
 .page-title {
@@ -350,7 +327,7 @@ const goToLogin = () => {
   display: flex;
   justify-content: center;
   align-items: center;
-  min-height: calc(100vh - 80px);
+  min-height: calc(100vh - 100px);
   padding: 20px;
 }
 
@@ -431,53 +408,26 @@ const goToLogin = () => {
   color: #ff5021;
 }
 
-/* 验证码输入样式 */
-.captcha-input {
-  display: flex;
-  gap: 10px;
-}
 
-.captcha-input input {
-  flex: 1;
-}
-
-.captcha-btn {
-  padding: 12px 16px;
-  background: #f5f5f5;
-  border: 1px solid #e0e0e0;
-  border-radius: 6px;
-  font-size: 12px;
-  color: #666;
-  cursor: pointer;
-  transition: all 0.3s;
-  white-space: nowrap;
-}
-
-.captcha-btn:hover:not(:disabled) {
-  background: #ff5021;
-  color: white;
-  border-color: #ff5021;
-}
-
-.captcha-btn:disabled {
-  background: #f5f5f5;
-  color: #999;
-  cursor: not-allowed;
-}
 
 /* 用户协议样式 */
 .agreement {
   margin-bottom: 30px;
   text-align: center;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px;
 }
 
 .agreement-label {
-  display: inline-flex;
+  display: flex;
   align-items: center;
   font-size: 14px;
   color: #666;
   cursor: pointer;
-  margin-right: 4px;
+  white-space: nowrap;
 }
 
 .agreement-label input {
@@ -485,10 +435,17 @@ const goToLogin = () => {
   width: auto;
 }
 
+.agreement-text {
+  font-size: 14px;
+  color: #666;
+  white-space: nowrap;
+}
+
 .agreement-link {
   color: #ff5021;
   text-decoration: none;
   font-size: 14px;
+  white-space: nowrap;
 }
 
 .agreement-link:hover {

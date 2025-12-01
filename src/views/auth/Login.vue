@@ -1,5 +1,15 @@
 <template>
   <div class="auth-page">
+    <!-- 页面头部 -->
+    <div class="auth-header">
+      <div class="header-content">
+        <div class="back-btn" @click="goToHome">
+          <i class="back-icon">←</i>
+          <span class="back-text">首页</span>
+        </div>
+      </div>
+    </div>
+
     <!-- 登录表单 -->
     <div class="auth-container">
       <div class="auth-form">
@@ -36,16 +46,7 @@
             </span>
           </div>
 
-          <!-- 记住密码和忘记密码 -->
-          <div class="form-options">
-            <label class="remember-me">
-              <input type="checkbox" v-model="loginForm.rememberMe" />
-              <span>记住密码</span>
-            </label>
-            <a href="#" class="forgot-password" @click.prevent="handleForgotPassword">
-              忘记密码？
-            </a>
-          </div>
+          
 
           <!-- 登录按钮 -->
           <button type="submit" class="submit-btn" :disabled="loading">
@@ -58,22 +59,7 @@
           <p>还没有账号？<a href="#" @click.prevent="goToRegister">立即注册</a></p>
         </div>
 
-        <!-- 第三方登录 -->
-        <div class="social-login">
-          <div class="divider">
-            <span>或使用以下方式登录</span>
-          </div>
-          <div class="social-buttons">
-            <button class="social-btn wechat" @click="handleWechatLogin">
-              <span class="social-icon">💬</span>
-              <span>微信登录</span>
-            </button>
-            <button class="social-btn qq" @click="handleQQLogin">
-              <span class="social-icon">🐧</span>
-              <span>QQ登录</span>
-            </button>
-          </div>
-        </div>
+        
       </div>
     </div>
   </div>
@@ -89,8 +75,7 @@ const router = useRouter()
 // 登录表单数据
 const loginForm = ref({
   username: '',
-  password: '',
-  rememberMe: false
+  password: ''
 })
 
 const showPassword = ref(false)
@@ -124,20 +109,12 @@ const handleLogin = async () => {
   }
 }
 
-const handleForgotPassword = () => {
-  ElMessage.info('忘记密码功能暂未开放')
-}
-
 const goToRegister = () => {
   router.push('/register')
 }
 
-const handleWechatLogin = () => {
-  ElMessage.info('微信登录功能暂未开放')
-}
-
-const handleQQLogin = () => {
-  ElMessage.info('QQ登录功能暂未开放')
+const goToHome = () => {
+  router.push('/home')
 }
 </script>
 
@@ -151,15 +128,15 @@ const handleQQLogin = () => {
 .auth-header {
   background: transparent;
   padding: 20px 0;
+  position: relative;
+  height: 60px;
 }
 
 .header-content {
-  max-width: 400px;
-  margin: 0 auto;
-  padding: 0 20px;
-  display: flex;
-  justify-content: center;
-  align-items: center;
+  position: absolute;
+  top: 20px;
+  left: 40px;
+  z-index: 100;
 }
 
 .page-title {
@@ -205,7 +182,7 @@ const handleQQLogin = () => {
   display: flex;
   justify-content: center;
   align-items: center;
-  min-height: calc(100vh - 80px);
+  min-height: calc(100vh - 180px);
   padding: 20px;
 }
 
@@ -280,35 +257,7 @@ const handleQQLogin = () => {
   color: #ff5021;
 }
 
-/* 表单选项样式 */
-.form-options {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 30px;
-}
 
-.remember-me {
-  display: flex;
-  align-items: center;
-  font-size: 14px;
-  color: #666;
-  cursor: pointer;
-}
-
-.remember-me input {
-  margin-right: 8px;
-}
-
-.forgot-password {
-  font-size: 14px;
-  color: #ff5021;
-  text-decoration: none;
-}
-
-.forgot-password:hover {
-  text-decoration: underline;
-}
 
 /* 提交按钮样式 */
 .submit-btn {
@@ -359,68 +308,5 @@ const handleQQLogin = () => {
   text-decoration: underline;
 }
 
-/* 第三方登录样式 */
-.social-login {
-  margin-top: 30px;
-}
 
-.divider {
-  text-align: center;
-  position: relative;
-  margin-bottom: 20px;
-}
-
-.divider::before {
-  content: '';
-  position: absolute;
-  top: 50%;
-  left: 0;
-  right: 0;
-  height: 1px;
-  background: #e0e0e0;
-}
-
-.divider span {
-  background: white;
-  padding: 0 15px;
-  font-size: 12px;
-  color: #999;
-  position: relative;
-}
-
-.social-buttons {
-  display: flex;
-  gap: 15px;
-}
-
-.social-btn {
-  flex: 1;
-  padding: 12px;
-  border: 1px solid #e0e0e0;
-  border-radius: 6px;
-  background: white;
-  cursor: pointer;
-  transition: all 0.3s;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-}
-
-.social-btn:hover {
-  border-color: #ff5021;
-  transform: translateY(-1px);
-}
-
-.social-icon {
-  font-size: 16px;
-}
-
-.social-btn.wechat:hover {
-  border-color: #07c160;
-}
-
-.social-btn.qq:hover {
-  border-color: #12b7f5;
-}
 </style>
