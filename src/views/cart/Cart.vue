@@ -39,11 +39,6 @@ const toggleAll = () => {
   });
 };
 
-// 单个商品选择状态切换
-const toggleItem = (item: CartItem) => {
-  item.checked = !item.checked;
-};
-
 // 增加商品数量
 const increaseQuantity = (item: CartItem) => {
   item.quantity++;
