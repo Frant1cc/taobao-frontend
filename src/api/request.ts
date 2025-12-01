@@ -1,10 +1,12 @@
 // 封装axios请求
 import axios, { type AxiosRequestConfig, type AxiosResponse, type AxiosError } from 'axios'
+import { BASE_URL, TIMEOUT, HEADERS } from './config'
 
 // 创建axios实例
 const service = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000/api', // API基础路径
-  timeout: 10000 // 请求超时时间
+  baseURL: BASE_URL, // API基础路径
+  timeout: TIMEOUT, // 请求超时时间
+  headers: HEADERS // 默认请求头
 })
 
 // 请求拦截器
