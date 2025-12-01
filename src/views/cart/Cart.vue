@@ -1,9 +1,20 @@
 <script setup lang="ts">
-import { reactive, computed } from 'vue';
-import { useRouter } from 'vue-router';
+import { reactive, computed, onMounted } from 'vue';
+import { useRoute, useRouter } from 'vue-router';
+import { ElMessage } from 'element-plus';
+import { useUserStore } from '@/stores/user';
 import type { CartItem } from '@/types/cart';
 
+const route = useRoute();
 const router = useRouter();
+const userStore = useUserStore();
+
+// 检查是否有重定向参数并显示相应提示
+onMounted(() => {
+  if (route.query.redirect === 'auth-required') {
+    ElMessage.warning('请先登录后再访问该页面');
+  }
+});
 
 // 模拟购物车数据
 const cartItems = reactive<CartItem[]>([
@@ -70,9 +81,18 @@ const checkout = () => {
   const checkedItems = cartItems
     .filter(item => item.checked);
   if (checkedItems.length === 0) {
-    alert('请选择要结算的商品');
+    ElMessage.warning('请选择要结算的商品');
     return;
   }
+  
+  // 检查用户是否已登录
+  if (!userStore.isLoggedIn) {
+    ElMessage.warning('请先登录后再进行结算');
+    // 跳转到登录页面
+    router.push('/login');
+    return;
+  }
+  
   // 跳转到结算页面
   router.push('/checkout');
 };

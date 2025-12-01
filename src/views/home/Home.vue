@@ -1,9 +1,11 @@
 <script setup lang="ts">
 import { ref, reactive, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
+import { useUserStore } from '@/stores/user'
 
 const searchQuery = ref('')
 const router = useRouter()
+const userStore = useUserStore()
 const currentBannerIndex = ref(0)
 let bannerInterval: number | null = null
 
@@ -152,7 +154,7 @@ const handleSearch = () => {
   <div class="home-page">
     <header class="header">
       <h1>欢迎来到黄启华首页</h1>
-      <div class="header-actions">
+      <div class="header-actions" v-if="!userStore.isLoggedIn">
         <router-link to="/login" class="auth-btn login-btn">登录</router-link>
         <router-link to="/register" class="auth-btn register-btn">注册</router-link>
       </div>

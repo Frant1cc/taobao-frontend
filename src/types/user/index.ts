@@ -13,3 +13,11 @@ export interface RegisterParams {
   userType: 'operator' | 'merchant' | 'customer' | 'visitor';
 }
 
+// 登录响应数据
+export interface LoginResponse {
+  userId: number
+  account: string
+  username: string
+  token: string
+}
+

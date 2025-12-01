@@ -7,7 +7,7 @@
           <img src="@/assets/vue.svg" alt="用户头像" />
         </div>
         <div class="user-details">
-          <h3 class="username">淘宝用户</h3>
+          <h3 class="username">{{ userStore.username || '淘宝用户' }}</h3>
           <p class="user-level">普通会员</p>
         </div>
       </div>
@@ -86,8 +86,10 @@
 <script setup lang="ts">
 import { useRouter } from 'vue-router'
 import { ElMessageBox } from 'element-plus'
+import { useUserStore } from '@/stores/user'
 
 const router = useRouter()
+const userStore = useUserStore()
 
 // 订单点击事件处理
 const handleOrderClick = (status: string) => {
@@ -137,17 +139,15 @@ const confirmLogout = async () => {
     
     // 用户确认退出，执行退出登录逻辑
     console.log('用户确认退出登录')
-    // 这里可以添加实际的退出登录逻辑，例如：
-    // 1. 清除本地存储的token
-    // 2. 清除用户状态
-    // 3. 跳转到登录页面
+    // 使用Pinia store清除用户状态
+    userStore.clearToken()
     
     ElMessageBox.alert('退出登录成功', '提示', {
       confirmButtonText: '确定',
       callback: () => {
         console.log('退出登录流程完成')
         // 跳转到登录页面
-        // router.push('/login')
+        router.push('/login')
       }
     })
   } catch (error) {

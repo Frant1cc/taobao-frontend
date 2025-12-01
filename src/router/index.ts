@@ -15,6 +15,7 @@ import OrderList from '../views/profile/OrderList.vue'
 import Login from '../views/auth/Login.vue'
 // @ts-ignore
 import Register from '../views/auth/Register.vue'
+import { useUserStore } from '@/stores/user'
 
 const routes = [
   {
@@ -34,7 +35,8 @@ const routes = [
   {
     path: '/cart',
     name: 'Cart',
-    component: Cart
+    component: Cart,
+    meta: { requiresAuth: true }
   },
   {
     path: '/checkout',
@@ -44,27 +46,32 @@ const routes = [
   {
     path: '/profile',
     name: 'Profile',
-    component: Profile
+    component: Profile,
+    meta: { requiresAuth: true }
   },
   {
     path: '/profile/edit',
     name: 'ProfileEdit',
-    component: ProfileEdit
+    component: ProfileEdit,
+    meta: { requiresAuth: true }
   },
   {
     path: '/profile/addresses',
     name: 'AddressManagement',
-    component: AddressManagement
+    component: AddressManagement,
+    meta: { requiresAuth: true }
   },
   {
     path: '/profile/security',
     name: 'SecuritySettings',
-    component: SecuritySettings
+    component: SecuritySettings,
+    meta: { requiresAuth: true }
   },
   {
     path: '/profile/orders',
     name: 'OrderList',
-    component: OrderList
+    component: OrderList,
+    meta: { requiresAuth: true }
   },
   {
     path: '/login',
@@ -81,6 +88,26 @@ const routes = [
 const router = createRouter({
   history: createWebHistory(),
   routes
+})
+
+// 添加路由守卫
+router.beforeEach((to: any, from: any, next: any) => {
+  const userStore = useUserStore()
+  
+  // 检查路由是否需要认证
+  if (to.meta.requiresAuth && !userStore.isLoggedIn) {
+    // 如果需要认证但用户未登录，重定向到登录页面，并携带提示信息
+    next({
+      path: '/login',
+      query: { 
+        redirect: 'auth-required',
+        from: to.fullPath 
+      }
+    })
+  } else {
+    // 否则正常导航
+    next()
+  }
 })
 
 export default router
