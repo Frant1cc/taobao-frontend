@@ -1,16 +1,15 @@
 <template>
   <div class="auth-page">
-    <!-- 返回按钮 -->
-    <div class="back-button-container">
-      <button class="back-btn" @click="goBack">
-        <span class="back-icon">←</span>
-        返回首页
-      </button>
-    </div>
-    
     <!-- 注册表单 -->
     <div class="auth-container">
       <div class="auth-form">
+        <!-- 返回按钮 -->
+        <div class="back-button-container">
+          <button class="back-btn" @click="goBack">
+            <span class="back-icon">←</span>
+            返回首页
+          </button>
+        </div>
         <div class="form-header">
           <h2>商家注册</h2>
           <p>创建您的商家账号，开启电商之旅</p>
@@ -286,17 +285,14 @@ const goBack = () => {
 
 /* 返回按钮样式 */
 .back-button-container {
-  position: absolute;
-  top: 20px;
-  left: 20px;
-  z-index: 10;
+  margin-bottom: 20px;
 }
 
 .back-btn {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 10px 16px;
+  padding: 8px 16px;
   background: white;
   border: 1px solid #e0e0e0;
   border-radius: 6px;
@@ -304,7 +300,7 @@ const goBack = () => {
   font-size: 14px;
   cursor: pointer;
   transition: all 0.3s;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  width: fit-content;
 }
 
 .back-btn:hover {

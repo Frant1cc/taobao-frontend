@@ -5,16 +5,16 @@ import { computed } from 'vue'
 
 const route = useRoute()
 
-// 判断当前是否在商家端页面
-const isMerchantPage = computed(() => {
-  return route.path.startsWith('/merchant')
+// 判断当前是否在商家端或管理员页面
+const shouldShowTabBar = computed(() => {
+  return !route.path.startsWith('/merchant') && !route.path.startsWith('/admin')
 })
 </script>
 
 <template>
-  <div class="app-container" :class="{ 'merchant-page': isMerchantPage }">
+  <div class="app-container" :class="{ 'no-tabbar': !shouldShowTabBar }">
     <router-view />
-    <ElTabBar v-if="!isMerchantPage" />
+    <ElTabBar v-if="shouldShowTabBar" />
   </div>
 </template>
 
@@ -23,8 +23,8 @@ const isMerchantPage = computed(() => {
   padding-top: 60px; // 为顶部Tab栏留出空间
   padding-bottom: 0;
   
-  &.merchant-page {
-    padding-top: 0; // 商家端不需要顶部Tab栏的padding
+  &.no-tabbar {
+    padding-top: 0; // 商家端和管理员页面不需要顶部Tab栏的padding
   }
 }
 </style>
