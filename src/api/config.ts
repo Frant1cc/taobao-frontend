@@ -14,7 +14,7 @@ export interface ApiConfig {
 
 /** API配置 */
 export const apiConfig: ApiConfig = {
-  baseURL: import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000/api',
+  baseURL: import.meta.env.VITE_API_BASE_URL || '',
   timeout: 10000,
   headers: {
     'Content-Type': 'application/json'
@@ -24,6 +24,9 @@ export const apiConfig: ApiConfig = {
 /** API基础URL */
 export const BASE_URL = apiConfig.baseURL
 
+/** 图片资源基础URL */
+export const IMAGE_BASE_URL = import.meta.env.VITE_IMAGE_BASE_URL || ''
+
 /** 请求超时时间 */
 export const TIMEOUT = apiConfig.timeout
 
@@ -32,6 +35,7 @@ export const HEADERS = apiConfig.headers
 
 export default {
   BASE_URL,
+  IMAGE_BASE_URL,
   TIMEOUT,
   HEADERS
 }
