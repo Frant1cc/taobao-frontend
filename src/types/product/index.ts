@@ -6,6 +6,21 @@ export interface ProductListParams {
   limit?: number //默认18条
 }
 
+// 商品SKU信息
+export interface ProductSku {
+  skuId: number
+  productId: number
+  skuName: string
+  skuType: string
+  price: number
+  stock: number
+  soldCount: number
+  skuImage: string
+  status: string
+  createTime: string
+  updateTime: string
+}
+
 // 商品信息
 export interface Product {
   id: string
@@ -15,7 +30,7 @@ export interface Product {
   images: string[]
   categoryId: string
   categoryName: string
-  // 添加额外字段以匹配后端返回的数据格式
+  // 新增字段以匹配后端返回的数据格式
   productId?: number
   productName?: string
   mainImages?: string
@@ -23,6 +38,7 @@ export interface Product {
   status?: string
   createTime?: string
   updateTime?: string
+  skus?: ProductSku[]
 }
 
 // 商品分类

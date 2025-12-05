@@ -12,9 +12,9 @@ export function getProductList(params?: ProductListParams) {
 }
 
 // 获取商品详情
-export function getProductDetail(id: string) {
+export function getProductDetail(id: number) {
   return request({
-    url: `/api/products/${id}`,
+    url: `/api/product/detail/${id}`,
     method: 'get'
   })
 }
