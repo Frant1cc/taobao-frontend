@@ -5,7 +5,7 @@ import type { LoginParams, RegisterParams } from '@/types/user/index'
 // 用户登录
 export function login(data: LoginParams) {
   return request({
-    url: '/user/login',
+    url: '/api/user/login',
     method: 'post',
     data
   })
@@ -14,7 +14,7 @@ export function login(data: LoginParams) {
 // 用户注册
 export function register(data: RegisterParams) {
   return request({
-    url: '/user/register',
+    url: '/api/user/register',
     method: 'post',
     data
   })
@@ -23,7 +23,7 @@ export function register(data: RegisterParams) {
 // 获取用户信息
 export function getUserInfo() {
   return request({
-    url: '/user/profile',
+    url: '/api/user/profile',
     method: 'get'
   })
 }
