@@ -10,10 +10,10 @@
     <form @submit.prevent="handleSubmit" class="address-form">
       <!-- 收货人姓名 -->
       <div class="form-group">
-        <label for="recipient_name" class="form-label">收货人</label>
+        <label for="recipientName" class="form-label">收货人</label>
         <input
-          id="recipient_name"
-          v-model="formData.recipient_name"
+          id="recipientName"
+          v-model="formData.recipientName"
           type="text"
           placeholder="请输入收货人姓名"
           class="form-input"
@@ -37,10 +37,10 @@
 
       <!-- 完整地址 -->
       <div class="form-group">
-        <label for="full_address" class="form-label">完整地址</label>
+        <label for="fullAddress" class="form-label">完整地址</label>
         <textarea
-          id="full_address"
-          v-model="formData.full_address"
+          id="fullAddress"
+          v-model="formData.fullAddress"
           placeholder="请输入完整的收货地址，包括省市区和详细地址"
           class="form-textarea"
           rows="3"
@@ -53,7 +53,7 @@
         <label class="checkbox-label">
           <input
             type="checkbox"
-            v-model="formData.is_default"
+            v-model="formData.isDefault"
             class="checkbox-input"
           />
           <span class="checkbox-custom"></span>
@@ -77,24 +77,15 @@
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
 
-// 地址相关类型定义
-interface Address {
-  address_id: number
-  user_id: number
-  full_address: string
-  recipient_name: string
-  phone: string
-  is_default: boolean
-  create_time: string
-  update_time: string
-}
+// 导入地址类型
+import type { Address } from '@/types/address'
 
 // 地址表单数据类型定义
-interface AddressFormData {
-  full_address: string
-  recipient_name: string
+export interface AddressFormData {
+  fullAddress: string
+  recipientName: string
   phone: string
-  is_default: boolean
+  isDefault: boolean
 }
 
 interface Props {
@@ -113,10 +104,10 @@ const emit = defineEmits<Emits>()
 
 // 表单数据
 const formData = ref<AddressFormData>({
-  recipient_name: '',
+  recipientName: '',
   phone: '',
-  full_address: '',
-  is_default: false
+  fullAddress: '',
+  isDefault: false
 })
 
 // 计算属性
@@ -127,18 +118,18 @@ const submitText = computed(() => props.address ? '保存修改' : '添加地址
 watch(() => props.address, (newAddress) => {
   if (newAddress) {
     formData.value = {
-      recipient_name: newAddress.recipient_name,
+      recipientName: newAddress.recipientName,
       phone: newAddress.phone,
-      full_address: newAddress.full_address,
-      is_default: newAddress.is_default
+      fullAddress: newAddress.fullAddress,
+      isDefault: newAddress.isDefault
     }
   } else {
     // 重置表单
     formData.value = {
-      recipient_name: '',
+      recipientName: '',
       phone: '',
-      full_address: '',
-      is_default: false
+      fullAddress: '',
+      isDefault: false
     }
   }
 }, { immediate: true })
@@ -152,7 +143,7 @@ const handleClose = () => {
 // 提交表单
 const handleSubmit = () => {
   // 表单验证
-  if (!formData.value.recipient_name.trim()) {
+  if (!formData.value.recipientName.trim()) {
     alert('请输入收货人姓名')
     return
   }
@@ -162,7 +153,7 @@ const handleSubmit = () => {
     return
   }
   
-  if (!formData.value.full_address.trim()) {
+  if (!formData.value.fullAddress.trim()) {
     alert('请输入完整地址')
     return
   }

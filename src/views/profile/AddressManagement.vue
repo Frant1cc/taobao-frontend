@@ -15,18 +15,18 @@
     <div class="address-list">
       <div 
         v-for="address in addressList" 
-        :key="address.address_id"
+        :key="address.addressId"
         class="address-item"
-        :class="{ 'default-address': address.is_default }"
+        :class="{ 'default-address': address.isDefault }"
       >
         <div class="address-info">
           <div class="address-header">
-            <span class="recipient-name">{{ address.recipient_name }}</span>
+            <span class="recipient-name">{{ address.recipientName }}</span>
             <span class="recipient-phone">{{ address.phone }}</span>
-            <span v-if="address.is_default" class="default-tag">默认</span>
+            <span v-if="address.isDefault" class="default-tag">默认</span>
           </div>
           <div class="address-detail">
-            {{ address.full_address }}
+            {{ address.fullAddress }}
           </div>
         </div>
         <div class="address-actions">
@@ -38,14 +38,14 @@
           </button>
           <button 
             class="delete-btn" 
-            @click="deleteAddress(address.address_id)"
+            @click="handleDeleteAddress(address.addressId)"
           >
             删除
           </button>
           <button 
-            v-if="!address.is_default"
+            v-if="!address.isDefault"
             class="set-default-btn" 
-            @click="setDefaultAddress(address.address_id)"
+            @click="handleSetDefaultAddress(address.addressId)"
           >
             设为默认
           </button>
@@ -62,7 +62,7 @@
 
     <!-- 添加地址按钮 -->
     <div class="add-address-section">
-      <button class="add-address-btn" @click="addAddress">
+      <button class="add-address-btn" @click="handleAddAddress">
         <span class="add-icon">+</span>
         <span class="add-text">添加新地址</span>
       </button>
@@ -88,62 +88,30 @@ import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import AddressEditor from '@/components/AddressEditor.vue'
-
-// 地址相关类型定义
-interface Address {
-  address_id: number
-  user_id: number
-  full_address: string
-  recipient_name: string
-  phone: string
-  is_default: boolean
-  create_time: string
-  update_time: string
-}
+import { 
+  getAddressList, 
+  addAddress, 
+  updateAddress, 
+  deleteAddress, 
+  setDefaultAddress 
+} from '@/api/modules/address'
+import type { Address, CreateAddressRequest, UpdateAddressRequest } from '@/types/address'
 
 // 地址表单数据类型定义
 interface AddressFormData {
-  full_address: string
-  recipient_name: string
+  fullAddress: string
+  recipientName: string
   phone: string
-  is_default: boolean
+  isDefault: boolean
 }
 
 const router = useRouter()
 
-// 地址列表 - 淘宝风格示例数据
-const addressList = ref<Address[]>([
-  {
-    address_id: 1,
-    user_id: 1001,
-    full_address: '北京市朝阳区建国门外大街1号国贸大厦A座1001室',
-    recipient_name: '张三',
-    phone: '13800138000',
-    is_default: true,
-    create_time: '2024-01-15 10:30:00',
-    update_time: '2024-01-15 10:30:00'
-  },
-  {
-    address_id: 2,
-    user_id: 1001,
-    full_address: '广东省深圳市南山区科技园南区科技南一路8号',
-    recipient_name: '李四',
-    phone: '13800138001',
-    is_default: false,
-    create_time: '2024-01-20 14:20:00',
-    update_time: '2024-01-20 14:20:00'
-  },
-  {
-    address_id: 3,
-    user_id: 1001,
-    full_address: '上海市浦东新区陆家嘴环路1000号',
-    recipient_name: '王五',
-    phone: '13800138002',
-    is_default: false,
-    create_time: '2024-01-25 16:45:00',
-    update_time: '2024-01-25 16:45:00'
-  }
-])
+// 地址列表
+const addressList = ref<Address[]>([])
+
+// 加载状态
+const loading = ref(false)
 
 // 编辑弹窗相关
 const showEditor = ref(false)
@@ -155,7 +123,7 @@ const goBack = () => {
 }
 
 // 添加地址
-const addAddress = () => {
+const handleAddAddress = () => {
   editingAddress.value = null
   showEditor.value = true
 }
@@ -166,8 +134,26 @@ const editAddress = (address: Address) => {
   showEditor.value = true
 }
 
+// 加载地址列表
+const loadAddressList = async () => {
+  try {
+    loading.value = true
+    const response = await getAddressList()
+    if (response.code === 200) {
+      addressList.value = response.data || []
+    } else {
+      ElMessage.error(response.msg || '获取地址列表失败')
+    }
+  } catch (error) {
+    console.error('获取地址列表失败:', error)
+    ElMessage.error('获取地址列表失败')
+  } finally {
+    loading.value = false
+  }
+}
+
 // 删除地址
-const deleteAddress = async (addressId: number) => {
+const handleDeleteAddress = async (addressId: number) => {
   try {
     await ElMessageBox.confirm(
       '确定要删除这个收货地址吗？',
@@ -180,58 +166,78 @@ const deleteAddress = async (addressId: number) => {
     )
     
     // 执行删除操作
-    addressList.value = addressList.value.filter((addr: Address) => addr.address_id !== addressId)
-    ElMessage.success('地址删除成功')
+    const response = await deleteAddress(addressId)
+    if (response.code === 200) {
+      ElMessage.success('地址删除成功')
+      await loadAddressList() // 重新加载地址列表
+    } else {
+      ElMessage.error(response.msg || '地址删除失败')
+    }
   } catch {
     // 用户取消删除
   }
 }
 
 // 设为默认地址
-const setDefaultAddress = (addressId: number) => {
-  addressList.value = addressList.value.map((addr: Address) => ({
-    ...addr,
-    is_default: addr.address_id === addressId
-  }))
-  ElMessage.success('默认地址设置成功')
+const handleSetDefaultAddress = async (addressId: number) => {
+  try {
+    const response = await setDefaultAddress(addressId)
+    if (response.code === 200) {
+      ElMessage.success('默认地址设置成功')
+      await loadAddressList() // 重新加载地址列表
+    } else {
+      ElMessage.error(response.msg || '设置默认地址失败')
+    }
+  } catch (error) {
+    console.error('设置默认地址失败:', error)
+    ElMessage.error('设置默认地址失败')
+  }
 }
 
 // 处理地址提交
-const handleAddressSubmit = (formData: AddressFormData) => {
-  if (editingAddress.value) {
-    // 编辑模式
-    const index = addressList.value.findIndex((addr: Address) => addr.address_id === editingAddress.value!.address_id)
-    if (index !== -1) {
-      addressList.value[index] = {
-        address_id: editingAddress.value!.address_id,
-        user_id: addressList.value[index]?.user_id ?? editingAddress.value!.user_id,
-        create_time: addressList.value[index]?.create_time ?? editingAddress.value!.create_time,
-        ...formData,
-        update_time: new Date().toISOString().slice(0, 19).replace('T', ' ')
+const handleAddressSubmit = async (formData: AddressFormData) => {
+  try {
+    if (editingAddress.value) {
+      // 编辑模式
+      const updateData: UpdateAddressRequest = {
+        addressId: editingAddress.value.addressId,
+        fullAddress: formData.fullAddress,
+        recipientName: formData.recipientName,
+        phone: formData.phone,
+        isDefault: formData.isDefault
+      }
+      
+      const response = await updateAddress(updateData)
+      if (response.code === 200) {
+        ElMessage.success('地址修改成功')
+        await loadAddressList() // 重新加载地址列表
+      } else {
+        ElMessage.error(response.msg || '地址修改失败')
+      }
+    } else {
+      // 添加模式
+      const createData: CreateAddressRequest = {
+        fullAddress: formData.fullAddress,
+        recipientName: formData.recipientName,
+        phone: formData.phone,
+        isDefault: formData.isDefault
+      }
+      
+      const response = await addAddress(createData)
+      if (response.code === 200) {
+        ElMessage.success('地址添加成功')
+        await loadAddressList() // 重新加载地址列表
+      } else {
+        ElMessage.error(response.msg || '地址添加失败')
       }
     }
-    ElMessage.success('地址修改成功')
-  } else {
-    // 添加模式
-    const newAddress: Address = {
-      address_id: Date.now(), // 模拟ID生成
-      user_id: 1001, // 模拟用户ID
-      ...formData,
-      create_time: new Date().toISOString().slice(0, 19).replace('T', ' '),
-      update_time: new Date().toISOString().slice(0, 19).replace('T', ' ')
-    }
     
-    // 如果是第一个地址，自动设为默认
-    if (addressList.value.length === 0) {
-      newAddress.is_default = true
-    }
-    
-    addressList.value.push(newAddress)
-    ElMessage.success('地址添加成功')
+    showEditor.value = false
+    editingAddress.value = null
+  } catch (error) {
+    console.error('地址操作失败:', error)
+    ElMessage.error('地址操作失败')
   }
-  
-  showEditor.value = false
-  editingAddress.value = null
 }
 
 // 处理编辑取消
@@ -242,7 +248,7 @@ const handleEditorCancel = () => {
 
 // 页面加载时获取地址列表
 onMounted(() => {
-  console.log('收货地址管理页面加载完成')
+  loadAddressList()
 })
 </script>
 

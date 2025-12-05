@@ -1,27 +1,8 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
-import AddressEditor from '@/components/AddressEditor.vue';
-
-// 地址相关类型定义
-interface Address {
-  address_id: number
-  user_id: number
-  full_address: string
-  recipient_name: string
-  phone: string
-  is_default: boolean
-  create_time: string
-  update_time: string
-}
-
-// 地址表单数据类型定义
-interface AddressFormData {
-  full_address: string
-  recipient_name: string
-  phone: string
-  is_default: boolean
-}
+import AddressEditor, { type AddressFormData } from '@/components/AddressEditor.vue';
+import type { Address } from '@/types/address'
 
 // 订单商品类型定义
 interface OrderItem {
@@ -58,24 +39,24 @@ const orderItems = ref<OrderItem[]>([
 // 收货地址列表
 const addresses = ref<Address[]>([
   {
-    address_id: 1,
-    user_id: 1001,
-    full_address: '北京市朝阳区建国门外大街1号国贸大厦A座1001室',
-    recipient_name: '张三',
+    addressId: 1,
+    userId: 1001,
+    fullAddress: '北京市朝阳区建国门外大街1号国贸大厦A座1001室',
+    recipientName: '张三',
     phone: '13800138000',
-    is_default: true,
-    create_time: '2024-01-15 10:30:00',
-    update_time: '2024-01-15 10:30:00'
+    isDefault: true,
+    createTime: '2024-01-15 10:30:00',
+    updateTime: '2024-01-15 10:30:00'
   },
   {
-    address_id: 2,
-    user_id: 1001,
-    full_address: '上海市浦东新区陆家嘴环路1000号金茂大厦',
-    recipient_name: '李四',
+    addressId: 2,
+    userId: 1001,
+    fullAddress: '上海市浦东新区陆家嘴环路1000号金茂大厦',
+    recipientName: '李四',
     phone: '13900139000',
-    is_default: false,
-    create_time: '2024-01-20 14:20:00',
-    update_time: '2024-01-20 14:20:00'
+    isDefault: false,
+    createTime: '2024-01-20 14:20:00',
+    updateTime: '2024-01-20 14:20:00'
   }
 ]);
 
@@ -128,7 +109,7 @@ const addAddress = () => {
 const handleAddressSubmit = (formData: AddressFormData) => {
   if (editingAddress.value) {
     // 修改地址
-    const index = addresses.value.findIndex((addr: Address) => addr.address_id === editingAddress.value!.address_id);
+    const index = addresses.value.findIndex((addr: Address) => addr.addressId === editingAddress.value!.addressId);
     if (index !== -1) {
       addresses.value[index] = {
         ...editingAddress.value,
@@ -136,24 +117,24 @@ const handleAddressSubmit = (formData: AddressFormData) => {
       };
       
       // 如果修改的是当前选中的地址，更新选中地址
-      if (selectedAddress.value && selectedAddress.value.address_id === editingAddress.value.address_id) {
+      if (selectedAddress.value && selectedAddress.value.addressId === editingAddress.value.addressId) {
         selectedAddress.value = addresses.value[index];
       }
     }
   } else {
     // 添加新地址
     const newAddress: Address = {
-      address_id: Date.now(),
-      user_id: 1001,
+      addressId: Date.now(),
+      userId: 1001,
       ...formData,
-      create_time: new Date().toISOString().slice(0, 19).replace('T', ' '),
-      update_time: new Date().toISOString().slice(0, 19).replace('T', ' ')
+      createTime: new Date().toISOString().slice(0, 19).replace('T', ' '),
+      updateTime: new Date().toISOString().slice(0, 19).replace('T', ' ')
     };
     
     // 如果设置为默认地址，取消其他地址的默认状态
-    if (formData.is_default) {
+    if (formData.isDefault) {
       addresses.value.forEach((addr: Address) => {
-        addr.is_default = false;
+        addr.isDefault = false;
       });
     }
     
@@ -214,19 +195,19 @@ onMounted(() => {
       <div class="address-list">
         <div 
           v-for="address in addresses" 
-          :key="address.address_id"
+          :key="address.addressId"
           class="address-item"
-:class="{ active: selectedAddress && selectedAddress.address_id === address.address_id }"
+:class="{ active: selectedAddress && selectedAddress.addressId === address.addressId }"
           @click="selectAddress(address)"
         >
           <div class="address-info">
             <div class="address-header">
-              <span class="receiver">{{ address.recipient_name }}</span>
+              <span class="receiver">{{ address.recipientName }}</span>
               <span class="phone">{{ address.phone }}</span>
-              <span v-if="address.is_default" class="default-tag">默认</span>
+              <span v-if="address.isDefault" class="default-tag">默认</span>
             </div>
             <div class="address-detail">
-              {{ address.full_address }}
+              {{ address.fullAddress }}
             </div>
           </div>
           <div class="address-actions">
