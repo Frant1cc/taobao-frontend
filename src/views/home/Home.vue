@@ -143,6 +143,8 @@ const handleSearch = () => {
 // 处理商品点击事件
 const handleProductClick = (product: Product) => {
   console.log('点击的商品ID:', product.id)
+  // 跳转到商品详情页面，携带商品ID
+  router.push(`/product/${product.id}`)
 }
 
 // 处理分类点击事件

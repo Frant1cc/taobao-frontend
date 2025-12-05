@@ -1,11 +1,58 @@
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue'
-import { useRoute } from 'vue-router'
-import type { Product } from '@/types/product'
+import { useRoute, useRouter } from 'vue-router'
+import { getProductDetail } from '@/api/modules/product'
+import type { Product, ProductSku } from '@/types/product'
 
 // 路由信息
 const route = useRoute()
+const router = useRouter()
 const productId = computed(() => route.params.id as string)
+
+// 图片基础URL
+const imageBaseUrl = import.meta.env.VITE_IMAGE_BASE_URL || ''
+
+// 返回首页
+const goToHome = () => {
+  router.push('/')
+}
+
+// 计算当前选中的SKU
+const selectedSku = computed(() => {
+  if (!product.value.skus || product.value.skus.length === 0) return null
+  
+  // 查找完全匹配的SKU
+  const matchedSku = product.value.skus.find(sku => {
+    return Object.keys(selectedSpecs.value).every(key => {
+      // 对于尺寸规格，检查skuName是否匹配
+      if (key === 'size') {
+        return sku.skuName === selectedSpecs.value[key]
+      }
+      return true
+    })
+  })
+  
+  return matchedSku || null
+})
+
+// 计算完整的图片URL列表（只包含SKU图片，不包含主图和详情图）
+const fullImages = computed(() => {
+  // 只获取SKU图片
+  const skuImages = product.value.skus?.map(sku => sku.skuImage).filter(img => img) || []
+  
+  // 去重SKU图片
+  const uniqueSkuImages = [...new Set(skuImages)]
+  
+  // 拼接完整URL
+  return uniqueSkuImages.map(image => {
+    // 如果图片已经是完整URL，则直接返回
+    if (image.startsWith('http')) {
+      return image
+    }
+    // 否则拼接基础URL
+    return imageBaseUrl + image
+  })
+})
 
 // 商品数据
 const product = ref<Product>({
@@ -14,8 +61,11 @@ const product = ref<Product>({
   price: 0,
   description: '',
   images: [],
+  mainImages: '[]',
+  detailImages: '[]',
   categoryId: '',
-  categoryName: ''
+  categoryName: '',
+  skus: []
 })
 
 // 轮播图当前索引
@@ -27,11 +77,8 @@ const quantity = ref(1)
 // 已选规格
 const selectedSpecs = ref<Record<string, string>>({})
 
-// 规格选项 - 修改为使用英文键名
-const specsOptions = [
-  { name: 'color', label: '颜色', options: ['红色', '蓝色', '黑色', '白色'] },
-  { name: 'size', label: '尺寸', options: ['XS', 'S', 'M', 'L', 'XL'] }
-]
+// 规格选项 - 初始为空数组，通过API获取数据后动态填充
+const specsOptions: Array<{ name: string; label: string; options: string[] }> = []
 
 // 选择规格
 const selectSpec = (specName: string, option: string) => {
@@ -40,6 +87,12 @@ const selectSpec = (specName: string, option: string) => {
 
 // 加入购物车
 const addToCart = () => {
+  // 检查是否有商品数据
+  if (!product.value.id) {
+    alert('商品信息加载失败，请稍后重试~')
+    return
+  }
+  
   // 检查是否选择了所有规格
   const allSpecsSelected = specsOptions.every(spec => 
     selectedSpecs.value[spec.name] !== undefined && selectedSpecs.value[spec.name] !== ''
@@ -50,22 +103,40 @@ const addToCart = () => {
     return
   }
   
-  alert(`已成功加入购物车：${product.value.name} x ${quantity.value}`)
+  // 检查是否有选中的SKU
+  if (!selectedSku.value) {
+    alert('请选择有效的商品规格')
+    return
+  }
+  
+  alert(`已成功加入购物车：${product.value.name} x ${quantity.value}，SKU: ${selectedSku.value.skuName}，价格: ¥${selectedSku.value.price.toFixed(2)}，库存: ${selectedSku.value.stock}`)
 }
 
 // 立即购买
 const buyNow = () => {
+  // 检查是否有商品数据
+  if (!product.value.id) {
+    alert('商品信息加载失败，请稍后重试~')
+    return
+  }
+  
   // 检查是否选择了所有规格
   const allSpecsSelected = specsOptions.every(spec => 
     selectedSpecs.value[spec.name] !== undefined && selectedSpecs.value[spec.name] !== ''
   )
   
   if (!allSpecsSelected) {
-alert('请选择完整的商品规格')
+    alert('请选择完整的商品规格')
     return
   }
   
-  alert(`准备购买：${product.value.name} x ${quantity.value}`)
+  // 检查是否有选中的SKU
+  if (!selectedSku.value) {
+    alert('请选择有效的商品规格')
+    return
+  }
+  
+  alert(`准备购买：${product.value.name} x ${quantity.value}，SKU: ${selectedSku.value.skuName}，价格: ¥${selectedSku.value.price.toFixed(2)}，库存: ${selectedSku.value.stock}`)
 }
 
 // 轮播图切换
@@ -85,30 +156,54 @@ const handleQuantityChange = (type: 'increase' | 'decrease') => {
 // 获取商品数据
 const fetchProductData = async () => {
   try {
-    // 由于是模拟环境，使用模拟数据
+    // 调用API获取商品详情
+    const response = await getProductDetail(parseInt(productId.value))
+    const productData = response.data
+    
+    // 设置商品数据（注意：这里不再合并详情图到images字段）
     product.value = {
       id: productId.value,
-      name: 'Apple iPhone 15 Pro Max 256GB 原色钛金属 移动联通电信5G双卡双待手机',
-      price: 9999,
-      description: 'iPhone 15 Pro Max 采用航空级钛金属设计，配备 A17 Pro 芯片，搭载 4800 万像素主摄系统，支持 USB-C 充电，带来前所未有的强大性能和拍摄体验。',
-      images: [
-        'https://img.alicdn.com/imgextra/i4/O1CN01Qf1Z7C1hQmJ0Kj7Iq_!!6000000004368-0-picassoopen.jpg',
-        'https://img.alicdn.com/imgextra/i2/O1CN01Bw9mUu1hQmJ4qZJ14_!!6000000004372-0-picassoopen.jpg',
-        'https://img.alicdn.com/imgextra/i1/O1CN01G47N5g1hQmJ460xNf_!!6000000004371-0-picassoopen.jpg',
-        'https://img.alicdn.com/imgextra/i3/O1CN01L8VJcM1hQmKzK3W8P_!!6000000004370-0-picassoopen.jpg'
-      ],
-      categoryId: 'electronics',
-      categoryName: '手机数码'
+      name: productData.productName || productData.name || '',
+      price: productData.skus && productData.skus.length > 0 ? productData.skus[0].price : 0,
+      description: productData.description || '',
+      images: [], // 这个字段现在不再使用，因为我们有专门的fullImages计算属性
+      mainImages: productData.mainImages || '[]', // 保留原始的mainImages字符串
+      detailImages: productData.detailImages || '[]', // 保留原始的detailImages字符串
+      categoryId: productData.categoryId?.toString() || '',
+      categoryName: '', // 需要根据categoryId获取分类名称
+      skus: productData.skus || []
     }
     
-    // 初始化默认规格
-    specsOptions.forEach(spec => {
-      if (spec.options.length > 0) {
-        selectedSpecs.value[spec.name] = spec.options[0] || ''
-      }
-    })
+    // 更新规格选项
+    if (productData.skus && productData.skus.length > 0) {
+      // 清空原有规格选项
+      specsOptions.length = 0
+      
+      // 根据SKU数据生成新的规格选项
+      specsOptions.push({
+        name: 'size',
+        label: '尺码',
+        options: productData.skus.map((sku: ProductSku) => sku.skuName)
+      })
+      
+      // 初始化默认规格
+      selectedSpecs.value.size = productData.skus[0].skuName
+    }
   } catch (error) {
     console.error('获取商品详情失败:', error)
+    // 如果API调用失败，不使用模拟数据，保持页面空白或显示错误信息
+    product.value = {
+      id: '',
+      name: '',
+      price: 0,
+      description: '',
+      images: [],
+      mainImages: '[]',
+      detailImages: '[]',
+      categoryId: '',
+      categoryName: '',
+      skus: []
+    }
   }
 }
 
@@ -120,23 +215,39 @@ onMounted(() => {
 
 <template>
   <div class="product-detail-page">
+    <!-- 返回首页按钮 -->
+    <div class="back-to-home">
+      <button @click="goToHome" class="back-button">
+        ← 返回首页
+      </button>
+    </div>
+    
+    <!-- 错误提示 -->
+    <div v-if="!product.id" class="error-message">
+      <p>商品信息加载失败，请稍后重试~</p>
+    </div>
+    
     <!-- 商品图片轮播 -->
-    <section class="product-gallery">
+    <section v-else class="product-gallery">
       <div class="main-image-wrapper">
         <img 
-          v-for="(image, index) in product.images" 
+          v-for="(image, index) in fullImages" 
           :key="index"
           :src="image" 
           :alt="`${product.name} - 图片${index + 1}`"
           class="main-image" 
           :class="{ active: index === currentImageIndex }"
         />
+        <!-- 无图片占位符 -->
+        <div v-if="fullImages.length === 0" class="no-image-placeholder">
+          暂无商品图片
+        </div>
       </div>
       
       <!-- 缩略图列表 -->
       <div class="thumbnail-list">
         <div 
-          v-for="(image, index) in product.images" 
+          v-for="(image, index) in fullImages" 
           :key="index"
           class="thumbnail-item" 
           :class="{ active: index === currentImageIndex }"
@@ -144,32 +255,37 @@ onMounted(() => {
         >
           <img :src="image" :alt="`缩略图${index + 1}`" />
         </div>
+        <!-- 无缩略图占位符 -->
+        <div v-if="fullImages.length === 0" class="no-thumbnail-placeholder">
+          暂无缩略图
+        </div>
       </div>
     </section>
 
     <!-- 商品信息 -->
     <section class="product-info">
       <!-- 商品标题 -->
-      <h1 class="product-title">{{ product.name }}</h1>
+      <h1 class="product-title">{{ product.name || '商品名称加载中...' }}</h1>
       
       <!-- 价格区域 -->
       <div class="price-section">
         <div class="price-main">
           <span class="price-symbol">¥</span>
-          <span class="price-value">{{ product.price }}</span>
-        </div>
-        <div class="price-extra">
-          <span class="price-tag">促销价</span>
+          <span class="price-value" v-if="selectedSku && selectedSku.price > 0">{{ selectedSku.price.toFixed(2) }}</span>
+          <span class="price-value" v-else-if="product.price > 0">{{ product.price.toFixed(2) }}</span>
+          <span class="price-value" v-else>暂无价格</span>
         </div>
       </div>
       
       <!-- 销量信息 -->
       <div class="sales-info">
-        <span>月销 {{ Math.floor(Math.random() * 1000) + 100 }} 件</span>
+        <span v-if="selectedSku && selectedSku.stock !== undefined">库存 {{ selectedSku.stock }} 件</span>
+        <span v-else-if="product?.skus?.length && product.skus[0]?.stock !== undefined">库存 {{ product.skus[0].stock }} 件</span>
+        <span v-else>库存 0 件</span>
       </div>
       
       <!-- 规格选择 -->
-      <div class="specs-section">
+      <div v-if="specsOptions.length > 0" class="specs-section">
         <div 
           v-for="spec in specsOptions" 
           :key="spec.name" 
@@ -201,14 +317,6 @@ onMounted(() => {
           </button>
         </div>
       </div>
-      
-      <!-- 优惠信息 -->
-      <div class="promotion-section">
-        <div class="promotion-item">
-          <span class="promotion-tag">优惠券</span>
-          <span class="promotion-desc">满1000减50，满2000减100</span>
-        </div>
-      </div>
     </section>
 
     <!-- 操作按钮 -->
@@ -221,12 +329,12 @@ onMounted(() => {
     <section class="product-detail-section">
       <div class="detail-content">
         <h3 class="detail-section-title">商品详情</h3>
-        <p class="product-description">{{ product.description }}</p>
+        <p class="product-description">{{ product.description || '商品详情加载中...' }}</p>
         
         <!-- 详情图片 -->
         <div class="detail-images">
           <img 
-            v-for="(image, index) in product.images" 
+            v-for="(image, index) in fullImages" 
             :key="`detail-${index}`"
             :src="image" 
             :alt="`详情图片${index + 1}`" 
@@ -245,6 +353,44 @@ onMounted(() => {
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
   background-color: #f5f5f5;
   padding-bottom: 80px; // 为底部操作栏留出空间
+  
+  // 返回首页按钮
+  .back-to-home {
+    padding: 15px 20px;
+    background-color: #ffffff;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+    
+    .back-button {
+      background-color: #f5f5f5;
+      border: none;
+      border-radius: 20px;
+      padding: 8px 15px;
+      font-size: 14px;
+      color: #333333;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      transition: background-color 0.3s;
+      
+      &:hover {
+        background-color: #e0e0e0;
+      }
+    }
+  }
+  
+  // 错误提示样式
+  .error-message {
+    text-align: center;
+    padding: 50px 20px;
+    background: #fff;
+    margin: 10px;
+    border-radius: 8px;
+    
+    p {
+      font-size: 16px;
+      color: #666;
+    }
+  }
   
   // 商品图片轮播
   .product-gallery {
@@ -271,6 +417,17 @@ onMounted(() => {
         &.active {
           opacity: 1;
         }
+      }
+      
+      .no-image-placeholder {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 100%;
+        height: 100%;
+        background-color: #f5f5f5;
+        color: #999;
+        font-size: 16px;
       }
     }
     
@@ -299,6 +456,18 @@ onMounted(() => {
           height: 100%;
           object-fit: cover;
         }
+      }
+      
+      .no-thumbnail-placeholder {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 80px;
+        height: 80px;
+        background-color: #f5f5f5;
+        color: #999;
+        font-size: 12px;
+        border-radius: 4px;
       }
     }
   }
@@ -338,17 +507,7 @@ onMounted(() => {
         }
       }
       
-      .price-extra {
-        margin-left: 10px;
-        
-        .price-tag {
-          background-color: #ff5021;
-          color: #ffffff;
-          padding: 2px 6px;
-          font-size: 12px;
-          border-radius: 4px;
-        }
-      }
+
     }
     
     .sales-info {
@@ -452,29 +611,6 @@ onMounted(() => {
           display: flex;
           align-items: center;
           justify-content: center;
-          font-size: 14px;
-        }
-      }
-    }
-    
-    .promotion-section {
-      
-      .promotion-item {
-        display: flex;
-        align-items: center;
-        margin-bottom: 10px;
-        
-        .promotion-tag {
-          background-color: rgba(255, 80, 33, 0.1);
-          color: #ff5021;
-          padding: 2px 8px;
-          font-size: 12px;
-          border-radius: 4px;
-          margin-right: 10px;
-        }
-        
-        .promotion-desc {
-          color: #666666;
           font-size: 14px;
         }
       }
