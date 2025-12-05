@@ -1,14 +1,11 @@
 // 商品相关API接口
 import request from '@/api/request'
 import type { ProductListParams, SearchParams } from '@/types/product'
-import type { BaseResponse, PageResponse } from '@/types/common'
-import type { Category } from '@/types/product'
-import type { Product } from '@/types/product'
 
-// 获取商品列表
+// 获取home页面商品列表
 export function getProductList(params?: ProductListParams) {
-  return request<BaseResponse<PageResponse<Product>>>({
-    url: '/products',
+  return request({
+    url: '/api/product/home/list',
     method: 'get',
     params
   })
@@ -16,16 +13,16 @@ export function getProductList(params?: ProductListParams) {
 
 // 获取商品详情
 export function getProductDetail(id: string) {
-  return request<BaseResponse<Product>>({
-    url: `/products/${id}`,
+  return request({
+    url: `/api/products/${id}`,
     method: 'get'
   })
 }
 
 // 搜索商品
 export function searchProducts(params: SearchParams) {
-  return request<BaseResponse<PageResponse<Product>>>({
-    url: '/products/search',
+  return request({
+    url: '/api/products/search',
     method: 'get',
     params
   })
@@ -33,8 +30,8 @@ export function searchProducts(params: SearchParams) {
 
 // 获取分类列表
 export function getCategoryList() {
-  return request<BaseResponse<Category[]>>({
-    url: '/categories',
+  return request({
+    url: '/api/categories',
     method: 'get'
   })
 }

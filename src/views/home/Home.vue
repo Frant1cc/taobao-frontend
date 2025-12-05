@@ -2,6 +2,9 @@
 import { ref, reactive, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/user'
+import { getProductList } from '@/api/modules/product'
+import { IMAGE_BASE_URL } from '@/api/config'
+import type { Product } from '@/types/product'
 
 const searchQuery = ref('')
 const router = useRouter()
@@ -16,6 +19,16 @@ const bannerImages = [
   'https://picsum.photos/800/300?random=3',
   'https://picsum.photos/800/300?random=4'
 ]
+
+// 商品分类数据
+const categories = ref([
+  { id: 1, name: '数码' },
+  { id: 2, name: '生鲜' },
+  { id: 3, name: '图书' },
+  { id: 4, name: '衣服' },
+  { id: 5, name: '零食' },
+  { id: 6, name: '宠物' }
+])
 
 // 轮播图自动播放
 const startBannerRotation = () => {
@@ -45,101 +58,78 @@ const prevBanner = () => {
   currentBannerIndex.value = (currentBannerIndex.value - 1 + bannerImages.length) % bannerImages.length
 }
 
+// 真实商品数据
+const featuredProducts = ref<Product[]>([])
+
+// 获取图片完整URL
+const getImageUrl = (imagePath: string) => {
+  // 如果imagePath已经是完整URL，则直接返回
+  if (imagePath && (imagePath.startsWith('http://') || imagePath.startsWith('https://'))) {
+    return imagePath
+  }
+  // 否则拼接基础URL
+  return imagePath ? `${IMAGE_BASE_URL}/${imagePath}` : ''
+}
+
+// 处理图片加载错误
+const handleImageError = (event: Event) => {
+  const target = event.target as HTMLImageElement
+  // 图片加载错误时不使用默认图片，保持空白
+  target.style.display = 'none'
+}
+
+// 获取商品列表
+const fetchProductList = async () => {
+  try {
+    const response = await getProductList()
+    console.log('商品列表数据:', response)
+    
+    // 处理API返回的数据格式
+    if (response && response.data) {
+      // 将API返回的数据转换为前端需要的格式
+      featuredProducts.value = response.data.map((item: any) => {
+        // 解析主图数组
+        let images: string[] = []
+        try {
+          if (typeof item.mainImages === 'string') {
+            images = JSON.parse(item.mainImages)
+          } else if (Array.isArray(item.mainImages)) {
+            images = item.mainImages
+          }
+        } catch (e) {
+          console.warn('解析商品图片失败:', e)
+          images = []
+        }
+        
+        return {
+          id: item.productId?.toString() || item.id?.toString() || '',
+          name: item.productName || item.name || '未知商品',
+          price: item.price || item.salePrice || 0,
+          description: item.description || '',
+          images: images,
+          categoryId: item.categoryId?.toString() || '',
+          categoryName: item.categoryName || ''
+        }
+      })
+    } else {
+      // 如果没有数据，清空商品列表
+      featuredProducts.value = []
+    }
+  } catch (error) {
+    console.error('获取商品列表失败:', error)
+    // 接口响应失败时不清空数据，保持原有状态或空状态
+    featuredProducts.value = []
+  }
+}
+
 onMounted(() => {
   startBannerRotation()
+  fetchProductList()
 })
 
 onUnmounted(() => {
   stopBannerRotation()
 })
-
-// 模拟商品数据
-const featuredProducts = reactive([
-  {
-    id: 1,
-    name: '无线蓝牙耳机',
-    price: 199.99,
-    sales: 1234,
-    image: 'https://picsum.photos/200/200?random=1'
-  },
-  {
-    id: 2,
-    name: '智能手表',
-    price: 599.00,
-    sales: 856,
-    image: 'https://picsum.photos/200/200?random=2'
-  },
-  {
-    id: 3,
-    name: '笔记本电脑',
-    price: 4999.99,
-    sales: 234,
-    image: 'https://picsum.photos/200/200?random=3'
-  },
-  {
-    id: 4,
-    name: '智能手机',
-    price: 2999.00,
-    sales: 678,
-    image: 'https://picsum.photos/200/200?random=4'
-  },
-  {
-    id: 5,
-    name: '平板电脑',
-    price: 1999.00,
-    sales: 456,
-    image: 'https://picsum.photos/200/200?random=5'
-  },
-  {
-    id: 6,
-    name: '游戏手柄',
-    price: 299.99,
-    sales: 789,
-    image: 'https://picsum.photos/200/200?random=6'
-  },
-  {
-    id: 7,
-    name: '无线充电器',
-    price: 89.99,
-    sales: 1256,
-    image: 'https://picsum.photos/200/200?random=7'
-  },
-  {
-    id: 8,
-    name: '机械键盘',
-    price: 399.00,
-    sales: 642,
-    image: 'https://picsum.photos/200/200?random=8'
-  },
-  {
-    id: 9,
-    name: '高清摄像头',
-    price: 1299.50,
-    sales: 321,
-    image: 'https://picsum.photos/200/200?random=9'
-  },
-  {
-    id: 10,
-    name: '移动电源',
-    price: 159.99,
-    sales: 2156,
-    image: 'https://picsum.photos/200/200?random=10'
-  },
-  {
-    id: 11,
-    name: '蓝牙音箱',
-    price: 259.00,
-    sales: 987,
-    image: 'https://picsum.photos/200/200?random=11'
-  },
-  {
-    id: 12,
-    name: '智能台灯',
-    price: 189.99,
-    sales: 567,
-    image: 'https://picsum.photos/200/200?random=12'
-  }
-])
 
 const handleSearch = () => {
   if (searchQuery.value.trim()) {
@@ -148,6 +138,16 @@ const handleSearch = () => {
       query: { q: searchQuery.value.trim() }
     })
   }
+}
+
+// 处理商品点击事件
+const handleProductClick = (product: Product) => {
+  console.log('点击的商品ID:', product.id)
+}
+
+// 处理分类点击事件
+const handleCategoryClick = (category: { id: number; name: string }) => {
+  console.log('点击的分类ID:', category.id)
 }
 </script>
 <template>
@@ -187,22 +187,21 @@ const handleSearch = () => {
       <section class="categories">
         <h2>商品分类</h2>
         <div class="category-list">
-          <div class="category-item" v-for="i in 5" :key="i">
-            分类 {{ i }}
+          <div class="category-item" v-for="category in categories" :key="category.id" @click="handleCategoryClick(category)">
+            {{ category.name }}
           </div>
         </div>
       </section>
       <section class="featured-products">
         <h2>推荐商品</h2>
         <div class="product-list">
-          <div class="product-item" v-for="product in featuredProducts" :key="product.id">
+          <div class="product-item" v-for="product in featuredProducts" :key="product.id" @click="handleProductClick(product)">
             <div class="product-image">
-              <img :src="product.image" :alt="product.name">
+              <img :src="getImageUrl(product.images[0] || '')" :alt="product.name" @error="handleImageError">
             </div>
             <div class="product-info">
               <h3 class="product-name">{{ product.name }}</h3>
               <p class="product-price">¥{{ product.price.toFixed(2) }}</p>
-              <p class="product-sales">{{ product.sales }}人购买</p>
             </div>
           </div>
         </div>
