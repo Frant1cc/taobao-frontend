@@ -20,12 +20,15 @@
         </div>
         <div class="avatar-edit-section">
           <div class="avatar-preview">
-            <img :src="userInfo.avatar" alt="用户头像" />
-            <div class="avatar-overlay" @click="changeAvatar">
-              <span class="camera-icon">📷</span>
-              <span class="change-text">更换头像</span>
-            </div>
+          <img v-if="userInfo.avatar" :src="userInfo.avatar" alt="用户头像" />
+          <div v-else class="avatar-placeholder">
+            <span class="placeholder-icon">👤</span>
           </div>
+          <div class="avatar-overlay" @click="changeAvatar">
+            <span class="camera-icon">📷</span>
+            <span class="change-text">更换头像</span>
+          </div>
+        </div>
         </div>
       </div>
 
@@ -52,47 +55,97 @@
           <h3 class="section-title">性别</h3>
         </div>
         <div class="gender-section">
-          <label class="gender-option">
+          <label 
+            class="gender-option" 
+            :class="{ active: userInfo.gender === 'male' }"
+          >
             <input 
               type="radio" 
               v-model="userInfo.gender" 
               value="male" 
-              class="gender-radio" 
+              class="gender-radio visually-hidden" 
             />
+            <span class="custom-radio"></span>
             <span class="gender-label">男</span>
           </label>
-          <label class="gender-option">
+          <label 
+            class="gender-option" 
+            :class="{ active: userInfo.gender === 'female' }"
+          >
             <input 
               type="radio" 
               v-model="userInfo.gender" 
               value="female" 
-              class="gender-radio" 
+              class="gender-radio visually-hidden" 
             />
+            <span class="custom-radio"></span>
             <span class="gender-label">女</span>
           </label>
-          <label class="gender-option">
+          <label 
+            class="gender-option" 
+            :class="{ active: userInfo.gender === 'unknown' }"
+          >
             <input 
               type="radio" 
               v-model="userInfo.gender" 
               value="unknown" 
-              class="gender-radio" 
+              class="gender-radio visually-hidden" 
             />
+            <span class="custom-radio"></span>
             <span class="gender-label">保密</span>
           </label>
         </div>
       </div>
 
       <!-- 出生日期 -->
+<div class="form-section">
+  <div class="section-header">
+    <h3 class="section-title">出生日期</h3>
+  </div>
+  <div class="input-section">
+    <div class="birthday-display">
+      <span class="birthday-text">{{ formatDateDisplay(userInfo.birthday) }}</span>
+      <button type="button" class="change-date-btn" @click="openDatePicker">修改日期</button>
+    </div>
+    <!-- 隐藏的日期输入框，用于日期选择器 -->
+    <input 
+      ref="datePickerRef"
+      v-model="userInfo.birthday" 
+      type="date" 
+      class="birthday-input"
+      placeholder="请选择出生日期"
+    />
+  </div>
+</div>
+
+      <!-- 手机号码 -->
       <div class="form-section">
         <div class="section-header">
-          <h3 class="section-title">出生日期</h3>
+          <h3 class="section-title">手机号码</h3>
         </div>
         <div class="input-section">
           <input 
-            v-model="userInfo.birthday" 
-            type="date" 
-            class="birthday-input"
-            placeholder="请选择出生日期"
+            v-model="userInfo.phone" 
+            type="tel" 
+            class="phone-input"
+            placeholder="请输入手机号码"
+            maxlength="11"
+          />
+        </div>
+      </div>
+
+      <!-- 邮箱地址 -->
+      <div class="form-section">
+        <div class="section-header">
+          <h3 class="section-title">邮箱地址</h3>
+        </div>
+        <div class="input-section">
+          <input 
+            v-model="userInfo.email" 
+            type="email" 
+            class="email-input"
+            placeholder="请输入邮箱地址"
+            maxlength="50"
           />
         </div>
       </div>
@@ -110,18 +163,70 @@
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
+import { useUserStore } from '@/stores/user'
+import { getUserInfo, updateUserInfo, uploadUserAvatar } from '@/api/modules/user'
 
 const router = useRouter()
+const userStore = useUserStore()
 
 // 用户信息
+const datePickerRef = ref(null)
+
 const userInfo = ref({
-  avatar: '@/assets/vue.svg',
-  username: '淘宝用户_123456',
+  avatar: '',
+  username: '',
   gender: 'unknown',
   birthday: '',
   phone: '',
   email: ''
 })
+
+// 格式化日期显示
+const formatDateDisplay = (dateString: string) => {
+  if (!dateString) {
+    return '未设置'
+  }
+  
+  // 如果是 YYYY-MM-DD 格式，直接显示
+  if (/^\d{4}-\d{2}-\d{2}/.test(dateString)) {
+    return dateString
+  }
+  
+  // 尝试解析时间戳格式
+  if (/^\d+$/.test(dateString)) {
+    const timestamp = parseInt(dateString, 10)
+    const date = new Date(timestamp)
+    if (!isNaN(date.getTime())) {
+      const year = date.getFullYear()
+      const month = String(date.getMonth() + 1).padStart(2, '0')
+      const day = String(date.getDate()).padStart(2, '0')
+      return `${year}-${month}-${day}`
+    }
+  }
+  
+  // 尝试解析其他日期格式
+  const date = new Date(dateString)
+  if (!isNaN(date.getTime())) {
+    const year = date.getFullYear()
+    const month = String(date.getMonth() + 1).padStart(2, '0')
+    const day = String(date.getDate()).padStart(2, '0')
+    return `${year}-${month}-${day}`
+  }
+  
+  return '日期格式错误'
+}
+
+// 打开日期选择器
+const openDatePicker = () => {
+  if (datePickerRef.value) {
+    // 使用 showPicker API 如果可用，否则回退到 click 方法
+    if (typeof (datePickerRef.value as HTMLInputElement).showPicker === 'function') {
+(datePickerRef.value as HTMLInputElement).click()
+    } else {
+(datePickerRef.value as HTMLInputElement).click()
+    }
+  }
+}
 
 // 返回上一页
 const goBack = () => {
@@ -130,11 +235,45 @@ const goBack = () => {
 
 // 更换头像
 const changeAvatar = () => {
-  ElMessage.info('头像更换功能开发中...')
+  // 创建一个隐藏的文件输入元素
+  const fileInput = document.createElement('input')
+  fileInput.type = 'file'
+  fileInput.accept = 'image/*'
+  fileInput.style.display = 'none'
+  
+  // 添加文件选择事件监听器
+  fileInput.onchange = async (event) => {
+    const target = event.target as HTMLInputElement
+    const file = target.files?.[0]
+    
+    if (file) {
+      try {
+        // 调用API上传头像
+        const response = await uploadUserAvatar(file)
+        
+        // 更新用户信息中的头像URL
+        if (response.data?.avatarUrl) {
+          const baseUrl = import.meta.env.VITE_IMAGE_BASE_URL || ''
+          userInfo.value.avatar = baseUrl ? baseUrl + response.data.avatarUrl : response.data.avatarUrl
+          ElMessage.success('头像上传成功！')
+        } else {
+          ElMessage.success('头像上传成功！')
+        }
+      } catch (error) {
+        console.error('上传头像失败:', error)
+        ElMessage.error('头像上传失败，请稍后重试')
+      }
+    }
+  }
+  
+  // 触发文件选择
+  document.body.appendChild(fileInput)
+  fileInput.click()
+  document.body.removeChild(fileInput)
 }
 
 // 保存个人信息
-const saveProfile = () => {
+const saveProfile = async () => {
   if (!userInfo.value.username.trim()) {
     ElMessage.error('用户名不能为空')
     return
@@ -150,27 +289,98 @@ const saveProfile = () => {
     }
   }
   
-  // 模拟保存操作
-  console.log('保存的用户信息：', userInfo.value)
-  ElMessage.success('个人信息保存成功！')
+  // 验证手机号格式（如果填写了）
+  if (userInfo.value.phone && !/^1[3-9]\d{9}$/.test(userInfo.value.phone)) {
+    ElMessage.error('请输入正确的手机号码')
+    return
+  }
   
-  // 延迟返回上一页
-  setTimeout(() => {
-    router.back()
-  }, 1000)
+  // 验证邮箱格式（如果填写了）
+  if (userInfo.value.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(userInfo.value.email)) {
+    ElMessage.error('请输入正确的邮箱地址')
+    return
+  }
+  
+  try {
+    // 处理生日日期，转换为时间戳格式
+    let birthdayTimestamp = null
+    if (userInfo.value.birthday) {
+      // 创建日期对象并转换为时间戳（毫秒）
+      const date = new Date(userInfo.value.birthday)
+      if (!isNaN(date.getTime())) {
+        birthdayTimestamp = date.getTime().toString() // 转换为毫秒时间戳字符串
+      }
+    }
+    
+    // 调用API更新用户信息
+    await updateUserInfo({
+      username: userInfo.value.username,
+      gender: userInfo.value.gender,
+      birthday: birthdayTimestamp ?? undefined,
+      phone: userInfo.value.phone,
+      email: userInfo.value.email
+    })
+    
+    ElMessage.success('个人信息保存成功！')
+    
+    // 延迟返回上一页
+    setTimeout(() => {
+      router.back()
+    }, 1000)
+  } catch (error) {
+    console.error('保存用户信息失败:', error)
+    ElMessage.error('保存用户信息失败，请稍后重试')
+  }
 }
 
 // 页面加载时获取用户信息
-onMounted(() => {
-  // 这里可以调用API获取用户信息
-  console.log('个人信息管理页面加载完成')
+onMounted(async () => {
+  try {
+    const response = await getUserInfo()
+    // 更新用户信息到表单
+    const userData = response.data
+    // 处理生日时间戳转换为日期字符串
+    let birthdayStr = ''
+    if (userData.birthday) {
+      // 如果是数字字符串，转换为日期格式
+      if (/^\d+$/.test(userData.birthday)) {
+        const timestamp = parseInt(userData.birthday, 10)
+        const date = new Date(timestamp)
+        // 转换为 YYYY-MM-DD 格式
+birthdayStr = date.toISOString().split('T')[0] || ''
+      } else {
+        // 如果已经是日期字符串格式，直接使用
+        birthdayStr = userData.birthday
+      }
+    }
+    
+    userInfo.value = {
+      avatar: userData.avatarUrl || '',
+      username: userData.username || '',
+      gender: userData.gender || 'unknown',
+      birthday: birthdayStr,
+      phone: userData.phone || '',
+      email: userData.email || ''
+    }
+    
+    // 如果有头像URL且设置了基础URL，则拼接完整路径
+    const baseUrl = import.meta.env.VITE_IMAGE_BASE_URL || ''
+    if (userData.avatarUrl && baseUrl) {
+      userInfo.value.avatar = baseUrl + userData.avatarUrl
+    }
+  } catch (error) {
+    console.error('获取用户信息失败:', error)
+    ElMessage.error('获取用户信息失败')
+  }
 })
 </script>
 
 <style scoped>
 .profile-edit-page {
   min-height: 100vh;
+  height: auto;
   background: #f5f5f5;
+  padding-bottom: 20px;
 }
 
 /* 页面头部样式 */
@@ -271,6 +481,20 @@ onMounted(() => {
   object-fit: cover;
 }
 
+.avatar-placeholder {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: #f5f5f5;
+}
+
+.placeholder-icon {
+  font-size: 40px;
+  color: #ccc;
+}
+
 .avatar-overlay {
   position: absolute;
   top: 0;
@@ -345,16 +569,61 @@ onMounted(() => {
   padding: 8px 12px;
   border-radius: 6px;
   transition: all 0.3s;
+  border: 1px solid transparent;
 }
 
 .gender-option:hover {
   background: #f5f5f5;
 }
 
-.gender-radio {
-  margin-right: 8px;
+/* 隐藏原始单选框 */
+.gender-radio.visually-hidden {
+  position: absolute;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  height: 1px;
+  width: 1px;
+  margin: -1px;
+  padding: 0;
+  border: 0;
+}
+
+/* 自定义单选框样式 */
+.custom-radio {
+  display: inline-block;
   width: 16px;
   height: 16px;
+  border: 2px solid #ddd;
+  border-radius: 50%;
+  margin-right: 8px;
+  position: relative;
+  background-color: white;
+  vertical-align: middle;
+  transition: all 0.3s;
+}
+
+/* 选中状态的自定义单选框 */
+.gender-option.active .custom-radio {
+  border-color: #ff5000;
+  background-color: white;
+}
+
+/* 选中状态的内部圆点 */
+.gender-option.active .custom-radio::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background-color: #ff5000;
+}
+
+.gender-option.active {
+  border-color: #ff5000;
+  background: #fff5f0;
 }
 
 .gender-label {
@@ -362,49 +631,97 @@ onMounted(() => {
   color: #333;
 }
 
-/* 日期输入框样式 */
+/* 出生日期显示区域 */
+.birthday-display {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  padding: 12px 15px;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  background: white;
+}
+
+.birthday-text {
+  font-size: 16px;
+  color: #333;
+}
+
+.change-date-btn {
+  background: #ff5000;
+  color: white;
+  border: none;
+  padding: 6px 12px;
+  border-radius: 4px;
+  font-size: 14px;
+  cursor: pointer;
+  transition: background 0.3s;
+}
+
+.change-date-btn:hover {
+  background: #e04500;
+}
+
+/* 隐藏的日期输入框 */
+.birthday-input.hidden {
+  position: absolute;
+  left: -9999px;
+  top: -9999px;
+  width: 0;
+  height: 0;
+  opacity: 0;
+}
+
+/* 出生日期输入框样式 */
 .birthday-input {
   width: 100%;
-  padding: 12px;
-  border: 1px solid #e0e0e0;
-  border-radius: 6px;
-  font-size: 14px;
-  outline: none;
-  transition: border-color 0.3s;
+  padding: 12px 15px;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  font-size: 16px;
+  box-sizing: border-box;
+  background: white;
 }
 
 .birthday-input:focus {
-  border-color: #ff5021;
+  outline: none;
+  border-color: #ff5000;
+  box-shadow: 0 0 0 2px rgba(255, 80, 0, 0.1);
 }
 
 /* 手机号码输入框样式 */
 .phone-input {
   width: 100%;
-  padding: 12px;
-  border: 1px solid #e0e0e0;
-  border-radius: 6px;
-  font-size: 14px;
-  outline: none;
-  transition: border-color 0.3s;
+  padding: 12px 15px;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  font-size: 16px;
+  box-sizing: border-box;
+  background: white;
 }
 
 .phone-input:focus {
-  border-color: #ff5021;
+  outline: none;
+  border-color: #ff5000;
+  box-shadow: 0 0 0 2px rgba(255, 80, 0, 0.1);
 }
 
 /* 邮箱输入框样式 */
 .email-input {
   width: 100%;
-  padding: 12px;
-  border: 1px solid #e0e0e0;
-  border-radius: 6px;
-  font-size: 14px;
-  outline: none;
-  transition: border-color 0.3s;
+  padding: 12px 15px;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  font-size: 16px;
+  box-sizing: border-box;
+  background: white;
 }
 
 .email-input:focus {
-  border-color: #ff5021;
+  outline: none;
+  border-color: #ff5000;
+  box-shadow: 0 0 0 2px rgba(255, 80, 0, 0.1);
 }
 
 

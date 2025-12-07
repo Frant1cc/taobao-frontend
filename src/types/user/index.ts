@@ -13,12 +13,22 @@ export interface RegisterParams {
   userType: 'operator' | 'merchant' | 'customer' | 'visitor';
 }
 
+// 更新用户信息参数（不包含头像）
+export interface UpdateUserInfoParams {
+  username?: string
+  gender?: string
+  birthday?: string
+  phone?: string
+  email?: string
+}
+
 // 登录响应数据
 export interface LoginResponse {
   account: string
   username: string
   userType: string
   token: string
+  avatarUrl?: string
 }
 
 // 用户详细信息
@@ -37,4 +47,5 @@ export interface UserInfo {
   createTime: string
   updateTime: string
 }
+
 

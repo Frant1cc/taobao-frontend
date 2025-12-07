@@ -84,7 +84,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessageBox } from 'element-plus'
 import { useUserStore } from '@/stores/user'
@@ -94,14 +94,12 @@ import defaultAvatar from '@/assets/vue.svg'
 const router = useRouter()
 const userStore = useUserStore()
 
+// 创建一个本地响应式变量来存储头像URL
+const avatarUrl = ref(defaultAvatar)
+
 // 计算属性：显示用户名或默认名称
 const displayName = computed(() => {
   return userStore.userInfo?.username || userStore.userInfo?.account || '淘宝用户'
-})
-
-// 计算属性：显示头像URL或默认头像
-const avatarUrl = computed(() => {
-  return userStore.userInfo?.avatarUrl || defaultAvatar
 })
 
 // 在组件挂载时获取用户详细信息
@@ -110,8 +108,16 @@ onMounted(async () => {
     const response = await getUserInfo()
     // 更新用户store中的用户信息
     userStore.setUserInfo(response.data)
+    // 更新本地头像URL变量，拼接完整路径
+    const baseUrl = import.meta.env.VITE_IMAGE_BASE_URL || ''
+    if (response.data.avatarUrl && baseUrl) {
+      avatarUrl.value = baseUrl + response.data.avatarUrl
+    } else {
+      avatarUrl.value = response.data.avatarUrl || defaultAvatar
+    }
   } catch (error) {
     console.error('获取用户信息失败:', error)
+    avatarUrl.value = defaultAvatar
   }
 })
 
