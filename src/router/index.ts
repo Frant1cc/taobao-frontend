@@ -91,7 +91,7 @@ const router = createRouter({
 })
 
 // 添加路由守卫
-router.beforeEach((to: any, from: any, next: any) => {
+router.beforeEach((to: any, _from: any, next: any) => {
   const userStore = useUserStore()
   
   // 检查路由是否需要认证

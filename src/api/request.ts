@@ -1,5 +1,5 @@
 // 封装axios请求
-import axios, { type AxiosResponse, type AxiosError } from 'axios'
+import axios, { type AxiosResponse, type AxiosError, type AxiosRequestConfig } from 'axios'
 import { BASE_URL, TIMEOUT, HEADERS } from './config'
 
 // 创建axios实例
@@ -8,6 +8,11 @@ const service = axios.create({
   timeout: TIMEOUT, // 请求超时时间
   headers: HEADERS // 默认请求头
 })
+
+// 封装请求函数，支持泛型
+function request<T = any>(config: AxiosRequestConfig): Promise<T> {
+  return service(config) as Promise<T>
+}
 
 // 请求拦截器
 service.interceptors.request.use(
@@ -42,7 +47,8 @@ service.interceptors.response.use(
       console.error('响应错误:', res.msg)
       return Promise.reject(new Error(res.msg || 'Error'))
     } else {
-      return res
+      // 返回处理后的数据，确保类型正确
+      return res as any
     }
   },
   (error: AxiosError) => {
@@ -65,4 +71,4 @@ service.interceptors.response.use(
   }
 )
 
-export default service
+export default request
