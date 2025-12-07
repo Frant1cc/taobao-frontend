@@ -35,23 +35,47 @@ const selectedSku = computed(() => {
   return matchedSku || null
 })
 
-// 计算完整的图片URL列表（只包含SKU图片，不包含主图和详情图）
+// 计算完整的图片URL列表（只包含当前选中SKU的图片）
 const fullImages = computed(() => {
-  // 只获取SKU图片
-  const skuImages = product.value.skus?.map(sku => sku.skuImage).filter(img => img) || []
+  // 如果没有选中的SKU，返回空数组
+  if (!selectedSku.value || !selectedSku.value.skuImage) {
+    return []
+  }
   
-  // 去重SKU图片
-  const uniqueSkuImages = [...new Set(skuImages)]
+  // 只获取当前选中SKU的图片
+  const skuImage = selectedSku.value.skuImage
   
   // 拼接完整URL
-  return uniqueSkuImages.map(image => {
-    // 如果图片已经是完整URL，则直接返回
-    if (image.startsWith('http')) {
-      return image
+  const fullUrl = skuImage.startsWith('http') ? skuImage : imageBaseUrl + skuImage
+  
+  // 返回包含单张图片的数组，以保持与原代码的一致性
+  return [fullUrl]
+})
+
+// 获取所有SKU的图片用于缩略图展示
+const allSkuImages = computed(() => {
+  if (!product.value.skus || product.value.skus.length === 0) return []
+  
+  // 收集所有SKU的图片，去重
+  const images = product.value.skus
+    .filter(sku => sku.skuImage)
+    .map(sku => {
+      const fullUrl = sku.skuImage.startsWith('http') ? sku.skuImage : imageBaseUrl + sku.skuImage
+      return { url: fullUrl, sku }
+    })
+    
+  // 去重逻辑：基于URL去重
+  const uniqueImages = []
+  const seenUrls = new Set()
+  
+  for (const image of images) {
+    if (!seenUrls.has(image.url)) {
+      seenUrls.add(image.url)
+      uniqueImages.push(image)
     }
-    // 否则拼接基础URL
-    return imageBaseUrl + image
-  })
+  }
+  
+  return uniqueImages
 })
 
 // 商品数据
@@ -83,6 +107,8 @@ const specsOptions: Array<{ name: string; label: string; options: string[] }> = 
 // 选择规格
 const selectSpec = (specName: string, option: string) => {
   selectedSpecs.value[specName] = option
+  // 重置图片轮播索引为0，确保显示新SKU的第一张图片
+  currentImageIndex.value = 0
 }
 
 // 加入购物车
@@ -142,6 +168,32 @@ const buyNow = () => {
 // 轮播图切换
 const handleImageChange = (index: number) => {
   currentImageIndex.value = index
+}
+
+// 通过图片选择SKU
+const selectSkuByImage = (sku: ProductSku) => {
+  // 根据SKU的规格名称设置选中的规格
+  // 解析SKU名称，例如："颜色:红色 尺寸:L"
+  const skuParts = sku.skuName.split(' ')
+  
+  // 清除当前选择
+  selectedSpecs.value = {}
+  
+  // 设置新的选择
+  skuParts.forEach(part => {
+    const [specName, specValue] = part.split(':')
+    if (specName && specValue) {
+      // 特殊处理尺寸规格
+      if (specName === '尺寸') {
+        selectedSpecs.value['size'] = specValue
+      } else {
+        selectedSpecs.value[specName] = specValue
+      }
+    }
+  })
+  
+  // 重置图片轮播索引为0，确保显示新SKU的第一张图片
+  currentImageIndex.value = 0
 }
 
 // 数量变更
@@ -247,16 +299,16 @@ onMounted(() => {
       <!-- 缩略图列表 -->
       <div class="thumbnail-list">
         <div 
-          v-for="(image, index) in fullImages" 
+          v-for="(imageObj, index) in allSkuImages" 
           :key="index"
           class="thumbnail-item" 
-          :class="{ active: index === currentImageIndex }"
-          @click="handleImageChange(index)"
+          :class="{ active: selectedSku && selectedSku.skuName === imageObj.sku.skuName }"
+          @click="selectSkuByImage(imageObj.sku)"
         >
-          <img :src="image" :alt="`缩略图${index + 1}`" />
+          <img :src="imageObj.url" :alt="`缩略图${index + 1}`" />
         </div>
         <!-- 无缩略图占位符 -->
-        <div v-if="fullImages.length === 0" class="no-thumbnail-placeholder">
+        <div v-if="allSkuImages.length === 0" class="no-thumbnail-placeholder">
           暂无缩略图
         </div>
       </div>
