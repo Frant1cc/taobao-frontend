@@ -84,7 +84,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessageBox } from 'element-plus'
 import { useUserStore } from '@/stores/user'
@@ -102,8 +102,8 @@ const displayName = computed(() => {
   return userStore.userInfo?.username || userStore.userInfo?.account || '淘宝用户'
 })
 
-// 在组件挂载时获取用户详细信息
-onMounted(async () => {
+// 刷新用户信息的方法
+const refreshUserInfo = async () => {
   try {
     const response = await getUserInfo()
     // 更新用户store中的用户信息
@@ -119,6 +119,19 @@ onMounted(async () => {
     console.error('获取用户信息失败:', error)
     avatarUrl.value = defaultAvatar
   }
+}
+
+// 在组件挂载时获取用户详细信息
+onMounted(async () => {
+  await refreshUserInfo()
+  
+  // 监听用户信息更新事件
+  window.addEventListener('user-profile-updated', refreshUserInfo)
+})
+
+// 组件卸载时移除事件监听器
+onUnmounted(() => {
+  window.removeEventListener('user-profile-updated', refreshUserInfo)
 })
 
 // 订单点击事件处理

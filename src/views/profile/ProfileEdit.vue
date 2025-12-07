@@ -160,7 +160,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, onUnmounted, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { useUserStore } from '@/stores/user'
@@ -248,14 +248,34 @@ const changeAvatar = () => {
     
     if (file) {
       try {
+        // 显示上传中提示
+        ElMessage.info('正在上传头像...')
+        
         // 调用API上传头像
         const response = await uploadUserAvatar(file)
         
         // 更新用户信息中的头像URL
         if (response.data?.avatarUrl) {
           const baseUrl = import.meta.env.VITE_IMAGE_BASE_URL || ''
-          userInfo.value.avatar = baseUrl ? baseUrl + response.data.avatarUrl : response.data.avatarUrl
+          const fullAvatarUrl = baseUrl ? baseUrl + response.data.avatarUrl : response.data.avatarUrl
+          
+          // 更新用户信息中的头像URL
+          userInfo.value.avatar = fullAvatarUrl
+          
+          // 同时更新用户store中的头像信息
+          if (userStore.userInfo) {
+            userStore.userInfo.avatarUrl = response.data.avatarUrl
+          }
+          
           ElMessage.success('头像上传成功！')
+          
+          // 发送事件通知其他组件刷新
+          window.dispatchEvent(new CustomEvent('user-profile-updated'))
+          
+          // 强制触发视图更新
+          nextTick(() => {
+            // 可以在这里添加额外的刷新逻辑
+          })
         } else {
           ElMessage.success('头像上传成功！')
         }
@@ -270,6 +290,46 @@ const changeAvatar = () => {
   document.body.appendChild(fileInput)
   fileInput.click()
   document.body.removeChild(fileInput)
+}
+
+// 刷新当前页面的用户信息
+const refreshCurrentUserInfo = async () => {
+  try {
+    const response = await getUserInfo()
+    // 更新用户信息到表单
+    const userData = response.data
+    // 处理生日时间戳转换为日期字符串
+    let birthdayStr = ''
+    if (userData.birthday) {
+      // 如果是数字字符串，转换为日期格式
+      if (/^\d+$/.test(userData.birthday)) {
+        const timestamp = parseInt(userData.birthday, 10)
+        const date = new Date(timestamp)
+        // 转换为 YYYY-MM-DD 格式
+        birthdayStr = date.toISOString().split('T')[0] || ''
+      } else {
+        // 如果已经是日期字符串格式，直接使用
+        birthdayStr = userData.birthday
+      }
+    }
+    
+    userInfo.value = {
+      avatar: userData.avatarUrl || '',
+      username: userData.username || '',
+      gender: userData.gender || 'unknown',
+      birthday: birthdayStr,
+      phone: userData.phone || '',
+      email: userData.email || ''
+    }
+    
+    // 如果有头像URL且设置了基础URL，则拼接完整路径
+    const baseUrl = import.meta.env.VITE_IMAGE_BASE_URL || ''
+    if (userData.avatarUrl && baseUrl) {
+      userInfo.value.avatar = baseUrl + userData.avatarUrl
+    }
+  } catch (error) {
+    console.error('刷新当前页面用户信息失败:', error)
+  }
 }
 
 // 保存个人信息
@@ -323,6 +383,19 @@ const saveProfile = async () => {
     
     ElMessage.success('个人信息保存成功！')
     
+    // 刷新用户信息
+    try {
+      const response = await getUserInfo()
+      userStore.setUserInfo(response.data)
+      // 通过事件总线或路由参数通知Profile页面刷新
+      window.dispatchEvent(new CustomEvent('user-profile-updated'))
+      
+      // 同时刷新当前页面显示的用户信息
+      await refreshCurrentUserInfo()
+    } catch (error) {
+      console.error('刷新用户信息失败:', error)
+    }
+    
     // 延迟返回上一页
     setTimeout(() => {
       router.back()
@@ -335,43 +408,15 @@ const saveProfile = async () => {
 
 // 页面加载时获取用户信息
 onMounted(async () => {
-  try {
-    const response = await getUserInfo()
-    // 更新用户信息到表单
-    const userData = response.data
-    // 处理生日时间戳转换为日期字符串
-    let birthdayStr = ''
-    if (userData.birthday) {
-      // 如果是数字字符串，转换为日期格式
-      if (/^\d+$/.test(userData.birthday)) {
-        const timestamp = parseInt(userData.birthday, 10)
-        const date = new Date(timestamp)
-        // 转换为 YYYY-MM-DD 格式
-birthdayStr = date.toISOString().split('T')[0] || ''
-      } else {
-        // 如果已经是日期字符串格式，直接使用
-        birthdayStr = userData.birthday
-      }
-    }
-    
-    userInfo.value = {
-      avatar: userData.avatarUrl || '',
-      username: userData.username || '',
-      gender: userData.gender || 'unknown',
-      birthday: birthdayStr,
-      phone: userData.phone || '',
-      email: userData.email || ''
-    }
-    
-    // 如果有头像URL且设置了基础URL，则拼接完整路径
-    const baseUrl = import.meta.env.VITE_IMAGE_BASE_URL || ''
-    if (userData.avatarUrl && baseUrl) {
-      userInfo.value.avatar = baseUrl + userData.avatarUrl
-    }
-  } catch (error) {
-    console.error('获取用户信息失败:', error)
-    ElMessage.error('获取用户信息失败')
-  }
+  await refreshCurrentUserInfo()
+  
+  // 监听用户信息更新事件
+  window.addEventListener('user-profile-updated', refreshCurrentUserInfo)
+})
+
+// 组件卸载时移除事件监听器
+onUnmounted(() => {
+  window.removeEventListener('user-profile-updated', refreshCurrentUserInfo)
 })
 </script>
 
