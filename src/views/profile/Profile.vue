@@ -23,27 +23,27 @@
         <div class="status-item" @click="handleOrderClick('待付款')">
           <div class="status-icon">📦</div>
           <span class="status-label">待付款</span>
-          <span class="order-count">0</span>
+          <span class="order-count">{{ orderStats.pendingOrderCount }}</span>
         </div>
         <div class="status-item" @click="handleOrderClick('待发货')">
           <div class="status-icon">🚚</div>
           <span class="status-label">待发货</span>
-          <span class="order-count">0</span>
+          <span class="order-count">{{ orderStats.paidOrderCount }}</span>
         </div>
         <div class="status-item" @click="handleOrderClick('待收货')">
           <div class="status-icon">📬</div>
           <span class="status-label">待收货</span>
-          <span class="order-count">0</span>
+          <span class="order-count">{{ orderStats.shippedOrderCount }}</span>
         </div>
         <div class="status-item" @click="handleOrderClick('待评价')">
           <div class="status-icon">⭐</div>
           <span class="status-label">待评价</span>
-          <span class="order-count">0</span>
+          <span class="order-count">{{ orderStats.completedOrderCount }}</span>
         </div>
         <div class="status-item" @click="handleOrderClick('退款/售后')">
           <div class="status-icon">🔄</div>
           <span class="status-label">退款/售后</span>
-          <span class="order-count">0</span>
+          <span class="order-count">{{ orderStats.cancelledOrderCount }}</span>
         </div>
       </div>
     </div>
@@ -102,6 +102,15 @@ const displayName = computed(() => {
   return userStore.userInfo?.username || userStore.userInfo?.account || '淘宝用户'
 })
 
+// 存储订单统计数据
+const orderStats = ref({
+  pendingOrderCount: 0,
+  paidOrderCount: 0,
+  shippedOrderCount: 0,
+  completedOrderCount: 0,
+  cancelledOrderCount: 0
+})
+
 // 刷新用户信息的方法
 const refreshUserInfo = async () => {
   try {
@@ -115,6 +124,13 @@ const refreshUserInfo = async () => {
     } else {
       avatarUrl.value = response.data.avatarUrl || defaultAvatar
     }
+    
+    // 更新订单统计数据
+    orderStats.value.pendingOrderCount = response.data.pendingOrderCount || 0
+    orderStats.value.paidOrderCount = response.data.paidOrderCount || 0
+    orderStats.value.shippedOrderCount = response.data.shippedOrderCount || 0
+    orderStats.value.completedOrderCount = response.data.completedOrderCount || 0
+    orderStats.value.cancelledOrderCount = response.data.cancelledOrderCount || 0
   } catch (error) {
     console.error('获取用户信息失败:', error)
     avatarUrl.value = defaultAvatar

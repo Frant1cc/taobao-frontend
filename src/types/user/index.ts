@@ -46,6 +46,11 @@ export interface UserInfo {
   avatarUrl: string | null
   createTime: string
   updateTime: string
+  pendingOrderCount?: number
+  paidOrderCount?: number
+  shippedOrderCount?: number
+  completedOrderCount?: number
+  cancelledOrderCount?: number
 }
 
 
