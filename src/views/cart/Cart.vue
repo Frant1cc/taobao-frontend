@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import { ref, reactive, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { ElMessage } from 'element-plus'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import { useUserStore } from '@/stores/user'
-import { getCartList } from '@/api/modules/cart'
+import { getCartList, deleteCartItem, batchUpdateCartQuantity } from '@/api/modules/cart'
 import type { CartItem } from '@/types/cart'
 import { IMAGE_BASE_URL } from '@/api/config';
 
@@ -38,24 +38,65 @@ const fetchCartList = async () => {
     const response = await getCartList();
     console.log('购物车API响应:', response);
     
-    // 检查响应结构
-    if (response && response.data) {
-      // 设置默认选中状态并赋值给cartItems
-      const itemsWithChecked = response.data.map(item => ({
-        ...item,
-        checked: true // 默认选中
-      }));
-      cartItems.splice(0, cartItems.length, ...itemsWithChecked);
-    } else if (response instanceof Array) {
-      // 直接返回数组的情况
-      const itemsWithChecked = response.map(item => ({
-        ...item,
-        checked: true // 默认选中
-      }));
-      cartItems.splice(0, cartItems.length, ...itemsWithChecked);
+    // 处理不同格式的响应数据
+    let cartData = [];
+    
+    // 如果response本身就是数组，直接使用
+    if (Array.isArray(response)) {
+      cartData = response;
+    } 
+    // 如果response有data字段且为数组，使用response.data
+    else if (response && typeof response === 'object' && 'data' in response && Array.isArray((response as any).data)) {
+      cartData = (response as any).data;
+    }
+
+    // 其他情况尝试直接使用response（如果它是数组）
+    else if (response && typeof response === 'object') {
+      // 尝试查找可能包含购物车数据的字段
+      const possibleFields = ['items', 'list', 'cartItems'];
+      for (const field of possibleFields) {
+        if (field in response && Array.isArray(response[field])) {
+          cartData = response[field];
+          break;
+        }
+      }
+    }
+    
+    // 检查是否成功提取到购物车数据
+    if (Array.isArray(cartData) && cartData.length > 0) {
+      // 验证数据结构是否符合CartItem接口
+      const isValidCartItem = (item: any): item is CartItem => {
+        return (
+          typeof item === 'object' &&
+          'cartItemId' in item &&
+          'skuId' in item &&
+          'quantity' in item &&
+          'sku' in item &&
+          typeof item.sku === 'object' &&
+          'skuId' in item.sku &&
+          'skuName' in item.sku &&
+          'price' in item.sku
+        );
+      };
+      
+      // 检查所有项目是否符合CartItem结构
+      const allValid = cartData.every(isValidCartItem);
+      
+      if (allValid) {
+        // 设置默认选中状态并赋值给cartItems
+        const itemsWithChecked = cartData.map(item => ({
+          ...item,
+          checked: true // 默认选中
+        }));
+        cartItems.splice(0, cartItems.length, ...itemsWithChecked);
+      } else {
+        console.warn('购物车数据结构不符合预期:', cartData);
+        ElMessage.warning('购物车数据结构异常');
+      }
     } else {
-      console.warn('购物车数据格式不符合预期:', response);
-      ElMessage.warning('购物车数据格式异常');
+      console.warn('购物车数据为空或格式不符合预期:', response);
+      // 即使没有购物车数据，也要清空现有数据
+      cartItems.splice(0, cartItems.length);
     }
   } catch (error) {
     console.error('获取购物车列表失败:', error);
@@ -132,6 +173,59 @@ const checkout = () => {
   // 跳转到结算页面
   router.push('/checkout');
 };
+
+// 删除购物车商品
+const deleteItem = (item: CartItem) => {
+  ElMessageBox.confirm(
+    `确定要删除商品 "${item.sku.skuName}" 吗？`,
+    '删除确认',
+    {
+      confirmButtonText: '确定',
+      cancelButtonText: '取消',
+      type: 'warning',
+    }
+  ).then(async () => {
+    try {
+      // 调用删除接口
+      await deleteCartItem(item.cartItemId);
+      
+      // 从本地购物车列表中移除
+      const index = cartItems.findIndex(cartItem => cartItem.cartItemId === item.cartItemId);
+      if (index > -1) {
+        cartItems.splice(index, 1);
+      }
+      
+      ElMessage.success('删除成功');
+    } catch (error) {
+      console.error('删除商品失败:', error);
+      ElMessage.error('删除商品失败，请稍后重试');
+    }
+  }).catch(() => {
+    // 用户取消删除
+    ElMessage.info('已取消删除');
+  });
+};
+
+// 保存修改功能
+const saveChanges = async () => {
+  try {
+    // 准备批量更新的数据
+    const updateItems = cartItems.map(item => ({
+      cartItemId: item.cartItemId,
+      quantity: item.quantity
+    }));
+    
+    // 调用批量更新接口
+    await batchUpdateCartQuantity({
+      items: updateItems
+    });
+    
+    ElMessage.success('修改已保存');
+  } catch (error) {
+    console.error('保存修改失败:', error);
+    ElMessage.error('保存修改失败，请稍后重试');
+  }
+};
 </script>
 
 <template>
@@ -182,7 +276,11 @@ const checkout = () => {
         <div class="item-info">
           <img :src="getFullImageUrl(item.sku.skuImage)" :alt="item.sku.skuName" class="item-image">
           <div class="item-details">
-            <h3 class="item-name">{{ item.sku.skuName }}</h3>
+            <h3 class="item-name">
+              <router-link :to="'/product/' + item.sku.productId" class="product-link">
+                {{ item.sku.skuName }}
+              </router-link>
+            </h3>
             <p class="item-spec" v-if="item.sku.skuType">{{ item.sku.skuType }}</p>
           </div>
         </div>
@@ -196,6 +294,8 @@ const checkout = () => {
         </div>
 
         <div class="item-subtotal">￥{{ (item.sku.price * item.quantity).toFixed(2) }}</div>
+        
+        <button class="delete-btn" @click="deleteItem(item)">删除</button>
       </div>
     </div>
 
@@ -215,6 +315,9 @@ const checkout = () => {
           <span class="price-label">合计:</span>
           <span class="total-price">￥{{ getTotalPrice().toFixed(2) }}</span>
         </div>
+        <button class="save-btn" @click="saveChanges">
+          保存修改
+        </button>
         <button class="checkout-btn" @click="checkout">
           结算
         </button>
@@ -228,6 +331,7 @@ const checkout = () => {
   padding: 20px;
   max-width: 1200px;
   margin: 0 auto;
+  padding-bottom: 80px; // 为底部结算栏留出空间
 }
 
 .cart-header {
@@ -290,15 +394,21 @@ const checkout = () => {
     display: flex;
     justify-content: space-between;
     flex: 1;
-    padding-left: 120px; // 与商品图片宽度对齐
+    padding-left: 95px; // 与商品图片宽度对齐 (80px图片宽度 + 15px右边距)
 
     span {
       flex: 1;
-      text-align: center;
+      text-align: left;
+      padding-left: 10px;
       &:first-child {
         text-align: left;
-        flex: 2;
+        flex: 1;
       }
+    }
+    
+    // 为删除按钮预留空间
+    span:last-child {
+      flex: 0.5;
     }
   }
 }
@@ -315,13 +425,13 @@ const checkout = () => {
 
   .item-info {
     display: flex;
-    flex: 2;
+    flex: 1.5;
     align-items: center;
   }
 
   .item-image {
-    width: 100px;
-    height: 100px;
+    width: 80px;
+    height: 80px;
     object-fit: cover;
     border-radius: 4px;
     margin-right: 15px;
@@ -339,6 +449,16 @@ const checkout = () => {
       -webkit-box-orient: vertical;
       overflow: hidden;
       max-height: 40px;
+      
+      .product-link {
+        color: #333333;
+        text-decoration: none;
+        
+        &:hover {
+          color: #ff5021;
+          text-decoration: underline;
+        }
+      }
     }
 
     .item-spec {
@@ -349,16 +469,18 @@ const checkout = () => {
   }
 
   .item-price {
-    flex: 1;
-    text-align: center;
+    flex: 0.8;
+    text-align: left;
+    padding-left: 10px;
     font-size: 14px;
     color: #333333;
   }
 
   .item-quantity {
-    flex: 1;
+    flex: 0.8;
     display: flex;
-    justify-content: center;
+    justify-content: flex-start;
+    padding-left: 10px;
 
     .quantity-btn {
       width: 30px;
@@ -389,17 +511,36 @@ const checkout = () => {
   }
 
   .item-subtotal {
-    flex: 1;
-    text-align: center;
+    flex: 0.8;
+    text-align: left;
+    padding-left: 10px;
     font-size: 14px;
     color: #ff5021;
     font-weight: bold;
+  }
+  
+  .delete-btn {
+    width: 60px;
+    height: 30px;
+    background-color: #ffffff;
+    border: 1px solid #e0e0e0;
+    border-radius: 4px;
+    color: #666666;
+    cursor: pointer;
+    margin-left: 10px;
+    transition: all 0.3s;
+    
+    &:hover {
+      background-color: #ff5021;
+      color: #ffffff;
+      border-color: #ff5021;
+    }
   }
 }
 
 .cart-footer {
   position: fixed;
-  bottom: 60px; // 为底部导航栏留出空间
+  bottom: 0;
   left: 0;
   right: 0;
   background-color: #ffffff;
@@ -407,6 +548,8 @@ const checkout = () => {
   box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.1);
   display: flex;
   align-items: center;
+  z-index: 1000; // 确保在最上层
+  min-height: 60px; // 设置最小高度
 
   .footer-checkbox {
     margin-right: 20px;
@@ -445,6 +588,22 @@ const checkout = () => {
     }
   }
 
+  .save-btn {
+    background-color: #4CAF50;
+    color: #ffffff;
+    border: none;
+    border-radius: 4px;
+    padding: 12px 40px;
+    font-size: 16px;
+    cursor: pointer;
+    transition: background-color 0.3s;
+    margin-left: 10px;
+    
+    &:hover {
+      background-color: #45a049;
+    }
+  }
+
   .checkout-btn {
     background-color: #ff5021;
     color: #ffffff;
@@ -454,7 +613,7 @@ const checkout = () => {
     font-size: 16px;
     cursor: pointer;
     transition: background-color 0.3s;
-    margin-left: 30px;
+    margin-left: 10px;
     
     &:hover {
       background-color: #e6450d;

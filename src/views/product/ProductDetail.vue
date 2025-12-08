@@ -2,7 +2,9 @@
 import { ref, onMounted, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { getProductDetail } from '@/api/modules/product'
+import { addCartItem } from '@/api/modules/cart'
 import type { Product, ProductSku } from '@/types/product'
+import type { AddToCartParams } from '@/types/cart'
 
 // 路由信息
 const route = useRoute()
@@ -12,9 +14,21 @@ const productId = computed(() => route.params.id as string)
 // 图片基础URL
 const imageBaseUrl = import.meta.env.VITE_IMAGE_BASE_URL || ''
 
-// 返回首页
-const goToHome = () => {
-  router.push('/')
+// 返回上一页或购物车页面
+const goBack = () => {
+  // 检查是否有历史记录可以返回
+  if (window.history.length > 1) {
+    // 如果是从购物车页面跳转过来的，直接返回购物车页面
+    if (document.referrer.includes('/cart')) {
+      router.push('/cart')
+    } else {
+      // 否则返回上一页
+      router.go(-1)
+    }
+  } else {
+    // 如果没有历史记录，直接跳转到购物车页面
+    router.push('/cart')
+  }
 }
 
 // 计算当前选中的SKU
@@ -138,7 +152,7 @@ const selectSpec = (specName: string, option: string) => {
 }
 
 // 加入购物车
-const addToCart = () => {
+const addToCart = async () => {
   // 检查是否有商品数据
   if (!product.value.id) {
     alert('商品信息加载失败，请稍后重试~')
@@ -161,7 +175,24 @@ const addToCart = () => {
     return
   }
   
-  alert(`已成功加入购物车：${product.value.name} x ${quantity.value}，SKU: ${selectedSku.value.skuName}，价格: ¥${selectedSku.value.price.toFixed(2)}，库存: ${selectedSku.value.stock}`)
+  // 在控制台输出所选商品的SKU ID和数量
+  console.log('添加到购物车 - SKU ID:', selectedSku.value.skuId, '数量:', quantity.value)
+  
+  // 准备添加到购物车的参数
+  const params: AddToCartParams = {
+    skuId: selectedSku.value.skuId,
+    quantity: quantity.value
+  }
+  
+  try {
+    // 调用添加到购物车的API
+    await addCartItem(params)
+    // 添加成功提示
+    alert('商品已成功添加到购物车！')
+  } catch (error) {
+    console.error('添加到购物车失败:', error)
+    alert('添加到购物车失败，请稍后重试~')
+  }
 }
 
 // 立即购买
@@ -293,10 +324,10 @@ onMounted(() => {
 
 <template>
   <div class="product-detail-page">
-    <!-- 返回首页按钮 -->
+    <!-- 返回按钮区域 -->
     <div class="back-to-home">
-      <button @click="goToHome" class="back-button">
-        ← 返回首页
+      <button @click="goBack" class="back-button">
+        ← 返回
       </button>
     </div>
     

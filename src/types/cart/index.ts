@@ -41,5 +41,22 @@ export interface CartOperationParams {
   quantity?: number;
 }
 
+// 添加购物车参数
+export interface AddToCartParams {
+  skuId: number;
+  quantity: number;
+}
+
+// 单个商品数量更新参数
+export interface UpdateCartQuantityParams {
+  cartItemId: number;
+  quantity: number;
+}
+
+// 批量更新购物车商品数量参数
+export interface BatchUpdateCartQuantityParams {
+  items: UpdateCartQuantityParams[];
+}
+
 // 购物车列表响应
 export type CartListResponse = CartItem[]

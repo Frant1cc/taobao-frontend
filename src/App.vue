@@ -21,10 +21,11 @@ const shouldShowTabBar = computed(() => {
 <style scoped lang="scss">
 .app-container {
   padding-top: 60px; // 为顶部Tab栏留出空间
-  padding-bottom: 0;
+  padding-bottom: 60px; // 为底部导航栏留出空间
   
   &.no-tabbar {
     padding-top: 0; // 商家端和管理员页面不需要顶部Tab栏的padding
+    padding-bottom: 0; // 商家端和管理员页面不需要底部导航栏的padding
   }
 }
 </style>
