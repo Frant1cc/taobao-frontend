@@ -1,9 +1,11 @@
 <script setup lang="ts">
-import { reactive, computed, onMounted } from 'vue';
-import { useRoute, useRouter } from 'vue-router';
-import { ElMessage } from 'element-plus';
-import { useUserStore } from '@/stores/user';
-import type { CartItem } from '@/types/cart';
+import { ref, reactive, computed, onMounted } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
+import { ElMessage } from 'element-plus'
+import { useUserStore } from '@/stores/user'
+import { getCartList } from '@/api/modules/cart'
+import type { CartItem } from '@/types/cart'
+import { IMAGE_BASE_URL } from '@/api/config';
 
 const route = useRoute();
 const router = useRouter();
@@ -16,27 +18,61 @@ onMounted(() => {
   }
 });
 
-// 模拟购物车数据
-const cartItems = reactive<CartItem[]>([
-  {
-    id: '1',
-    name: 'Apple iPhone 15 Pro 256GB 星光色',
-    image: 'https://img.alicdn.com/imgextra/i1/1234567890/O1CN01abcdefghijklmnopq_!!0-item_pic.jpg',
-    price: 7999,
-    quantity: 1,
-    checked: true,
-    spec: '256GB · 星光色'
-  },
-  {
-    id: '2',
-    name: '华为Mate 60 Pro 512GB 曜石黑',
-    image: 'https://img.alicdn.com/imgextra/i2/987654321/O1CN02zyxwvutsrqponml_!!0-item_pic.jpg',
-    price: 6999,
-    quantity: 1,
-    checked: true,
-    spec: '512GB · 曜石黑'
+// 购物车数据
+const cartItems = reactive<CartItem[]>([]);
+
+// 获取完整图片URL
+const getFullImageUrl = (imagePath: string) => {
+  if (!imagePath) return '';
+  // 如果已经是完整URL，则直接返回
+  if (imagePath.startsWith('http')) {
+    return imagePath;
   }
-]);
+  // 添加基础URL前缀
+  return IMAGE_BASE_URL + imagePath;
+};
+
+// 获取购物车列表
+const fetchCartList = async () => {
+  try {
+    const response = await getCartList();
+    console.log('购物车API响应:', response);
+    
+    // 检查响应结构
+    if (response && response.data) {
+      // 设置默认选中状态并赋值给cartItems
+      const itemsWithChecked = response.data.map(item => ({
+        ...item,
+        checked: true // 默认选中
+      }));
+      cartItems.splice(0, cartItems.length, ...itemsWithChecked);
+    } else if (response instanceof Array) {
+      // 直接返回数组的情况
+      const itemsWithChecked = response.map(item => ({
+        ...item,
+        checked: true // 默认选中
+      }));
+      cartItems.splice(0, cartItems.length, ...itemsWithChecked);
+    } else {
+      console.warn('购物车数据格式不符合预期:', response);
+      ElMessage.warning('购物车数据格式异常');
+    }
+  } catch (error) {
+    console.error('获取购物车列表失败:', error);
+    ElMessage.error('获取购物车数据失败，请稍后重试');
+  }
+};
+
+// 页面加载时获取购物车数据
+onMounted(() => {
+  // 检查是否有重定向参数并显示相应提示
+  if (route.query.redirect === 'auth-required') {
+    ElMessage.warning('请先登录后再访问该页面');
+  }
+  
+  // 获取购物车数据
+  fetchCartList();
+});
 
 const allChecked = computed(() => {
   return cartItems.length > 0 && cartItems.every(item => item.checked);
@@ -66,7 +102,7 @@ const decreaseQuantity = (item: CartItem) => {
 const getTotalPrice = () => {
   return cartItems
     .filter(item => item.checked)
-    .reduce((total, item) => total + item.price * item.quantity, 0);
+    .reduce((total, item) => total + item.sku.price * item.quantity, 0);
 };
 
 // 计算选中商品总数
@@ -137,21 +173,21 @@ const checkout = () => {
       </div>
 
       <!-- 商品项 -->
-      <div class="cart-item" v-for="item in cartItems" :key="item.id">
+      <div class="cart-item" v-for="item in cartItems" :key="item.cartItemId">
         <label class="checkbox-label">
           <input type="checkbox" v-model="item.checked">
           <span class="checkbox-custom"></span>
         </label>
 
         <div class="item-info">
-          <img :src="item.image" alt="{{ item.name }}" class="item-image">
+          <img :src="getFullImageUrl(item.sku.skuImage)" :alt="item.sku.skuName" class="item-image">
           <div class="item-details">
-            <h3 class="item-name">{{ item.name }}</h3>
-            <p class="item-spec" v-if="item.spec">{{ item.spec }}</p>
+            <h3 class="item-name">{{ item.sku.skuName }}</h3>
+            <p class="item-spec" v-if="item.sku.skuType">{{ item.sku.skuType }}</p>
           </div>
         </div>
 
-        <div class="item-price">￥{{ item.price.toFixed(2) }}</div>
+        <div class="item-price">￥{{ item.sku.price.toFixed(2) }}</div>
 
         <div class="item-quantity">
           <button class="quantity-btn minus" @click="decreaseQuantity(item)">-</button>
@@ -159,7 +195,7 @@ const checkout = () => {
           <button class="quantity-btn plus" @click="increaseQuantity(item)">+</button>
         </div>
 
-        <div class="item-subtotal">￥{{ (item.price * item.quantity).toFixed(2) }}</div>
+        <div class="item-subtotal">￥{{ (item.sku.price * item.quantity).toFixed(2) }}</div>
       </div>
     </div>
 

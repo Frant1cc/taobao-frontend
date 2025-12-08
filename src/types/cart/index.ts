@@ -1,14 +1,30 @@
 // 购物车相关类型定义
 
+// SKU信息
+export interface Sku {
+  skuId: number
+  productId: number
+  skuName: string
+  skuType: string
+  price: number
+  stock: number
+  soldCount: number
+  skuImage: string
+  status: string
+  createTime: string
+  updateTime: string
+}
+
 // 购物车商品项
 export interface CartItem {
-  id: string;
-  name: string;
-  image: string;
-  price: number;
-  quantity: number;
-  checked: boolean;
-  spec?: string;
+  cartItemId: number
+  userId: number
+  skuId: number
+  quantity: number
+  checked: boolean
+  createTime: string
+  updateTime: string
+  sku: Sku
 }
 
 // 购物车状态
@@ -24,3 +40,6 @@ export interface CartOperationParams {
   itemId: string;
   quantity?: number;
 }
+
+// 购物车列表响应
+export type CartListResponse = CartItem[]
