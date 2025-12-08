@@ -13,54 +13,6 @@
 
     <!-- 安全设置表单 -->
     <div class="security-form">
-      <!-- 手机号码设置 -->
-      <div class="form-section">
-        <div class="section-header">
-          <h3 class="section-title">手机号码</h3>
-        </div>
-        <div class="security-item">
-          <div class="security-info">
-            <div class="security-icon">📱</div>
-            <div class="security-details">
-              <h4 class="security-title">手机号码</h4>
-              <p class="security-desc">已绑定手机：{{ securityInfo.phone }}</p>
-            </div>
-          </div>
-          <div class="security-action">
-            <button 
-              class="modify-btn" 
-              @click="showPhoneModal = true"
-            >
-              更换手机
-            </button>
-          </div>
-        </div>
-      </div>
-
-      <!-- 邮箱地址设置 -->
-      <div class="form-section">
-        <div class="section-header">
-          <h3 class="section-title">邮箱地址</h3>
-        </div>
-        <div class="security-item">
-          <div class="security-info">
-            <div class="security-icon">📧</div>
-            <div class="security-details">
-              <h4 class="security-title">邮箱地址</h4>
-              <p class="security-desc">已绑定邮箱：{{ securityInfo.email }}</p>
-            </div>
-          </div>
-          <div class="security-action">
-            <button 
-              class="modify-btn" 
-              @click="showEmailModal = true"
-            >
-              更换邮箱
-            </button>
-          </div>
-        </div>
-      </div>
-
       <!-- 登录密码设置 -->
       <div class="form-section">
         <div class="section-header">
@@ -82,150 +34,6 @@
               修改密码
             </button>
           </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- 更换手机号码模态框 -->
-    <div v-if="showPhoneModal" class="modal-overlay" @click="closePhoneModal">
-      <div class="modal-container" @click.stop>
-        <div class="modal-header">
-          <h3 class="modal-title">更换手机号码</h3>
-          <button class="close-btn" @click="closePhoneModal">×</button>
-        </div>
-        
-        <div class="modal-content">
-          <form @submit.prevent="handlePhoneChange" class="verification-form">
-            <div class="form-group">
-              <label class="form-label">当前手机号</label>
-              <div class="current-info">{{ securityInfo.phone }}</div>
-            </div>
-            
-            <div class="form-group">
-              <label for="phoneVerificationCode" class="form-label">验证码</label>
-              <div class="verification-input-group">
-                <input 
-                  type="text" 
-                  id="phoneVerificationCode" 
-                  v-model="phoneForm.verificationCode" 
-                  class="form-input"
-                  placeholder="请输入验证码"
-                  maxlength="6"
-                  required
-                />
-                <button 
-                  type="button" 
-                  class="send-code-btn"
-                  :disabled="phoneForm.isSending"
-                  @click="sendPhoneVerificationCode"
-                >
-                  {{ phoneForm.isSending ? `${phoneForm.countdown}s后重新发送` : '发送验证码' }}
-                </button>
-              </div>
-            </div>
-            
-            <div class="form-group">
-              <label for="newPhone" class="form-label">新手机号码</label>
-              <input 
-                type="tel" 
-                id="newPhone" 
-                v-model="phoneForm.newPhone" 
-                class="form-input"
-                placeholder="请输入新手机号码"
-                maxlength="11"
-                required
-              />
-            </div>
-            
-            <div class="form-actions">
-              <button 
-                type="button" 
-                class="btn-cancel" 
-                @click="closePhoneModal"
-              >
-                取消
-              </button>
-              <button 
-                type="submit" 
-                class="btn-submit" 
-                :disabled="!isPhoneFormValid"
-              >
-                确认更换
-              </button>
-            </div>
-          </form>
-        </div>
-      </div>
-    </div>
-
-    <!-- 更换邮箱地址模态框 -->
-    <div v-if="showEmailModal" class="modal-overlay" @click="closeEmailModal">
-      <div class="modal-container" @click.stop>
-        <div class="modal-header">
-          <h3 class="modal-title">更换邮箱地址</h3>
-          <button class="close-btn" @click="closeEmailModal">×</button>
-        </div>
-        
-        <div class="modal-content">
-          <form @submit.prevent="handleEmailChange" class="verification-form">
-            <div class="form-group">
-              <label class="form-label">当前邮箱</label>
-              <div class="current-info">{{ securityInfo.email }}</div>
-            </div>
-            
-            <div class="form-group">
-              <label for="emailVerificationCode" class="form-label">验证码</label>
-              <div class="verification-input-group">
-                <input 
-                  type="text" 
-                  id="emailVerificationCode" 
-                  v-model="emailForm.verificationCode" 
-                  class="form-input"
-                  placeholder="请输入验证码"
-                  maxlength="6"
-                  required
-                />
-                <button 
-                  type="button" 
-                  class="send-code-btn"
-                  :disabled="emailForm.isSending"
-                  @click="sendEmailVerificationCode"
-                >
-                  {{ emailForm.isSending ? `${emailForm.countdown}s后重新发送` : '发送验证码' }}
-                </button>
-              </div>
-            </div>
-            
-            <div class="form-group">
-              <label for="newEmail" class="form-label">新邮箱地址</label>
-              <input 
-                type="email" 
-                id="newEmail" 
-                v-model="emailForm.newEmail" 
-                class="form-input"
-                placeholder="请输入新邮箱地址"
-                maxlength="50"
-                required
-              />
-            </div>
-            
-            <div class="form-actions">
-              <button 
-                type="button" 
-                class="btn-cancel" 
-                @click="closeEmailModal"
-              >
-                取消
-              </button>
-              <button 
-                type="submit" 
-                class="btn-submit" 
-                :disabled="!isEmailFormValid"
-              >
-                确认更换
-              </button>
-            </div>
-          </form>
         </div>
       </div>
     </div>
@@ -317,34 +125,10 @@ import { ElMessage } from 'element-plus'
 
 const router = useRouter()
 
-// 安全信息
-const securityInfo = ref({
-  phone: '138****8888',
-  email: 'user@example.com'
-})
-
 // 返回上一页
 const goBack = () => {
   router.back()
 }
-
-// 手机号码模态框相关
-const showPhoneModal = ref(false)
-const phoneForm = ref({
-  verificationCode: '',
-  newPhone: '',
-  isSending: false,
-  countdown: 60
-})
-
-// 邮箱地址模态框相关
-const showEmailModal = ref(false)
-const emailForm = ref({
-  verificationCode: '',
-  newEmail: '',
-  isSending: false,
-  countdown: 60
-})
 
 // 密码修改模态框显示状态
 const showPasswordModal = ref(false)
@@ -352,24 +136,6 @@ const passwordForm = ref({
   currentPassword: '',
   newPassword: '',
   confirmPassword: ''
-})
-
-// 手机表单验证
-const isPhoneFormValid = computed(() => {
-  const { verificationCode, newPhone } = phoneForm.value
-  return (
-    verificationCode.length === 6 &&
-    /^1[3-9]\d{9}$/.test(newPhone)
-  )
-})
-
-// 邮箱表单验证
-const isEmailFormValid = computed(() => {
-  const { verificationCode, newEmail } = emailForm.value
-  return (
-    verificationCode.length === 6 &&
-    /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(newEmail)
-  )
 })
 
 // 计算密码规则验证
@@ -390,118 +156,6 @@ const isFormValid = computed(() => {
     newPassword === confirmPassword
   )
 })
-
-// 发送手机验证码
-const sendPhoneVerificationCode = async () => {
-  if (phoneForm.value.isSending) return
-  
-  phoneForm.value.isSending = true
-  
-  try {
-    // 模拟发送验证码
-    await new Promise(resolve => setTimeout(resolve, 1000))
-    ElMessage.success('验证码已发送到您的手机')
-    
-    // 开始倒计时
-    const timer = setInterval(() => {
-      phoneForm.value.countdown--
-      if (phoneForm.value.countdown <= 0) {
-        clearInterval(timer)
-        phoneForm.value.isSending = false
-        phoneForm.value.countdown = 60
-      }
-    }, 1000)
-  } catch (error) {
-    ElMessage.error('验证码发送失败，请稍后重试')
-    phoneForm.value.isSending = false
-  }
-}
-
-// 发送邮箱验证码
-const sendEmailVerificationCode = async () => {
-  if (emailForm.value.isSending) return
-  
-  emailForm.value.isSending = true
-  
-  try {
-    // 模拟发送验证码
-    await new Promise(resolve => setTimeout(resolve, 1000))
-    ElMessage.success('验证码已发送到您的邮箱')
-    
-    // 开始倒计时
-    const timer = setInterval(() => {
-      emailForm.value.countdown--
-      if (emailForm.value.countdown <= 0) {
-        clearInterval(timer)
-        emailForm.value.isSending = false
-        emailForm.value.countdown = 60
-      }
-    }, 1000)
-  } catch (error) {
-    ElMessage.error('验证码发送失败，请稍后重试')
-    emailForm.value.isSending = false
-  }
-}
-
-// 处理手机号码更换
-const handlePhoneChange = async () => {
-  if (!isPhoneFormValid.value) {
-    ElMessage.error('请填写完整的验证信息')
-    return
-  }
-
-  try {
-    // 模拟API调用
-    await new Promise(resolve => setTimeout(resolve, 1000))
-    securityInfo.value.phone = phoneForm.value.newPhone
-    ElMessage.success('手机号码更换成功！')
-    closePhoneModal()
-  } catch (error) {
-    ElMessage.error('手机号码更换失败，请稍后重试')
-  }
-}
-
-// 处理邮箱地址更换
-const handleEmailChange = async () => {
-  if (!isEmailFormValid.value) {
-    ElMessage.error('请填写完整的验证信息')
-    return
-  }
-
-  try {
-    // 模拟API调用
-    await new Promise(resolve => setTimeout(resolve, 1000))
-    securityInfo.value.email = emailForm.value.newEmail
-    ElMessage.success('邮箱地址更换成功！')
-    closeEmailModal()
-  } catch (error) {
-    ElMessage.error('邮箱地址更换失败，请稍后重试')
-  }
-}
-
-// 关闭手机号码模态框
-const closePhoneModal = () => {
-  showPhoneModal.value = false
-  // 重置表单
-  phoneForm.value = {
-    verificationCode: '',
-    newPhone: '',
-    isSending: false,
-    countdown: 60
-  }
-}
-
-// 关闭邮箱地址模态框
-const closeEmailModal = () => {
-  showEmailModal.value = false
-  // 重置表单
-  emailForm.value = {
-    verificationCode: '',
-    newEmail: '',
-    isSending: false,
-    countdown: 60
-  }
-}
 
 // 关闭密码修改模态框
 const closePasswordModal = () => {

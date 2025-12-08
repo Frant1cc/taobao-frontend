@@ -169,14 +169,6 @@ const handleMenuClick = (menu: string) => {
     case '账户安全':
       router.push('/profile/security')
       break
-    case '账号绑定':
-      console.log('跳转到账号绑定页面')
-      // router.push('/account-binding')
-      break
-    case '消息通知':
-      console.log('跳转到消息通知设置页面')
-      // router.push('/notifications')
-      break
     default:
       console.log(`点击了菜单项: ${menu}`)
   }

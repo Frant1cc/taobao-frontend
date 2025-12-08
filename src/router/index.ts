@@ -68,6 +68,10 @@ const routes = [
     meta: { requiresAuth: true }
   },
   {
+    path: '/profile/security/password',
+    redirect: '/profile/security'
+  },
+  {
     path: '/profile/orders',
     name: 'OrderList',
     component: OrderList,
