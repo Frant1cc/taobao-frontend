@@ -52,6 +52,32 @@ const fullImages = computed(() => {
   return [fullUrl]
 })
 
+// 计算商品详情图片URL列表
+const detailImages = computed(() => {
+  try {
+    // 解析detailImages字符串为数组
+    const imagesArray = JSON.parse(product.value.detailImages || '[]')
+    
+    // 如果不是数组，返回空数组
+    if (!Array.isArray(imagesArray)) {
+      return []
+    }
+    
+    // 生成完整的图片URL列表
+    return imagesArray.map(imagePath => {
+      // 如果imagePath已经是完整URL，则直接返回
+      if (imagePath && (imagePath.startsWith('http://') || imagePath.startsWith('https://'))) {
+        return imagePath
+      }
+      // 否则拼接基础URL
+      return imagePath ? `${imageBaseUrl}/${imagePath}` : ''
+    }).filter(url => url !== '') // 过滤掉空URL
+  } catch (e) {
+    console.warn('解析商品详情图片失败:', e)
+    return []
+  }
+})
+
 // 获取所有SKU的图片用于缩略图展示
 const allSkuImages = computed(() => {
   if (!product.value.skus || product.value.skus.length === 0) return []
@@ -386,7 +412,7 @@ onMounted(() => {
         <!-- 详情图片 -->
         <div class="detail-images">
           <img 
-            v-for="(image, index) in fullImages" 
+            v-for="(image, index) in detailImages" 
             :key="`detail-${index}`"
             :src="image" 
             :alt="`详情图片${index + 1}`" 
