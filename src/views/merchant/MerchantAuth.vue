@@ -90,8 +90,12 @@
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
+import { login } from '@/api/modules/user'
+import { useUserStore } from '@/stores/user'
+import type { LoginParams } from '@/types/user'
 
 const router = useRouter()
+const userStore = useUserStore()
 
 // 登录表单数据
 const loginForm = ref({
@@ -116,16 +120,37 @@ const handleLogin = async () => {
   loading.value = true
   
   try {
-    // 模拟登录API调用
-    await new Promise(resolve => setTimeout(resolve, 1000))
+    // 调用用户登录接口
+    const loginParams: LoginParams = {
+      account: loginForm.value.username,
+      password: loginForm.value.password
+    }
     
-    // 模拟登录成功
-    ElMessage.success('商家登录成功')
+    const response = await login(loginParams)
     
-    // 跳转到商家工作台
-    router.push('/merchant/dashboard')
-  } catch (error) {
-    ElMessage.error('登录失败，请检查账号和密码')
+    if (response.code === 200) {
+      const userData = response.data
+      
+      // 验证用户类型是否为商家
+      if (userData.userType !== 'merchant') {
+        ElMessage.error('该账号不是商家账号，无法登录商家后台')
+        return
+      }
+      
+      // 保存用户信息和token
+      userStore.setToken(userData.token)
+      userStore.setUserInfo(userData)
+      
+      ElMessage.success('商家登录成功')
+      
+      // 跳转到商家工作台
+      router.push('/merchant/dashboard')
+    } else {
+      ElMessage.error(response.msg || '登录失败，请检查账号和密码')
+    }
+  } catch (error: any) {
+    console.error('登录失败:', error)
+    ElMessage.error(error.response?.data?.msg || '登录失败，请检查账号和密码')
   } finally {
     loading.value = false
   }

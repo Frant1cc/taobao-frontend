@@ -63,17 +63,7 @@
             </ul>
           </div>
 
-          <div class="menu-group">
-            <div class="menu-title">数据分析</div>
-            <ul class="menu-list">
-              <li class="menu-item" :class="{ active: $route.name === 'MerchantAnalytics' }">
-                <router-link to="/merchant/analytics" class="menu-link">
-                  <el-icon><TrendCharts /></el-icon>
-                  <span>数据分析</span>
-                </router-link>
-              </li>
-            </ul>
-          </div>
+
 
           <div class="menu-group">
             <div class="menu-title">店铺设置</div>
@@ -104,7 +94,6 @@ import {
   Monitor,
   Goods,
   Document,
-  TrendCharts,
   Setting,
   Search,
   ArrowDown

@@ -167,13 +167,20 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { ElMessageBox, ElMessage } from 'element-plus'
 import {
   Plus,
   Upload,
   Search
 } from '@element-plus/icons-vue'
+import { 
+  addProduct, 
+  getProductList, 
+  updateProduct, 
+  deleteProduct 
+} from '@/api/modules/merchant-product'
+import type { ProductListItem, AddProductParams, UpdateProductParams } from '@/types/product'
 
 interface Product {
   id: string
@@ -186,6 +193,8 @@ interface Product {
   status: string
   image: string
   description: string
+  productId?: number
+  productName?: string
 }
 
 // 搜索和筛选
@@ -203,65 +212,31 @@ const showAddDialog = ref(false)
 const editingProduct = ref<Product | null>(null)
 
 // 商品表单
-const productForm = ref({
-  name: '',
-  category: '',
-  price: 0,
-  stock: 0,
-  description: ''
+const productForm = ref<AddProductParams>({
+  productName: '',
+  description: '',
+  categoryId: 1,
+  mainImages: [],
+  detailImages: [],
+  status: 'on_sale'
 })
 
-// 模拟商品数据
-const products = ref<Product[]>([
-  {
-    id: '1',
-    name: '新款智能手机',
-    sku: 'SM001',
-    category: 'electronics',
-    price: 2999,
-    stock: 100,
-    sales: 45,
-    status: 'onSale',
-    image: 'https://via.placeholder.com/80x80',
-    description: '高性能智能手机'
-  },
-  {
-    id: '2',
-    name: '无线蓝牙耳机',
-    sku: 'BE002',
-    category: 'electronics',
-    price: 399,
-    stock: 200,
-    sales: 89,
-    status: 'onSale',
-    image: 'https://via.placeholder.com/80x80',
-    description: '高品质无线耳机'
-  },
-  {
-    id: '3',
-    name: '时尚连衣裙',
-    sku: 'CL003',
-    category: 'clothing',
-    price: 199,
-    stock: 50,
-    sales: 23,
-    status: 'offSale',
-    image: 'https://via.placeholder.com/80x80',
-    description: '时尚女装连衣裙'
-  },
-  {
-    id: '4',
-    name: '智能手表',
-    sku: 'SW004',
-    category: 'electronics',
-    price: 1299,
-    stock: 30,
-    sales: 12,
-    status: 'draft',
-    image: 'https://via.placeholder.com/80x80',
-    description: '多功能智能手表'
+// 商品数据
+const products = ref<ProductListItem[]>([])
+
+// 加载商品列表
+const loadProducts = async () => {
+  try {
+    const response = await getProductList(currentPage.value, pageSize.value)
+    if (response.code === 200) {
+      products.value = response.data.list
+      total.value = response.data.total
+    }
+  } catch (error) {
+    ElMessage.error('获取商品列表失败')
+    console.error('获取商品列表失败:', error)
   }
-])
+}
 
 // 计算属性：过滤商品
 const filteredProducts = computed(() => {
@@ -269,17 +244,12 @@ const filteredProducts = computed(() => {
   
   if (searchKeyword.value) {
     filtered = filtered.filter(product => 
-      product.name.includes(searchKeyword.value) || 
-      product.sku.includes(searchKeyword.value)
+      product.productName.includes(searchKeyword.value)
     )
   }
   
   if (filterStatus.value) {
     filtered = filtered.filter(product => product.status === filterStatus.value)
-  }
-  
-  if (filterCategory.value) {
-    filtered = filtered.filter(product => product.category === filterCategory.value)
   }
   
   total.value = filtered.length
@@ -291,6 +261,7 @@ const filteredProducts = computed(() => {
 // 方法
 const handleSearch = () => {
   currentPage.value = 1
+  loadProducts()
 }
 
 const handleReset = () => {
@@ -298,55 +269,117 @@ const handleReset = () => {
   filterStatus.value = ''
   filterCategory.value = ''
   currentPage.value = 1
+  loadProducts()
 }
 
-const handleEdit = (product: Product) => {
-  editingProduct.value = product
-  productForm.value = { ...product }
+const handleEdit = (product: ProductListItem) => {
+  editingProduct.value = product as Product
+  productForm.value = {
+    productName: product.productName,
+    description: product.description,
+    categoryId: product.categoryId,
+    mainImages: [],
+    detailImages: [],
+    status: product.status as 'on_sale' | 'off_sale'
+  }
   showAddDialog.value = true
 }
 
-const handleToggleStatus = (product: Product) => {
-  product.status = product.status === 'onSale' ? 'offSale' : 'onSale'
+const handleToggleStatus = async (product: ProductListItem) => {
+  try {
+    const newStatus = product.status === 'on_sale' ? 'off_sale' : 'on_sale'
+    const updateParams: UpdateProductParams = {
+      productId: product.productId,
+      productName: product.productName,
+      description: product.description,
+      categoryId: product.categoryId,
+      mainImages: [],
+      detailImages: [],
+      status: newStatus
+    }
+    
+    const response = await updateProduct(updateParams)
+    if (response.code === 200) {
+      ElMessage.success('商品状态更新成功')
+      await loadProducts()
+    } else {
+      ElMessage.error(response.msg || '更新失败')
+    }
+  } catch (error) {
+    ElMessage.error('更新商品状态失败')
+    console.error('更新商品状态失败:', error)
+  }
 }
 
-const handleView = (product: Product) => {
-  // 查看商品详情逻辑
+const handleView = (product: ProductListItem) => {
   console.log('查看商品:', product)
 }
 
-const handleDelete = (product: Product) => {
-  ElMessageBox.confirm(
-    `确定要删除商品"${product.name}"吗？此操作不可恢复。`,
-    '删除确认',
-    {
-      confirmButtonText: '确定',
-      cancelButtonText: '取消',
-      type: 'warning',
-    }
-  ).then(() => {
-    // 删除商品逻辑
-    const index = products.value.findIndex(p => p.id === product.id)
-    if (index !== -1) {
-      products.value.splice(index, 1)
+const handleDelete = async (product: ProductListItem) => {
+  try {
+    await ElMessageBox.confirm(
+      `确定要删除商品"${product.productName}"吗？此操作不可恢复。`,
+      '删除确认',
+      {
+        confirmButtonText: '确定',
+        cancelButtonText: '取消',
+        type: 'warning',
+      }
+    )
+    
+    const response = await deleteProduct(product.productId)
+    if (response.code === 200) {
       ElMessage.success('商品删除成功')
+      await loadProducts()
+    } else {
+      ElMessage.error(response.msg || '删除失败')
     }
-  }).catch(() => {
+  } catch (error) {
     // 用户取消删除
-  })
+  }
 }
 
-const handleSaveProduct = () => {
-  // 保存商品逻辑
-  showAddDialog.value = false
-  productForm.value = {
-    name: '',
-    category: '',
-    price: 0,
-    stock: 0,
-    description: ''
+const handleSaveProduct = async () => {
+  try {
+    if (editingProduct.value) {
+      // 更新商品
+      const updateParams: UpdateProductParams = {
+        productId: editingProduct.value.productId!,
+        ...productForm.value
+      }
+      const response = await updateProduct(updateParams)
+      if (response.code === 200) {
+        ElMessage.success('商品更新成功')
+      } else {
+        ElMessage.error(response.msg || '更新失败')
+        return
+      }
+    } else {
+      // 添加商品
+      const response = await addProduct(productForm.value)
+      if (response.code === 200) {
+        ElMessage.success('商品添加成功')
+      } else {
+        ElMessage.error(response.msg || '添加失败')
+        return
+      }
+    }
+    
+    showAddDialog.value = false
+    productForm.value = {
+      productName: '',
+      description: '',
+      categoryId: 1,
+      mainImages: [],
+      detailImages: [],
+      status: 'on_sale'
+    }
+    editingProduct.value = null
+    await loadProducts()
+  } catch (error) {
+    ElMessage.error('保存商品失败')
+    console.error('保存商品失败:', error)
   }
-  editingProduct.value = null
 }
 
 const getStatusType = (status: string) => {
@@ -376,6 +409,10 @@ const getCategoryName = (category: string) => {
   }
   return categoryMap[category] || '其他'
 }
+// 页面加载时获取商品列表
+onMounted(() => {
+  loadProducts()
+})
 </script>
 
 <style scoped lang="scss">

@@ -79,12 +79,7 @@
           </div>
         </el-card>
 
-        <el-card class="action-card" @click="$router.push('/merchant/analytics')">
-          <div class="action-content">
-            <el-icon size="32"><TrendCharts /></el-icon>
-            <span>查看数据</span>
-          </div>
-        </el-card>
+
 
         <el-card class="action-card" @click="$router.push('/merchant/settings')">
           <div class="action-content">
@@ -132,7 +127,6 @@ import {
   Document,
   User,
   Goods,
-  TrendCharts,
   Setting
 } from '@element-plus/icons-vue'
 

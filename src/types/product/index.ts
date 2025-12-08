@@ -64,3 +64,65 @@ export interface SearchParams {
   keyword: string
 }
 
+// 商家端商品管理相关类型定义
+
+// 添加商品请求参数
+export interface AddProductParams {
+  productName: string
+  description: string
+  categoryId: number
+  mainImages: string[]
+  detailImages: string[]
+  status: 'on_sale' | 'off_sale'
+}
+
+// 更新商品请求参数
+export interface UpdateProductParams {
+  productId: number
+  productName: string
+  description: string
+  categoryId: number
+  mainImages: string[]
+  detailImages: string[]
+  status: 'on_sale' | 'off_sale'
+}
+
+// 商品列表响应数据
+export interface ProductListResponse {
+  total: number
+  list: ProductListItem[]
+}
+
+// 商品列表项
+export interface ProductListItem {
+  productId: number
+  productName: string
+  description: string
+  categoryId: number
+  status: string
+  createTime: string
+  updateTime: string
+}
+
+// 添加SKU请求参数
+export interface AddSkuParams {
+  productId: number
+  skuName: string
+  skuType: string
+  price: number
+  stock: number
+  skuImage: string
+  status: 'on_sale' | 'off_sale'
+}
+
+// 更新SKU请求参数
+export interface UpdateSkuParams {
+  skuId: number
+  skuName: string
+  skuType: string
+  price: number
+  stock: number
+  skuImage: string
+  status: 'on_sale' | 'off_sale'
+}
+

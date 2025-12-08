@@ -21,7 +21,6 @@ import MerchantLayout from '../views/merchant/MerchantLayout.vue'
 import MerchantDashboard from '../views/merchant/Dashboard.vue'
 import Products from '../views/merchant/Products.vue'
 import Orders from '../views/merchant/Orders.vue'
-import Analytics from '../views/merchant/Analytics.vue'
 import Settings from '../views/merchant/Settings.vue'
 import MerchantAuth from '../views/merchant/MerchantAuth.vue'
 import MerchantRegister from '../views/merchant/MerchantRegister.vue'
@@ -138,12 +137,6 @@ const routes = [
         name: 'MerchantOrders',
         component: Orders,
         meta: { title: '订单管理' }
-      },
-      {
-        path: 'analytics',
-        name: 'MerchantAnalytics',
-        component: Analytics,
-        meta: { title: '数据分析' }
       },
       {
         path: 'settings',

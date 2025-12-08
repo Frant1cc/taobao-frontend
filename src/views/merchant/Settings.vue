@@ -358,7 +358,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive } from 'vue'
+import { ref, reactive, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import {
   User,
@@ -370,14 +370,20 @@ import {
   Lock,
   CreditCard
 } from '@element-plus/icons-vue'
+import { getShopInfo, updateShopInfo, getShopStatistics } from '@/api/modules/shop'
+import type { ShopInfo, UpdateShopParams, ShopStatistics } from '@/types/shop'
 
 // 当前激活的标签页
 const activeTab = ref('basic')
 
+// 店铺信息
+const shopInfo = ref<ShopInfo | null>(null)
+const shopStatistics = ref<ShopStatistics | null>(null)
+
 // 表单数据
 const basicForm = reactive({
-  shopName: '我的淘宝店铺',
-  description: '专业销售各类优质商品，提供最好的购物体验',
+  shopName: '',
+  description: '',
   category: 'clothing',
   businessHours: [new Date(2023, 0, 1, 9, 0), new Date(2023, 0, 1, 18, 0)]
 })
@@ -445,8 +451,56 @@ const handleMenuSelect = (index: string) => {
   activeTab.value = index
 }
 
-const saveBasicInfo = () => {
-  ElMessage.success('基本信息保存成功')
+// 加载店铺信息
+const loadShopInfo = async () => {
+  try {
+    const response = await getShopInfo()
+    if (response.code === 200) {
+      shopInfo.value = response.data
+      // 填充表单数据
+      basicForm.shopName = response.data.shopName || ''
+      basicForm.description = response.data.shopDescription || ''
+      logoForm.logoUrl = response.data.shopLogo || 'https://via.placeholder.com/200x200'
+    }
+  } catch (error) {
+    ElMessage.error('获取店铺信息失败')
+    console.error('获取店铺信息失败:', error)
+  }
+}
+
+// 加载店铺统计信息
+const loadShopStatistics = async () => {
+  try {
+    const response = await getShopStatistics()
+    if (response.code === 200) {
+      shopStatistics.value = response.data
+    }
+  } catch (error) {
+    console.error('获取店铺统计信息失败:', error)
+  }
+}
+
+const saveBasicInfo = async () => {
+  try {
+    const updateParams: UpdateShopParams = {
+      shopName: basicForm.shopName,
+      shopDescription: basicForm.description,
+      shopLogo: logoForm.logoUrl,
+      shopBanner: shopInfo.value?.shopBanner || ''
+    }
+    
+    const response = await updateShopInfo(updateParams)
+    if (response.code === 200) {
+      ElMessage.success('店铺信息更新成功')
+      // 重新加载店铺信息
+      await loadShopInfo()
+    } else {
+      ElMessage.error(response.msg || '更新失败')
+    }
+  } catch (error) {
+    ElMessage.error('更新店铺信息失败')
+    console.error('更新店铺信息失败:', error)
+  }
 }
 
 const beforeLogoUpload = (file: File) => {
@@ -519,6 +573,12 @@ const changePassword = () => {
 const viewOperationLogs = () => {
   ElMessage.info('查看操作日志功能开发中...')
 }
+
+// 页面加载时获取店铺信息
+onMounted(() => {
+  loadShopInfo()
+  loadShopStatistics()
+})
 </script>
 
 <style scoped lang="scss">

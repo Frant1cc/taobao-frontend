@@ -202,10 +202,17 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
+import { ElMessageBox, ElMessage } from 'element-plus'
 import {
   Search
 } from '@element-plus/icons-vue'
+import { 
+  getOrderList, 
+  getOrderDetail, 
+  shipOrder 
+} from '@/api/modules/merchant-order'
+import type { OrderListItem, OrderDetail, ShipOrderParams } from '@/types/order'
 
 interface OrderProduct {
   id: string
@@ -228,6 +235,9 @@ interface Order {
   receiverName: string
   receiverPhone: string
   receiverAddress: string
+  orderId?: number
+  orderNo?: string
+  userId?: number
 }
 
 // 状态筛选
@@ -249,80 +259,28 @@ const selectedOrders = ref<Order[]>([])
 // 对话框控制
 const showShipDialog = ref(false)
 const shippingOrder = ref<Order | null>(null)
-const shipForm = ref({
+const shipForm = ref<ShipOrderParams>({
   logisticsCompany: '',
-  trackingNumber: ''
+  logisticsNo: ''
 })
 
-// 模拟订单数据
-const orders = ref<Order[]>([
-  {
-    id: '1',
-    orderNumber: '202412150001',
-    status: 'toShip',
-    createTime: '2024-12-15 10:30:25',
-    buyerName: '张先生',
-    products: [
-      {
-        id: '1',
-        name: '新款智能手机',
-        image: 'https://via.placeholder.com/60x60',
-        spec: '黑色 128GB',
-        quantity: 1,
-        price: 2999
-      }
-    ],
-    totalAmount: 2999,
-    paymentMethod: 'alipay',
-    receiverName: '张三',
-    receiverPhone: '138****1234',
-    receiverAddress: '北京市朝阳区xxx街道xxx号'
-  },
-  {
-    id: '2',
-    orderNumber: '202412150002',
-    status: 'shipped',
-    createTime: '2024-12-15 09:15:42',
-    buyerName: '李女士',
-    products: [
-      {
-        id: '2',
-        name: '无线蓝牙耳机',
-        image: 'https://via.placeholder.com/60x60',
-        spec: '白色',
-        quantity: 2,
-        price: 399
-      }
-    ],
-    totalAmount: 798,
-    paymentMethod: 'wechat',
-    receiverName: '李四',
-    receiverPhone: '139****5678',
-    receiverAddress: '上海市浦东新区xxx路xxx号'
-  },
-  {
-    id: '3',
-    orderNumber: '202412150003',
-    status: 'completed',
-    createTime: '2024-12-14 16:20:18',
-    buyerName: '王先生',
-    products: [
-      {
-        id: '3',
-        name: '笔记本电脑',
-        image: 'https://via.placeholder.com/60x60',
-        spec: '银色 i7 16GB',
-        quantity: 1,
-        price: 5999
-      }
-    ],
-    totalAmount: 5999,
-    paymentMethod: 'bank',
-    receiverName: '王五',
-    receiverPhone: '137****9012',
-    receiverAddress: '广州市天河区xxx大道xxx号'
+// 订单数据
+const orders = ref<OrderListItem[]>([])
+
+// 加载订单列表
+const loadOrders = async () => {
+  try {
+    const status = activeStatus.value === 'all' ? undefined : activeStatus.value
+    const response = await getOrderList(currentPage.value, pageSize.value, status)
+    if (response.code === 200) {
+      orders.value = response.data.list
+      total.value = response.data.total
+    }
+  } catch (error) {
+    ElMessage.error('获取订单列表失败')
+    console.error('获取订单列表失败:', error)
   }
-])
+}
 
 // 计算属性：过滤订单
 const filteredOrders = computed(() => {
@@ -352,10 +310,12 @@ const filteredOrders = computed(() => {
 // 方法
 const handleTabChange = () => {
   currentPage.value = 1
+  loadOrders()
 }
 
 const handleSearch = () => {
   currentPage.value = 1
+  loadOrders()
 }
 
 const handleReset = () => {
@@ -363,6 +323,7 @@ const handleReset = () => {
   dateRange.value = []
   filterPayment.value = ''
   currentPage.value = 1
+  loadOrders()
 }
 
 const handleSelectionChange = (selection: Order[]) => {
@@ -372,44 +333,73 @@ const handleSelectionChange = (selection: Order[]) => {
 const handleBatchShip = () => {
   // 批量发货逻辑
   console.log('批量发货:', selectedOrders.value)
+  ElMessage.info('批量发货功能暂未实现')
 }
 
 const clearSelection = () => {
   selectedOrders.value = []
 }
 
-const handleShip = (order: Order) => {
-  shippingOrder.value = order
+const handleShip = (order: OrderListItem) => {
+  shippingOrder.value = order as Order
   showShipDialog.value = true
 }
 
-const handleConfirmShip = () => {
-  // 确认发货逻辑
-  if (shippingOrder.value) {
-    shippingOrder.value.status = 'shipped'
+const handleConfirmShip = async () => {
+  try {
+    if (shippingOrder.value) {
+      const response = await shipOrder(shippingOrder.value.orderId!, shipForm.value)
+      if (response.code === 200) {
+        ElMessage.success('订单发货成功')
+        await loadOrders()
+      } else {
+        ElMessage.error(response.msg || '发货失败')
+      }
+    }
+  } catch (error) {
+    ElMessage.error('发货失败')
+    console.error('发货失败:', error)
   }
+  
   showShipDialog.value = false
   shipForm.value = {
     logisticsCompany: '',
-    trackingNumber: ''
+    logisticsNo: ''
   }
   shippingOrder.value = null
 }
 
-const handleViewTracking = (order: Order) => {
+const handleViewTracking = (order: OrderListItem) => {
   // 查看物流逻辑
   console.log('查看物流:', order)
+  ElMessage.info('查看物流功能暂未实现')
 }
 
-const handleViewDetail = (order: Order) => {
-  // 查看详情逻辑
-  console.log('查看详情:', order)
+const handleViewDetail = async (order: OrderListItem) => {
+  try {
+    const response = await getOrderDetail(order.orderId)
+    if (response.code === 200) {
+      console.log('订单详情:', response.data)
+      ElMessage.info('订单详情功能暂未实现')
+    } else {
+      ElMessage.error('获取订单详情失败')
+    }
+  } catch (error) {
+    ElMessage.error('获取订单详情失败')
+    console.error('获取订单详情失败:', error)
+  }
 }
 
-const handleCancel = (order: Order) => {
+const handleCancel = (order: OrderListItem) => {
   // 取消订单逻辑
-  order.status = 'cancelled'
+  console.log('取消订单:', order)
+  ElMessage.info('取消订单功能暂未实现')
 }
+
+// 页面加载时获取订单列表
+onMounted(() => {
+  loadOrders()
+})
 
 const getStatusType = (status: string) => {
   const statusMap: { [key: string]: string } = {
