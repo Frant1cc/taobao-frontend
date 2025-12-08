@@ -2,8 +2,19 @@
 
 // home页面商品列表参数
 export interface ProductListParams {
-  categoryId?: 1 | 2 | 3 | 4 | 5 | 6 //1-数码，2-生鲜，3-图书，4-衣服，5-零食，6-宠物
-  limit?: number //默认18条
+  /**
+   * 分类ID
+   * 1-数码, 2-生鲜, 3-图书, 4-衣服, 5-零食, 6-宠物
+   */
+  categoryId?: 1 | 2 | 3 | 4 | 5 | 6
+  /**
+   * 商品名称，用于模糊查询
+   */
+  productName?: string
+  /**
+   * 返回数量，默认18条
+   */
+  limit?: number
 }
 
 // 商品SKU信息

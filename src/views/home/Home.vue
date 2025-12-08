@@ -22,6 +22,7 @@ const bannerImages = [
 
 // 商品分类数据
 const categories = ref([
+  { id: 0, name: '全部' },
   { id: 1, name: '数码' },
   { id: 2, name: '生鲜' },
   { id: 3, name: '图书' },
@@ -131,12 +132,53 @@ onUnmounted(() => {
   stopBannerRotation()
 })
 
-const handleSearch = () => {
-  if (searchQuery.value.trim()) {
-    router.push({
-      path: '/search',
-      query: { q: searchQuery.value.trim() }
+const handleSearch = async () => {
+  try {
+    // 调用getProductList接口获取搜索结果
+    const response = await getProductList({ 
+      productName: searchQuery.value.trim() 
     })
+    console.log(`搜索 "${searchQuery.value.trim()}" 的商品列表:`, response)
+    
+    // 处理API返回的数据格式
+    if (response && response.data) {
+      // 将API返回的数据转换为前端需要的格式
+      const products = response.data.map((item: any) => {
+        // 解析主图数组
+        let images: string[] = []
+        try {
+          if (typeof item.mainImages === 'string') {
+            images = JSON.parse(item.mainImages)
+          } else if (Array.isArray(item.mainImages)) {
+            images = item.mainImages
+          }
+        } catch (e) {
+          console.warn('解析商品图片失败:', e)
+          images = []
+        }
+        
+        return {
+          id: item.productId?.toString() || item.id?.toString() || '',
+          name: item.productName || item.name || '未知商品',
+          price: item.price || item.salePrice || 0,
+          description: item.description || '',
+          images: images,
+          categoryId: item.categoryId?.toString() || '',
+          categoryName: item.categoryName || ''
+        }
+      })
+      
+      console.log(`搜索 "${searchQuery.value.trim()}" 格式化后的商品列表:`, products)
+      // 更新商品列表状态
+      featuredProducts.value = products
+    } else {
+      // 如果没有数据，清空商品列表
+      featuredProducts.value = []
+    }
+  } catch (error) {
+    console.error(`搜索 "${searchQuery.value.trim()}" 的商品列表失败:`, error)
+    // 接口响应失败时不清空数据，保持原有状态或空状态
+    featuredProducts.value = []
   }
 }
 
@@ -148,8 +190,70 @@ const handleProductClick = (product: Product) => {
 }
 
 // 处理分类点击事件
-const handleCategoryClick = (category: { id: number; name: string }) => {
+const handleCategoryClick = async (category: { id: number; name: string }) => {
   console.log('点击的分类ID:', category.id)
+  
+  try {
+    let response;
+    // 如果是"全部"分类（id为0），则不传categoryId参数获取全部商品
+    if (category.id === 0) {
+      response = await getProductList()
+      console.log(`全部商品列表:`, response)
+    } else {
+      // 调用getProductList接口获取指定分类的商品
+      response = await getProductList({ categoryId: category.id as any })
+      console.log(`分类 "${category.name}" 的商品列表:`, response)
+    }
+    
+    // 处理API返回的数据格式
+    if (response && response.data) {
+      // 将API返回的数据转换为前端需要的格式
+      const products = response.data.map((item: any) => {
+        // 解析主图数组
+        let images: string[] = []
+        try {
+          if (typeof item.mainImages === 'string') {
+            images = JSON.parse(item.mainImages)
+          } else if (Array.isArray(item.mainImages)) {
+            images = item.mainImages
+          }
+        } catch (e) {
+          console.warn('解析商品图片失败:', e)
+          images = []
+        }
+        
+        return {
+          id: item.productId?.toString() || item.id?.toString() || '',
+          name: item.productName || item.name || '未知商品',
+          price: item.price || item.salePrice || 0,
+          description: item.description || '',
+          images: images,
+          categoryId: item.categoryId?.toString() || '',
+          categoryName: item.categoryName || ''
+        }
+      })
+      
+      if (category.id === 0) {
+        console.log('全部商品格式化后的商品列表:', products)
+      } else {
+        console.log(`分类 "${category.name}" 格式化后的商品列表:`, products)
+      }
+      
+      // 更新商品列表状态
+      featuredProducts.value = products
+    } else {
+      // 如果没有数据，清空商品列表
+      featuredProducts.value = []
+    }
+  } catch (error) {
+    if (category.id === 0) {
+      console.error('获取全部商品列表失败:', error)
+    } else {
+      console.error(`获取分类 "${category.name}" 的商品列表失败:`, error)
+    }
+    // 接口响应失败时不清空数据，保持原有状态或空状态
+    featuredProducts.value = []
+  }
 }
 </script>
 <template>
