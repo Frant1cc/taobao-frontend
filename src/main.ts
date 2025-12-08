@@ -7,6 +7,7 @@ import 'element-plus/dist/index.css'
 import { createPinia } from 'pinia'
 import { useUserStore } from '@/stores/user'
 import './styles/reset.css'
+import './styles/element-theme.css'
 
 const app = createApp(App)
 const pinia = createPinia()

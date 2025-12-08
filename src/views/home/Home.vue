@@ -260,7 +260,8 @@ const handleCategoryClick = async (category: { id: number; name: string }) => {
   <div class="home-page">
     <header class="header">
       <h1>欢迎来到黄启华首页</h1>
-      <div class="header-actions" v-if="!userStore.isLoggedIn">
+      <div class="header-actions">
+        <router-link to="/merchant/auth" class="auth-btn merchant-btn">商家入口</router-link>
         <router-link to="/login" class="auth-btn login-btn">登录</router-link>
         <router-link to="/register" class="auth-btn register-btn">注册</router-link>
       </div>
@@ -426,6 +427,17 @@ $white: #fff;
         font-size: 14px;
         font-weight: 500;
         transition: all 0.3s ease;
+        
+        &.merchant-btn {
+          background-color: #1890ff;
+          color: $white;
+          border: 1px solid #1890ff;
+          
+          &:hover {
+            background-color: color.adjust(#1890ff, $lightness: -10%);
+            border-color: color.adjust(#1890ff, $lightness: -10%);
+          }
+        }
         
         &.login-btn {
           background-color: transparent;

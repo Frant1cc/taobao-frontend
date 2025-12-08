@@ -298,11 +298,18 @@ onMounted(() => {
   padding: 8px 12px;
   border-radius: 6px;
   transition: all 0.3s;
+  outline: none;
 }
 
 .back-btn:hover {
   background: #f5f5f5;
   color: #ff5021;
+}
+
+.back-btn:focus,
+.back-btn:focus-visible {
+  outline: none !important;
+  box-shadow: none !important;
 }
 
 .back-icon {
@@ -347,6 +354,7 @@ onMounted(() => {
   cursor: pointer;
   transition: all 0.3s;
   border-bottom: 2px solid transparent;
+  outline: none;
 }
 
 .filter-tab.active {
@@ -356,6 +364,12 @@ onMounted(() => {
 
 .filter-tab:hover {
   color: #ff5021;
+}
+
+.filter-tab:focus,
+.filter-tab:focus-visible {
+  outline: none !important;
+  box-shadow: none !important;
 }
 
 /* 订单列表样式 */
@@ -392,10 +406,17 @@ onMounted(() => {
   font-size: 14px;
   cursor: pointer;
   transition: all 0.3s;
+  outline: none;
 }
 
 .go-shopping-btn:hover {
   background: #ff3a00;
+}
+
+.go-shopping-btn:focus,
+.go-shopping-btn:focus-visible {
+  outline: none !important;
+  box-shadow: none !important;
 }
 
 /* 订单项样式 */
@@ -554,6 +575,7 @@ onMounted(() => {
   transition: all 0.3s;
   background: white;
   color: #666;
+  outline: none;
 }
 
 .action-btn.primary {
@@ -580,5 +602,12 @@ onMounted(() => {
 
 .action-btn.secondary:hover {
   background: #fff2e8;
+}
+
+/* 移除按钮焦点边框 */
+.action-btn:focus,
+.action-btn:focus-visible {
+  outline: none !important;
+  box-shadow: none !important;
 }
 </style>
