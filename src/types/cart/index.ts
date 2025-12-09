@@ -4,6 +4,7 @@
 export interface Sku {
   skuId: number
   productId: number
+  productName: string
   skuName: string
   skuType: string
   price: number

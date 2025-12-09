@@ -278,10 +278,10 @@ const saveChanges = async () => {
           <div class="item-details">
             <h3 class="item-name">
               <router-link :to="'/product/' + item.sku.productId" class="product-link">
-                {{ item.sku.skuName }}
+                {{ item.sku.productName }}
               </router-link>
             </h3>
-            <p class="item-spec" v-if="item.sku.skuType">{{ item.sku.skuType }}</p>
+            <p class="item-sku-name">{{ item.sku.skuName }}</p>
           </div>
         </div>
 
@@ -461,10 +461,11 @@ const saveChanges = async () => {
       }
     }
 
-    .item-spec {
-      font-size: 12px;
-      color: #666666;
-      margin: 0;
+    .item-sku-name {
+      font-size: 13px;
+      color: #444444;
+      margin: 3px 0;
+      font-weight: 500;
     }
   }
 
