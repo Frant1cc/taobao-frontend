@@ -3,6 +3,7 @@ import { ref, reactive, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { useUserStore } from '@/stores/user'
+import { useCartCheckoutStore } from '@/stores/cartCheckout'
 import { getCartList, deleteCartItem, batchUpdateCartQuantity } from '@/api/modules/cart'
 import type { CartItem } from '@/types/cart'
 import { IMAGE_BASE_URL } from '@/api/config';
@@ -10,6 +11,7 @@ import { IMAGE_BASE_URL } from '@/api/config';
 const route = useRoute();
 const router = useRouter();
 const userStore = useUserStore();
+const cartCheckoutStore = useCartCheckoutStore();
 
 // 检查是否有重定向参数并显示相应提示
 onMounted(() => {
@@ -170,7 +172,20 @@ const checkout = () => {
     return;
   }
   
-  // 跳转到结算页面
+  // 构造选中商品的参数
+  const selectedProducts = checkedItems.map(item => ({
+    productId: item.sku.productId,
+    skuId: item.sku.skuId,
+    quantity: item.quantity,
+    price: item.sku.price,
+    productname: item.sku.productName,
+    skuname: item.sku.skuName
+  }));
+  
+  // 使用store存储选中商品信息
+  cartCheckoutStore.setSelectedProducts(selectedProducts);
+  
+  // 跳转到结算页面，不再携带URL参数
   router.push('/checkout');
 };
 

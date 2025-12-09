@@ -1,67 +1,69 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
+import { ElMessage, ElMessageBox } from 'element-plus';
 import AddressEditor, { type AddressFormData } from '@/components/AddressEditor.vue';
-import type { Address } from '@/types/address'
+import { getAddressList, updateAddress, deleteAddress, setDefaultAddress } from '@/api/modules/address';
+import { createOrder, updateOrderStatus } from '@/api/modules/order';
+import { useCartCheckoutStore } from '@/stores/cartCheckout';
+import type { Address, UpdateAddressRequest } from '@/types/address'
 
-// 订单商品类型定义
-interface OrderItem {
+// 结算商品类型定义
+interface CheckoutItem {
   id: string;
   name: string;
   image: string;
   price: number;
   quantity: number;
   spec?: string;
+  productId: number;
+  skuId: number;
 }
 
 const router = useRouter();
+const cartCheckoutStore = useCartCheckoutStore();
 
-// 模拟订单数据（实际项目中应从购物车传递）
-const orderItems = ref<OrderItem[]>([
-  {
-    id: '1',
-    name: 'Apple iPhone 15 Pro 256GB 星光色',
-    image: 'https://img.alicdn.com/imgextra/i1/1234567890/O1CN01abcdefghijklmnopq_!!0-item_pic.jpg',
-    price: 7999,
-    quantity: 1,
-    spec: '256GB · 星光色'
-  },
-  {
-    id: '2',
-    name: '华为Mate 60 Pro 512GB 曜石黑',
-    image: 'https://img.alicdn.com/imgextra/i2/987654321/O1CN02zyxwvutsrqponml_!!0-item_pic.jpg',
-    price: 6999,
-    quantity: 1,
-    spec: '512GB · 曜石黑'
+// 订单商品数据（从购物车传递过来）
+const orderItems = ref<CheckoutItem[]>([]);
+
+// 初始化订单商品数据
+const initOrderItems = () => {
+  // 从store获取购物车选中的商品数据
+  const products = cartCheckoutStore.getSelectedProducts;
+  if (products && products.length > 0) {
+    // 转换商品数据格式
+    orderItems.value = products.map((product: any) => ({
+      id: product.skuId.toString(),
+      name: product.productname,
+      image: product.image || 'https://img.alicdn.com/imgextra/i1/1234567890/O1CN01abcdefghijklmnopq_!!0-item_pic.jpg', // 使用默认图片
+      price: product.price,
+      quantity: product.quantity,
+      spec: product.skuname,
+      productId: product.productId,
+      skuId: product.skuId
+    }));
+  } else {
+    // 如果没有传递商品数据，使用默认数据
+    orderItems.value = [
+      {
+        id: '1',
+        name: 'Apple iPhone 15 Pro 256GB 星光色',
+        image: 'https://img.alicdn.com/imgextra/i1/1234567890/O1CN01abcdefghijklmnopq_!!0-item_pic.jpg',
+        price: 7999,
+        quantity: 1,
+        spec: '256GB · 星光色',
+        productId: 1,
+        skuId: 1
+      }
+    ];
   }
-]);
+};
 
 // 收货地址列表
-const addresses = ref<Address[]>([
-  {
-    addressId: 1,
-    userId: 1001,
-    fullAddress: '北京市朝阳区建国门外大街1号国贸大厦A座1001室',
-    recipientName: '张三',
-    phone: '13800138000',
-    isDefault: true,
-    createTime: '2024-01-15 10:30:00',
-    updateTime: '2024-01-15 10:30:00'
-  },
-  {
-    addressId: 2,
-    userId: 1001,
-    fullAddress: '上海市浦东新区陆家嘴环路1000号金茂大厦',
-    recipientName: '李四',
-    phone: '13900139000',
-    isDefault: false,
-    createTime: '2024-01-20 14:20:00',
-    updateTime: '2024-01-20 14:20:00'
-  }
-]);
+const addresses = ref<Address[]>([]);
 
 // 选中的地址
-const selectedAddress = ref<Address | undefined>(addresses.value[0]);
+const selectedAddress = ref<Address | undefined>(undefined);
 
 // 地址编辑相关状态
 const showAddressEditor = ref(false);
@@ -99,75 +101,187 @@ const editAddress = (address: Address) => {
   showAddressEditor.value = true;
 };
 
-// 添加地址
-const addAddress = () => {
-  editingAddress.value = undefined;
-  showAddressEditor.value = true;
-};
+
 
 // 处理地址提交
-const handleAddressSubmit = (formData: AddressFormData) => {
-  if (editingAddress.value) {
-    // 修改地址
-    const index = addresses.value.findIndex((addr: Address) => addr.addressId === editingAddress.value!.addressId);
-    if (index !== -1) {
-      addresses.value[index] = {
-        ...editingAddress.value,
-        ...formData
+const handleAddressSubmit = async (formData: AddressFormData) => {
+  try {
+    if (editingAddress.value) {
+      // 修改地址
+      const updateData: UpdateAddressRequest = {
+        addressId: editingAddress.value.addressId,
+        fullAddress: formData.fullAddress,
+        recipientName: formData.recipientName,
+        phone: formData.phone,
+        isDefault: formData.isDefault
       };
       
-      // 如果修改的是当前选中的地址，更新选中地址
-      if (selectedAddress.value && selectedAddress.value.addressId === editingAddress.value.addressId) {
-        selectedAddress.value = addresses.value[index];
+      const response = await updateAddress(updateData);
+      if (response.code === 200) {
+        ElMessage.success('地址修改成功');
+        await fetchAddresses(); // 重新加载地址列表
+      } else {
+        ElMessage.error(response.msg || '地址修改失败');
       }
     }
-  } else {
-    // 添加新地址
-    const newAddress: Address = {
-      addressId: Date.now(),
-      userId: 1001,
-      ...formData,
-      createTime: new Date().toISOString().slice(0, 19).replace('T', ' '),
-      updateTime: new Date().toISOString().slice(0, 19).replace('T', ' ')
-    };
-    
-    // 如果设置为默认地址，取消其他地址的默认状态
-    if (formData.isDefault) {
-      addresses.value.forEach((addr: Address) => {
-        addr.isDefault = false;
-      });
-    }
-    
-    addresses.value.push(newAddress);
-    
-    // 如果是第一个地址，自动选中
-    if (addresses.value.length === 1) {
-      selectedAddress.value = newAddress;
-    }
+  } catch (error) {
+    console.error('地址操作失败:', error);
+    ElMessage.error('地址操作失败');
   }
   
   // 重置编辑状态
+  showAddressEditor.value = false;
   editingAddress.value = undefined;
 };
 
+// 处理编辑取消
+const handleEditorCancel = () => {
+  showAddressEditor.value = false;
+  editingAddress.value = undefined;
+};
+
+// 删除地址
+const handleDeleteAddress = async (addressId: number) => {
+  try {
+    await ElMessageBox.confirm(
+      '确定要删除这个收货地址吗？',
+      '确认删除',
+      {
+        confirmButtonText: '确定删除',
+        cancelButtonText: '取消',
+        type: 'warning',
+        customClass: 'delete-confirm-dialog'
+      }
+    );
+    
+    // 执行删除操作
+    const response = await deleteAddress(addressId);
+    if (response.code === 200) {
+      ElMessage.success('地址删除成功');
+      await fetchAddresses(); // 重新加载地址列表
+    } else {
+      ElMessage.error(response.msg || '地址删除失败');
+    }
+  } catch {
+    // 用户取消删除
+  }
+};
+
+// 设为默认地址
+const handleSetDefaultAddress = async (addressId: number) => {
+  try {
+    const response = await setDefaultAddress(addressId);
+    if (response.code === 200) {
+      ElMessage.success('默认地址设置成功');
+      await fetchAddresses(); // 重新加载地址列表
+    } else {
+      ElMessage.error(response.msg || '设置默认地址失败');
+    }
+  } catch (error) {
+    console.error('设置默认地址失败:', error);
+    ElMessage.error('设置默认地址失败');
+  }
+};
+
 // 提交订单
-const submitOrder = () => {
-  // 模拟订单提交
+const submitOrder = async () => {
+  // 验证必填信息
+  if (!selectedAddress.value) {
+    ElMessage.error('请选择收货地址');
+    return;
+  }
+
+  if (orderItems.value.length === 0) {
+    ElMessage.error('订单商品不能为空');
+    return;
+  }
+
+  // 构造订单数据
   const orderData = {
-    items: orderItems.value,
-    address: selectedAddress.value,
-    paymentMethod: paymentMethod.value,
-    totalPrice: totalPrice.value,
-    orderTime: new Date().toISOString()
+    consignee: selectedAddress.value.recipientName,
+    phone: selectedAddress.value.phone,
+    address: selectedAddress.value.fullAddress,
+    orderItems: orderItems.value.map(item => ({
+      productId: item.productId,
+      skuId: item.skuId,
+      quantity: item.quantity,
+      price: item.price
+    }))
   };
-  
-  console.log('提交订单:', orderData);
-  
-  // 实际项目中这里会调用API提交订单
-  alert('订单提交成功！订单总金额：￥' + totalPrice.value.toFixed(2));
-  
-  // 跳转到订单完成页面
-  router.push('/order/success');
+
+  try {
+    // 显示确认对话框
+    await ElMessageBox.confirm(
+      `确认提交订单吗？订单总金额：￥${totalPrice.value.toFixed(2)}`,
+      '确认订单',
+      {
+        confirmButtonText: '确定',
+        cancelButtonText: '取消',
+        type: 'warning',
+        customClass: 'order-confirm-dialog'
+      }
+    );
+
+    // 调用API提交订单
+    const response = await createOrder(orderData);
+    
+    if (response.code === 200) {
+      ElMessage.success('订单提交成功！');
+      
+      // 根据实际响应结构调整处理逻辑
+      // 假设响应格式为 { code: 200, data: orderId, msg: "success" }
+      const orderId = response.data;
+      
+      // 显示支付确认弹窗
+      ElMessageBox.confirm(
+        `订单提交成功！请立即支付以确保订单有效。`,
+        '支付确认',
+        {
+          confirmButtonText: '立即支付',
+          cancelButtonText: '稍后支付',
+          type: 'success',
+          customClass: 'payment-confirm-dialog',
+          dangerouslyUseHTMLString: true,
+          center: true
+        }
+      ).then(async () => {
+        // 用户选择立即支付
+        try {
+          // 调用接口更新订单状态为已支付
+          const updateResponse = await updateOrderStatus({
+            orderId: orderId,
+            status: 'paid'
+          });
+          
+          if (updateResponse.code === 200) {
+            ElMessage.success('支付成功！');
+          } else {
+            ElMessage.error(updateResponse.msg || '支付失败，请稍后重试');
+          }
+        } catch (error) {
+          console.error('更新订单状态失败:', error);
+          ElMessage.error('支付处理异常，请稍后重试');
+        }
+        
+        // 无论支付成功与否，都跳转回首页
+        router.push('/');
+      }).catch(() => {
+        // 用户选择稍后支付（取消支付），也跳转回首页
+        ElMessage.info('已取消支付');
+        router.push('/');
+      });
+    } else {
+      ElMessage.error(response.msg || '订单提交失败');
+    }
+  } catch (error: any) {
+    if (error === 'cancel') {
+      // 用户取消操作
+      return;
+    }
+    
+    console.error('订单提交失败:', error);
+    ElMessage.error('订单提交失败，请稍后重试');
+  }
 };
 
 // 返回购物车
@@ -175,8 +289,40 @@ const goBackToCart = () => {
   router.push('/cart');
 };
 
+// 获取用户地址列表
+const fetchAddresses = async () => {
+  try {
+    const response = await getAddressList();
+    if (response.code === 200) {
+      addresses.value = response.data || [];
+      
+      // 设置默认选中的地址
+      const defaultAddress = addresses.value.find(addr => addr.isDefault);
+      if (defaultAddress) {
+        selectedAddress.value = defaultAddress;
+      } else if (addresses.value.length > 0) {
+        // 如果没有默认地址，选择第一个地址
+        selectedAddress.value = addresses.value[0];
+      }
+    } else {
+      ElMessage.error(response.msg || '获取地址列表失败');
+    }
+  } catch (error) {
+    console.error('获取地址列表失败:', error);
+    ElMessage.error('获取地址列表失败');
+  }
+};
+
 onMounted(() => {
-  // 实际项目中应从路由参数或状态管理获取购物车数据
+  // 初始化订单商品数据
+  initOrderItems();
+  
+  // 获取用户地址列表
+  fetchAddresses();
+  
+  // 清空购物车选中商品数据
+  cartCheckoutStore.clearSelectedProducts();
+  
   console.log('结算页面加载完成');
 });
 </script>
@@ -211,12 +357,16 @@ onMounted(() => {
             </div>
           </div>
           <div class="address-actions">
-            <button class="edit-btn" @click="editAddress(address)">编辑</button>
+            <button class="edit-btn" @click.stop="editAddress(address)">编辑</button>
+            <button class="delete-btn" @click.stop="handleDeleteAddress(address.addressId)">删除</button>
+            <button 
+              v-if="!address.isDefault" 
+              class="set-default-btn" 
+              @click.stop="handleSetDefaultAddress(address.addressId)"
+            >
+              设为默认
+            </button>
           </div>
-        </div>
-        <div class="add-address" @click="addAddress">
-          <span class="add-icon">+</span>
-          <span>添加新地址</span>
         </div>
       </div>
     </div>
@@ -303,7 +453,7 @@ onMounted(() => {
         :visible="showAddressEditor"
         @update:visible="showAddressEditor = $event"
         @submit="handleAddressSubmit"
-        @cancel="editingAddress = undefined"
+        @cancel="handleEditorCancel"
       />
     </div>
   </div>
@@ -421,16 +571,49 @@ onMounted(() => {
     }
 
     .address-actions {
-      .edit-btn {
-        background: none;
+      display: flex;
+      gap: 10px;
+      margin-left: 20px;
+
+      .edit-btn,
+      .delete-btn,
+      .set-default-btn {
+        padding: 4px 12px;
         border: 1px solid #e0e0e0;
-        padding: 6px 12px;
         border-radius: 4px;
-        color: #666666;
+        font-size: 12px;
         cursor: pointer;
+        transition: all 0.2s;
+        background: white;
+      }
+
+      .edit-btn {
+        color: #666666;
 
         &:hover {
-          background-color: #f5f5f5;
+          background: #f5f5f5;
+          border-color: #ccc;
+          color: #333;
+        }
+      }
+
+      .delete-btn {
+        color: #ff4d4f;
+        border-color: #ff4d4f;
+
+        &:hover {
+          background: #ff4d4f;
+          color: white;
+        }
+      }
+
+      .set-default-btn {
+        color: #ff5000;
+        border-color: #ff5000;
+
+        &:hover {
+          background: #ff5000;
+          color: white;
         }
       }
     }
@@ -687,6 +870,104 @@ onMounted(() => {
 @media (max-width: 768px) {
   .modal-overlay {
     padding: 10px;
+  }
+}
+
+/* 通用弹窗样式 */
+.delete-confirm-dialog,
+.order-confirm-dialog,
+.payment-confirm-dialog {
+  width: 420px !important;
+  max-width: 90vw;
+  border-radius: 12px;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.15);
+}
+
+.delete-confirm-dialog .el-message-box__header,
+.order-confirm-dialog .el-message-box__header,
+.payment-confirm-dialog .el-message-box__header {
+  padding: 20px 20px 10px;
+}
+
+.delete-confirm-dialog .el-message-box__title,
+.order-confirm-dialog .el-message-box__title,
+.payment-confirm-dialog .el-message-box__title {
+  font-size: 20px;
+  font-weight: 600;
+  color: #333;
+}
+
+.delete-confirm-dialog .el-message-box__content,
+.order-confirm-dialog .el-message-box__content,
+.payment-confirm-dialog .el-message-box__content {
+  padding: 20px;
+  font-size: 16px;
+  line-height: 1.6;
+  color: #555;
+}
+
+.delete-confirm-dialog .el-message-box__btns,
+.order-confirm-dialog .el-message-box__btns,
+.payment-confirm-dialog .el-message-box__btns {
+  padding: 15px 20px 20px;
+}
+
+.delete-confirm-dialog .el-button,
+.order-confirm-dialog .el-button,
+.payment-confirm-dialog .el-button {
+  padding: 12px 24px;
+  font-size: 16px;
+  border-radius: 6px;
+  min-width: 100px;
+}
+
+.delete-confirm-dialog .el-button--primary,
+.order-confirm-dialog .el-button--primary,
+.payment-confirm-dialog .el-button--primary {
+  background-color: #ff5021;
+  border-color: #ff5021;
+}
+
+.delete-confirm-dialog .el-button--primary:hover,
+.order-confirm-dialog .el-button--primary:hover,
+.payment-confirm-dialog .el-button--primary:hover {
+  background-color: #e6450d;
+  border-color: #e6450d;
+}
+
+.delete-confirm-dialog .el-button--default,
+.order-confirm-dialog .el-button--default,
+.payment-confirm-dialog .el-button--default {
+  border-color: #dcdfe6;
+  color: #666;
+}
+
+@media (max-width: 768px) {
+  .delete-confirm-dialog,
+  .order-confirm-dialog,
+  .payment-confirm-dialog {
+    width: 90vw !important;
+  }
+  
+  .delete-confirm-dialog .el-message-box__title,
+  .order-confirm-dialog .el-message-box__title,
+  .payment-confirm-dialog .el-message-box__title {
+    font-size: 18px;
+  }
+  
+  .delete-confirm-dialog .el-message-box__content,
+  .order-confirm-dialog .el-message-box__content,
+  .payment-confirm-dialog .el-message-box__content {
+    font-size: 14px;
+    padding: 15px;
+  }
+  
+  .delete-confirm-dialog .el-button,
+  .order-confirm-dialog .el-button,
+  .payment-confirm-dialog .el-button {
+    padding: 10px 20px;
+    font-size: 14px;
+    min-width: 80px;
   }
 }
 </style>
