@@ -263,8 +263,10 @@ const handleCategoryClick = async (category: { id: number; name: string }) => {
       <h1>欢迎来到黄启华首页</h1>
       <div class="header-actions">
         <router-link to="/merchant/auth" class="auth-btn merchant-btn">商家入口</router-link>
-        <router-link to="/login" class="auth-btn login-btn">登录</router-link>
-        <router-link to="/register" class="auth-btn register-btn">注册</router-link>
+        <template v-if="!userStore.isLoggedIn">
+          <router-link to="/login" class="auth-btn login-btn">登录</router-link>
+          <router-link to="/register" class="auth-btn register-btn">注册</router-link>
+        </template>
       </div>
       <div class="search-container">
         <input 
