@@ -58,7 +58,7 @@
               class="product-item"
             >
               <div class="product-image">
-                <img :src="product.image" :alt="product.name" />
+                <img :src="getImageUrl(product.image)" :alt="product.name" />
               </div>
               <div class="product-info">
                 <h4 class="product-name">{{ product.name }}</h4>
@@ -151,6 +151,7 @@ import { ref, computed, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { ElMessage, ElPagination } from 'element-plus'
 import { getOrderList, updateOrderStatus } from '@/api/modules/order'
+import { IMAGE_BASE_URL } from '@/api/config'
 import type { GetOrderListRequest, GetOrderListResponse, OrderListItem, UpdateOrderStatusRequest } from '@/types/order'
 
 const router = useRouter()
@@ -159,6 +160,15 @@ const route = useRoute()
 // 添加加载状态
 const loading = ref(false)
 
+// 获取图片完整URL
+const getImageUrl = (imagePath: string) => {
+  // 如果imagePath已经是完整URL，则直接返回
+  if (imagePath && (imagePath.startsWith('http://') || imagePath.startsWith('https://'))) {
+    return imagePath
+  }
+  // 否则拼接基础URL
+  return imagePath ? `${IMAGE_BASE_URL}/${imagePath}` : ''
+}
 
 // 订单状态映射 (适配新的API状态值)
 const statusMap = {
@@ -182,7 +192,7 @@ const filterTabs = [
 // 响应式数据
 const activeFilter = ref('')
 const currentPage = ref(1)
-const pageSize = ref(10) // 固定每页显示10条记录
+const pageSize = ref(5) // 固定每页显示5条记录
 const total = ref(0)
 
 // 从API获取的订单数据
@@ -200,14 +210,40 @@ const fetchOrders = async () => {
     
     const response = await getOrderList(params)
     
-    // 详细的响应结构调试信息
-    console.log('API完整响应:', JSON.stringify(response, null, 2))
-    
     // 根据实际API响应结构调整处理逻辑
     if (response.code === 200) {
+      // 处理新的API数据结构
+      if (response.data && typeof response.data === 'object' && 'orders' in response.data) {
+        // 转换API数据以适配前端组件
+        allOrders.value = (response.data as { orders: any[] }).orders.map((order: any) => ({
+          id: order.orderId?.toString() || '',
+          orderId: order.orderId || '',
+          status: order.status || 'pending',
+          createTime: order.createTime ? new Date(order.createTime).toLocaleString() : new Date().toLocaleString(),
+          totalAmount: order.totalAmount || 0,
+          productCount: order.orderItems && Array.isArray(order.orderItems) 
+            ? order.orderItems.reduce((count: number, item: any) => count + (item.quantity || 0), 0) 
+            : 0,
+          products: order.orderItems && Array.isArray(order.orderItems) 
+            ? order.orderItems.map((item: any) => ({
+                id: item.itemId?.toString() || Math.random().toString(),
+                name: item.productName || '未知商品',
+                spec: item.skuType || '默认规格',
+                price: item.price || 0,
+                quantity: item.quantity || 0,
+                image: getImageUrl(item.skuImage || item.image) || 'https://via.placeholder.com/80x80' // 使用占位图或真实图片
+              }))
+            : [],
+          address: order.shippingAddress || order.address || '',
+          consigneeName: order.consigneeName || '',
+          phone: order.phone || ''
+        }))
+        
+        // 设置总数量
+        total.value = (response.data as any).totalCount || (response.data as any).orders.length
+      } 
       // 检查是否有data字段并且是一个对象（包含list数组）
-      if (response.data && typeof response.data === 'object' && Array.isArray(response.data.list)) {
-        console.log('使用标准数据结构处理')
+      else if (response.data && typeof response.data === 'object' && Array.isArray(response.data.list)) {
         // 使用后端返回的实际数据结构
         allOrders.value = response.data.list.map(order => ({
           id: order.id || '',
@@ -226,7 +262,6 @@ const fetchOrders = async () => {
       } 
       // 如果data直接就是一个数组（根据用户提供的API数据）
       else if (Array.isArray(response.data)) {
-        console.log('使用数组数据结构处理')
         // 转换API数据以适配前端组件
         allOrders.value = response.data.map((order: any) => ({
           id: order.orderId?.toString() || '',
@@ -246,7 +281,7 @@ const fetchOrders = async () => {
                 spec: item.skuType || '默认规格',
                 price: item.price || 0,
                 quantity: item.quantity || 0,
-                image: item.image || 'https://via.placeholder.com/80x80' // 使用占位图或真实图片
+                image: getImageUrl(item.skuImage || item.image) || 'https://via.placeholder.com/80x80' // 使用占位图或真实图片
               }))
             : (order.products && Array.isArray(order.products) 
                 ? order.products.map((item: any) => ({
@@ -255,7 +290,7 @@ const fetchOrders = async () => {
                     spec: item.spec || '默认规格',
                     price: item.price || 0,
                     quantity: item.quantity || 0,
-                    image: item.image || 'https://via.placeholder.com/80x80'
+                    image: getImageUrl(item.image) || 'https://via.placeholder.com/80x80'
                   }))
                 : []),
           address: order.address || order.shippingAddress || order.receiverAddress || '',
@@ -267,7 +302,6 @@ const fetchOrders = async () => {
         total.value = response.data.length
       }
       else {
-        console.log('未知数据结构:', typeof response.data, response.data)
         ElMessage.error('获取订单列表失败: 数据格式不正确')
         // 重置数据
         allOrders.value = []
@@ -280,7 +314,6 @@ const fetchOrders = async () => {
       total.value = 0
     }
   } catch (error) {
-    console.error('获取订单列表异常:', error)
     ElMessage.error('获取订单列表失败: ' + (error instanceof Error ? error.message : '未知错误'))
     // 重置数据
     allOrders.value = []
@@ -308,8 +341,8 @@ const handlePageChange = (page: number) => {
 }
 
 const handleSizeChange = (size: number) => {
-  // 固定每页显示10条记录，不随用户选择改变
-  pageSize.value = 10
+  // 固定每页显示5条记录，不随用户选择改变
+  pageSize.value = 5
   currentPage.value = 1 // 重置到第一页
   fetchOrders() // 重新获取数据
 }
