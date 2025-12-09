@@ -4,7 +4,7 @@
     <header class="header">
       <div class="header-left">
         <div class="logo">
-          <img src="https://via.placeholder.com/120x40" alt="淘宝商家后台" />
+          <img src="@/assets/vue.svg" alt="淘宝商家后台" />
         </div>
         <div class="search-box">
           <el-input
@@ -15,10 +15,9 @@
         </div>
       </div>
       <div class="header-right">
-        <div class="user-info">
-          <el-avatar :size="32" src="https://via.placeholder.com/32x32" />
-          <span class="username">商家名称</span>
-          <el-icon><ArrowDown /></el-icon>
+        <div class="user-info" @click="goToSettings">
+          <el-avatar :size="32" :src="userInfo?.avatarUrl || 'https://via.placeholder.com/32x32'" />
+          <span class="username">{{ userInfo?.username || userInfo?.account || '商家用户' }}</span>
         </div>
       </div>
     </header>
@@ -88,8 +87,9 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
+import { useUserStore } from '@/stores/user'
 import {
   Monitor,
   Goods,
@@ -101,8 +101,26 @@ import {
 
 const router = useRouter()
 const route = useRoute()
-const userAvatar = ref('https://via.placeholder.com/32x32')
-const userName = ref('商家名称')
+const userStore = useUserStore()
+
+// 用户信息（从用户仓库获取）
+const userInfo = computed(() => userStore.userInfo)
+
+// 跳转到店铺设置页面
+const goToSettings = () => {
+  router.push('/merchant/settings')
+}
+
+// 加载用户信息
+onMounted(async () => {
+  if (!userStore.userInfo) {
+    try {
+      await userStore.fetchUserInfo()
+    } catch (error) {
+      console.error('加载用户信息失败:', error)
+    }
+  }
+})
 </script>
 
 <style scoped lang="scss">

@@ -16,7 +16,7 @@ import type { ShopResponse } from '@/types/shop'
  */
 export const addProduct = (params: AddProductParams): Promise<ShopResponse<string>> => {
   return request({
-    url: '/shop/product/add',
+    url: '/api/shop/product/add',
     method: 'POST',
     data: params
   })
@@ -25,31 +25,44 @@ export const addProduct = (params: AddProductParams): Promise<ShopResponse<strin
 /**
  * 商家获取商品列表
  * @param pageNum 页码
- * @param pageSize 每页大小
+ * @param pageSize 每页数量
+ * @param queryParams 查询参数
  * @returns 商品列表
  */
 export const getProductList = (
   pageNum: number = 1, 
-  pageSize: number = 10
+  pageSize: number = 10,
+  queryParams?: {
+    productName?: string
+    status?: string
+    categoryId?: number | string
+  }
 ): Promise<ShopResponse<ProductListResponse>> => {
+  const params = {
+    pageNum,
+    pageSize,
+    ...queryParams
+  }
+  
   return request({
-    url: '/shop/product/list',
+    url: '/api/shop/product/list',
     method: 'GET',
-    params: {
-      pageNum,
-      pageSize
-    }
+    params
   })
 }
 
 /**
  * 商家更新商品
+ * @param productId 商品ID
  * @param params 商品更新信息
  * @returns 更新结果
  */
-export const updateProduct = (params: UpdateProductParams): Promise<ShopResponse<string>> => {
+export const updateProduct = (
+  productId: number, 
+  params: UpdateProductParams
+): Promise<ShopResponse<string>> => {
   return request({
-    url: '/shop/product/update',
+    url: `/api/shop/product/update/${productId}`,
     method: 'PUT',
     data: params
   })
@@ -62,7 +75,7 @@ export const updateProduct = (params: UpdateProductParams): Promise<ShopResponse
  */
 export const deleteProduct = (productId: number): Promise<ShopResponse<string>> => {
   return request({
-    url: `/shop/product/${productId}`,
+    url: `/api/shop/product/${productId}`,
     method: 'DELETE'
   })
 }
@@ -74,7 +87,7 @@ export const deleteProduct = (productId: number): Promise<ShopResponse<string>> 
  */
 export const addSku = (params: AddSkuParams): Promise<ShopResponse<string>> => {
   return request({
-    url: '/shop/product/sku/add',
+    url: '/api/shop/product/sku/add',
     method: 'POST',
     data: params
   })
@@ -82,12 +95,16 @@ export const addSku = (params: AddSkuParams): Promise<ShopResponse<string>> => {
 
 /**
  * 商家更新SKU
+ * @param skuId SKU ID
  * @param params SKU更新信息
  * @returns 更新结果
  */
-export const updateSku = (params: UpdateSkuParams): Promise<ShopResponse<string>> => {
+export const updateSku = (
+  skuId: number, 
+  params: UpdateSkuParams
+): Promise<ShopResponse<string>> => {
   return request({
-    url: '/shop/product/sku/update',
+    url: `/api/shop/product/sku/update/${skuId}`,
     method: 'PUT',
     data: params
   })
@@ -100,7 +117,7 @@ export const updateSku = (params: UpdateSkuParams): Promise<ShopResponse<string>
  */
 export const deleteSku = (skuId: number): Promise<ShopResponse<string>> => {
   return request({
-    url: `/shop/product/sku/${skuId}`,
+    url: `/api/shop/product/sku/${skuId}`,
     method: 'DELETE'
   })
 }

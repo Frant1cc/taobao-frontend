@@ -20,6 +20,8 @@ export interface UpdateUserInfoParams {
   birthday?: string
   phone?: string
   email?: string
+  description?: string
+  avatarUrl?: string
 }
 
 // 登录响应数据

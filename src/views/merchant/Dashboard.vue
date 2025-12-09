@@ -2,8 +2,11 @@
   <div class="merchant-dashboard">
     <!-- 欢迎区域 -->
     <div class="welcome-section">
-      <h2>欢迎回来，商家用户！</h2>
+      <h2>欢迎回来，{{ userInfo?.username || userInfo?.account || '商家用户' }}！</h2>
       <p>今日是 {{ currentDate }}，祝您生意兴隆！</p>
+      <div v-if="userInfo" class="user-info-badge">
+        <span class="account-info">账号：{{ userInfo.account }}</span>
+      </div>
     </div>
 
     <!-- 数据概览卡片 -->
@@ -121,7 +124,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 import {
   Money,
   Document,
@@ -129,14 +132,57 @@ import {
   Goods,
   Setting
 } from '@element-plus/icons-vue'
+import { useUserStore } from '@/stores/user'
+import { getShopInfo } from '@/api/modules/shop'
+import type { ShopInfo } from '@/types/shop'
 
+const userStore = useUserStore()
 const currentDate = ref(new Date().toLocaleDateString('zh-CN'))
 
-// 模拟数据
+// 用户信息（从用户仓库获取）
+const userInfo = computed(() => userStore.userInfo)
+
+// 店铺信息
+const shopInfo = ref<ShopInfo | null>(null)
+
+// 数据概览（使用模拟数据，因为统计接口不存在）
 const revenue = ref(12568.5)
 const orders = ref(42)
 const visitors = ref(1568)
 const products = ref(28)
+
+// 获取用户类型文本
+const getUserTypeText = (userType: string) => {
+  const typeMap: Record<string, string> = {
+    'merchant': '商家',
+    'customer': '普通用户',
+    'operator': '运营人员',
+    'visitor': '访客'
+  }
+  return typeMap[userType] || userType
+}
+
+// 加载数据
+const loadData = async () => {
+  try {
+    // 如果用户信息不存在，尝试从用户仓库加载
+    if (!userStore.userInfo) {
+      await userStore.fetchUserInfo()
+    }
+    
+    // 获取店铺信息
+    const shopResponse = await getShopInfo()
+    if (shopResponse.code === 200) {
+      shopInfo.value = shopResponse.data
+    }
+  } catch (error) {
+    console.error('加载数据失败:', error)
+  }
+}
+
+onMounted(() => {
+  loadData()
+})
 
 const recentOrders = ref([
   {
@@ -213,8 +259,25 @@ $white: #fff;
     }
     
     p {
-      margin: 0;
+      margin: 0 0 12px 0;
       opacity: 0.9;
+    }
+    
+    .user-info-badge {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-top: 12px;
+      
+      .el-tag {
+        font-size: 12px;
+        font-weight: 500;
+      }
+      
+      .account-info {
+        font-size: 14px;
+        opacity: 0.9;
+      }
     }
   }
 

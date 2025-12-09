@@ -4,7 +4,7 @@
     <div class="page-header">
       <h2>商品管理</h2>
       <div class="header-actions">
-        <el-button type="primary" @click="showAddDialog = true">
+        <el-button type="primary" @click="handleAddProduct">
           <el-icon><Plus /></el-icon>
           发布商品
         </el-button>
@@ -20,22 +20,23 @@
       <div class="filter-row">
         <el-input
           v-model="searchKeyword"
-          placeholder="搜索商品名称、SKU..."
+          placeholder="搜索商品名称..."
           prefix-icon="Search"
           style="width: 300px"
         />
         <el-select v-model="filterStatus" placeholder="商品状态" style="width: 120px">
           <el-option label="全部" value="" />
-          <el-option label="在售" value="onSale" />
-          <el-option label="下架" value="offSale" />
-          <el-option label="草稿" value="draft" />
+          <el-option label="在售" value="on_sale" />
+          <el-option label="下架" value="off_sale" />
         </el-select>
         <el-select v-model="filterCategory" placeholder="商品分类" style="width: 120px">
           <el-option label="全部" value="" />
-          <el-option label="电子产品" value="electronics" />
-          <el-option label="服装" value="clothing" />
-          <el-option label="家居" value="home" />
-          <el-option label="美妆" value="beauty" />
+          <el-option label="数码" :value="1" />
+          <el-option label="生鲜" :value="2" />
+          <el-option label="图书" :value="3" />
+          <el-option label="衣服" :value="4" />
+          <el-option label="零食" :value="5" />
+          <el-option label="宠物" :value="6" />
         </el-select>
         <el-button type="primary" @click="handleSearch">搜索</el-button>
         <el-button @click="handleReset">重置</el-button>
@@ -44,48 +45,64 @@
 
     <!-- 商品列表 -->
     <el-card>
-      <el-table :data="filteredProducts" style="width: 100%">
+      <el-table :data="filteredProducts" style="width: 100%" v-loading="loading">
         <el-table-column type="selection" width="55" />
-        <el-table-column label="商品信息" min-width="300">
+        <el-table-column label="商品信息" min-width="350">
           <template #default="{ row }">
             <div class="product-info">
               <el-image
-                :src="row.image"
-                :alt="row.name"
+                v-if="getMainImageUrl(row)"
+                :src="getMainImageUrl(row)"
+                :alt="row.productName"
                 fit="cover"
                 class="product-image"
               />
               <div class="product-details">
-                <div class="product-name clickable" @click="handleView(row)">{{ row.name }}</div>
-                <div class="product-sku">SKU: {{ row.sku }}</div>
-                <div class="product-category">{{ getCategoryName(row.category) }}</div>
+                <div class="product-name clickable" @click="handleView(row)">{{ row.productName }}</div>
+                <div class="product-description">{{ row.description }}</div>
+                <div class="product-meta">
+                  <span class="product-category">{{ getCategoryNameById(row.categoryId) }}</span>
+                  <span class="product-time">{{ formatTime(row.createTime) }}</span>
+                </div>
               </div>
             </div>
           </template>
         </el-table-column>
-        <el-table-column prop="price" label="价格" width="120">
+        <el-table-column label="价格" width="120" align="center">
           <template #default="{ row }">
-            ¥{{ row.price }}
+            <span :class="{ 'price-null': !row.price }">
+              {{ row.price ? `¥${row.price}` : '未设置' }}
+            </span>
           </template>
         </el-table-column>
-        <el-table-column prop="stock" label="库存" width="100" />
-        <el-table-column prop="sales" label="销量" width="100" />
-        <el-table-column label="状态" width="100">
+        <el-table-column label="库存" width="100" align="center">
+          <template #default="{ row }">
+            <el-tag :type="row.skus ? 'success' : 'info'" size="small">
+              {{ row.skus ? '有SKU' : '无SKU' }}
+            </el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column label="商品ID" width="100" align="center">
+          <template #default="{ row }">
+            {{ row.productId }}
+          </template>
+        </el-table-column>
+        <el-table-column label="状态" width="100" align="center">
           <template #default="{ row }">
             <el-tag :type="getStatusType(row.status)" size="small">
               {{ getStatusText(row.status) }}
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column label="操作" width="150" fixed="right">
+        <el-table-column label="操作" width="180" align="center" fixed="right">
           <template #default="{ row }">
-            <el-button size="small" @click="handleEdit(row)">编辑</el-button>
+            <el-button size="small" type="primary" @click="handleEdit(row)">编辑</el-button>
             <el-button 
               size="small" 
-              :type="row.status === 'onSale' ? 'warning' : 'success'"
+              :type="row.status === 'on_sale' ? 'warning' : 'success'"
               @click="handleToggleStatus(row)"
             >
-              {{ row.status === 'onSale' ? '下架' : '上架' }}
+              {{ row.status === 'on_sale' ? '下架' : '上架' }}
             </el-button>
           </template>
         </el-table-column>
@@ -99,6 +116,8 @@
           :page-sizes="[10, 20, 50, 100]"
           :total="total"
           layout="total, sizes, prev, pager, next, jumper"
+          @size-change="handleSizeChange"
+          @current-change="handleCurrentChange"
         />
       </div>
     </el-card>
@@ -107,27 +126,40 @@
     <el-dialog
       v-model="showAddDialog"
       :title="editingProduct ? '编辑商品' : '发布商品'"
-      width="800px"
+      width="900px"
       align-center
       style="margin-top: 5vh"
     >
       <el-form :model="productForm" label-width="80px">
         <el-form-item label="商品名称">
-          <el-input v-model="productForm.name" placeholder="请输入商品名称" />
+          <el-input v-model="productForm.productName" placeholder="请输入商品名称" />
         </el-form-item>
         <el-form-item label="商品分类">
-          <el-select v-model="productForm.category" placeholder="请选择分类">
-            <el-option label="电子产品" value="electronics" />
-            <el-option label="服装" value="clothing" />
-            <el-option label="家居" value="home" />
-            <el-option label="美妆" value="beauty" />
+          <el-select v-model="productForm.categoryId" placeholder="请选择分类">
+            <el-option label="数码" :value="1" />
+            <el-option label="生鲜" :value="2" />
+            <el-option label="图书" :value="3" />
+            <el-option label="衣服" :value="4" />
+            <el-option label="零食" :value="5" />
+            <el-option label="宠物" :value="6" />
           </el-select>
         </el-form-item>
-        <el-form-item label="价格">
-          <el-input-number v-model="productForm.price" :min="0" :step="0.01" />
+        <el-form-item label="商品描述">
+          <el-input
+            v-model="productForm.description"
+            type="textarea"
+            :rows="4"
+            placeholder="请输入商品描述"
+          />
         </el-form-item>
-        <el-form-item label="库存">
-          <el-input-number v-model="productForm.stock" :min="0" />
+        <el-form-item label="商品价格">
+          <el-input-number
+            v-model="productForm.price"
+            :min="0"
+            :precision="2"
+            placeholder="请输入商品价格"
+          />
+          <span style="margin-left: 8px; color: #666;">元</span>
         </el-form-item>
         <el-form-item label="商品图片">
           <el-upload
@@ -138,19 +170,69 @@
             <el-icon><Plus /></el-icon>
           </el-upload>
         </el-form-item>
-        <el-form-item label="商品描述">
-          <el-input
-            v-model="productForm.description"
-            type="textarea"
-            :rows="4"
-            placeholder="请输入商品描述"
-          />
+        
+        <!-- SKU管理区域 -->
+        <el-form-item label="SKU管理">
+          <div class="sku-management">
+            <div class="sku-header">
+              <span class="sku-title">商品规格和库存</span>
+              <el-button type="primary" size="small" @click="handleAddSku">
+                <el-icon><Plus /></el-icon>
+                添加SKU
+              </el-button>
+            </div>
+            
+            <!-- SKU列表 -->
+            <div class="sku-list" v-if="productForm.skus && productForm.skus.length > 0">
+              <div v-for="(sku, index) in productForm.skus" :key="index" class="sku-item">
+                <div class="sku-info">
+                  <div class="sku-name">
+                    <el-input
+                      v-model="sku.skuName"
+                      placeholder="规格名称（如：颜色:红色 尺寸:L）"
+                      size="small"
+                    />
+                  </div>
+                  <div class="sku-price">
+                    <el-input-number
+                      v-model="sku.price"
+                      :min="0"
+                      :precision="2"
+                      placeholder="价格"
+                      size="small"
+                    />
+                    <span style="margin-left: 4px; color: #666;">元</span>
+                  </div>
+                  <div class="sku-stock">
+                    <el-input-number
+                      v-model="sku.stock"
+                      :min="0"
+                      placeholder="库存"
+                      size="small"
+                    />
+                    <span style="margin-left: 4px; color: #666;">件</span>
+                  </div>
+                </div>
+                <div class="sku-actions">
+                  <el-button type="danger" size="small" @click="handleRemoveSku(index)">
+                    <el-icon><Delete /></el-icon>
+                    删除
+                  </el-button>
+                </div>
+              </div>
+            </div>
+            
+            <!-- 无SKU提示 -->
+            <div v-else class="no-sku">
+              <el-empty description="暂无SKU，点击添加SKU按钮创建规格" :image-size="80" />
+            </div>
+          </div>
         </el-form-item>
       </el-form>
       <template #footer>
         <div style="display: flex; justify-content: space-between; width: 100%;">
           <div>
-            <el-button v-if="editingProduct" type="danger" @click="handleDelete(editingProduct)">
+            <el-button v-if="editingProduct" type="danger" @click="handleDelete(editingProduct as ProductListItem)">
               删除商品
             </el-button>
           </div>
@@ -172,30 +254,18 @@ import { ElMessageBox, ElMessage } from 'element-plus'
 import {
   Plus,
   Upload,
-  Search
+  Delete,
 } from '@element-plus/icons-vue'
 import { 
   addProduct, 
   getProductList, 
   updateProduct, 
-  deleteProduct 
+  deleteProduct,
+  addSku,
+  updateSku,
+  deleteSku
 } from '@/api/modules/merchant-product'
-import type { ProductListItem, AddProductParams, UpdateProductParams } from '@/types/product'
-
-interface Product {
-  id: string
-  name: string
-  sku: string
-  category: string
-  price: number
-  stock: number
-  sales: number
-  status: string
-  image: string
-  description: string
-  productId?: number
-  productName?: string
-}
+import type { ProductListItem, AddProductParams, UpdateProductParams, ProductSku, AddSkuParams, UpdateSkuParams } from '@/types/product'
 
 // 搜索和筛选
 const searchKeyword = ref('')
@@ -206,19 +276,22 @@ const filterCategory = ref('')
 const currentPage = ref(1)
 const pageSize = ref(10)
 const total = ref(0)
+const loading = ref(false)
 
 // 对话框控制
 const showAddDialog = ref(false)
-const editingProduct = ref<Product | null>(null)
+const editingProduct = ref<ProductListItem | null>(null)
 
 // 商品表单
-const productForm = ref<AddProductParams>({
+const productForm = ref<AddProductParams & { price?: number; skus?: ProductSku[] }>({
   productName: '',
   description: '',
   categoryId: 1,
+  price: undefined,
   mainImages: [],
   detailImages: [],
-  status: 'on_sale'
+  status: 'on_sale',
+  skus: []
 })
 
 // 商品数据
@@ -226,42 +299,75 @@ const products = ref<ProductListItem[]>([])
 
 // 加载商品列表
 const loadProducts = async () => {
+  loading.value = true
   try {
-    const response = await getProductList(currentPage.value, pageSize.value)
-    if (response.code === 200) {
-      products.value = response.data.list
-      total.value = response.data.total
+    // 构建查询参数
+    const params = {
+      pageNum: currentPage.value,
+      pageSize: pageSize.value,
+      productName: searchKeyword.value || undefined,
+      status: filterStatus.value || undefined,
+      categoryId: filterCategory.value || undefined
+    }
+    
+    // 移除空值参数
+    Object.keys(params).forEach((key: string) => {
+      if (params[key as keyof typeof params] === undefined || params[key as keyof typeof params] === '') {
+        delete params[key as keyof typeof params]
+      }
+    })
+    
+    // 提取查询参数（排除pageNum和pageSize）
+    const { pageNum: pNum, pageSize: pSize, ...queryParams } = params
+    
+    const response = await getProductList(pNum, pSize, queryParams)
+    if (response.code === 200 && response.data) {
+      const data = response.data
+      // 修复：根据实际数据结构，data直接是数组，而不是data.list
+      products.value = Array.isArray(data) ? data : []
+      total.value = products.value.length
+    } else {
+      products.value = []
+      total.value = 0
+      ElMessage.warning('获取商品列表失败，请稍后重试')
     }
   } catch (error) {
-    ElMessage.error('获取商品列表失败')
     console.error('获取商品列表失败:', error)
+    products.value = []
+    total.value = 0
+    ElMessage.error('获取商品列表失败，请检查网络连接')
+  } finally {
+    loading.value = false
   }
 }
 
-// 计算属性：过滤商品
+// 计算属性：商品列表（直接返回API返回的数据）
 const filteredProducts = computed(() => {
-  let filtered = products.value
-  
-  if (searchKeyword.value) {
-    filtered = filtered.filter(product => 
-      product.productName.includes(searchKeyword.value)
-    )
+  // 确保products是数组
+  if (!Array.isArray(products.value)) {
+    return []
   }
   
-  if (filterStatus.value) {
-    filtered = filtered.filter(product => product.status === filterStatus.value)
-  }
-  
-  total.value = filtered.length
-  const start = (currentPage.value - 1) * pageSize.value
-  const end = start + pageSize.value
-  return filtered.slice(start, end)
+  return products.value
 })
 
 // 方法
+const handleAddProduct = () => {
+  editingProduct.value = null
+  productForm.value = {
+    productName: '',
+    description: '',
+    categoryId: 1,
+    mainImages: [],
+    detailImages: [],
+    status: 'on_sale'
+  }
+  showAddDialog.value = true
+}
+
 const handleSearch = () => {
-  currentPage.value = 1
-  loadProducts()
+  currentPage.value = 1 // 搜索时重置到第一页
+  loadProducts() // 重新加载数据
 }
 
 const handleReset = () => {
@@ -269,20 +375,97 @@ const handleReset = () => {
   filterStatus.value = ''
   filterCategory.value = ''
   currentPage.value = 1
-  loadProducts()
+  loadProducts() // 重新加载数据
+}
+
+const handleSizeChange = (size: number) => {
+  pageSize.value = size
+  currentPage.value = 1
+}
+
+const handleCurrentChange = (page: number) => {
+  currentPage.value = page
 }
 
 const handleEdit = (product: ProductListItem) => {
-  editingProduct.value = product as Product
+  editingProduct.value = product
+  
+  // 解析SKU数据
+  let skus: ProductSku[] = []
+  if (product.skus && typeof product.skus === 'string') {
+    try {
+      skus = JSON.parse(product.skus)
+    } catch (error) {
+      console.warn('解析SKU数据失败:', error)
+      skus = []
+    }
+  } else if (Array.isArray(product.skus)) {
+    skus = product.skus
+  }
+  
   productForm.value = {
     productName: product.productName,
     description: product.description,
     categoryId: product.categoryId,
-    mainImages: [],
-    detailImages: [],
-    status: product.status as 'on_sale' | 'off_sale'
+    price: product.price || undefined,
+    mainImages: product.mainImages ? JSON.parse(product.mainImages) : [],
+    detailImages: product.detailImages ? JSON.parse(product.detailImages) : [],
+    status: product.status as 'on_sale' | 'off_sale',
+    skus: skus
   }
   showAddDialog.value = true
+}
+
+// SKU管理方法
+const handleAddSku = () => {
+  if (!productForm.value.skus) {
+    productForm.value.skus = []
+  }
+  
+  // 生成临时ID，从1开始递减（负数表示临时SKU）
+  const tempSkuId = - (productForm.value.skus.filter(sku => sku.skuId <= 0).length + 1)
+  
+  productForm.value.skus.push({
+    skuId: tempSkuId, // 临时ID（负数）
+    productId: editingProduct.value?.productId || 0,
+    skuName: '',
+    skuType: 'normal',
+    price: 0,
+    stock: 0,
+    soldCount: 0,
+    skuImage: '',
+    status: 'on_sale',
+    createTime: new Date().toISOString(),
+    updateTime: new Date().toISOString()
+  })
+}
+
+const handleRemoveSku = (index: number) => {
+  if (productForm.value.skus) {
+    const sku = productForm.value.skus[index]
+    
+    // 如果是已存在的SKU（有真实ID，ID > 0），需要确认删除
+    if (sku && sku.skuId > 0) {
+      ElMessageBox.confirm(
+        `确定要删除SKU "${sku.skuName}" 吗？此操作不可恢复。`,
+        '删除确认',
+        {
+          confirmButtonText: '确定',
+          cancelButtonText: '取消',
+          type: 'warning',
+        }
+      ).then(() => {
+        productForm.value.skus?.splice(index, 1)
+        ElMessage.success('SKU删除成功')
+      }).catch(() => {
+        // 用户取消删除
+      })
+    } else {
+      // 如果是新添加的SKU（临时ID，ID <= 0），直接删除
+      productForm.value.skus?.splice(index, 1)
+      ElMessage.success('SKU删除成功')
+    }
+  }
 }
 
 const handleToggleStatus = async (product: ProductListItem) => {
@@ -293,12 +476,12 @@ const handleToggleStatus = async (product: ProductListItem) => {
       productName: product.productName,
       description: product.description,
       categoryId: product.categoryId,
-      mainImages: [],
-      detailImages: [],
+      mainImages: product.mainImages ? JSON.parse(product.mainImages) : [],
+      detailImages: product.detailImages ? JSON.parse(product.detailImages) : [],
       status: newStatus
     }
     
-    const response = await updateProduct(updateParams)
+    const response = await updateProduct(updateParams.productId, updateParams)
     if (response.code === 200) {
       ElMessage.success('商品状态更新成功')
       await loadProducts()
@@ -341,14 +524,51 @@ const handleDelete = async (product: ProductListItem) => {
 
 const handleSaveProduct = async () => {
   try {
+    // 验证表单数据
+    if (!productForm.value.productName.trim()) {
+      ElMessage.error('请输入商品名称')
+      return
+    }
+    
+    if (!productForm.value.categoryId) {
+      ElMessage.error('请选择商品分类')
+      return
+    }
+    
+    // 验证SKU数据
+    if (productForm.value.skus && productForm.value.skus.length > 0) {
+      for (const sku of productForm.value.skus) {
+        if (!sku.skuName.trim()) {
+          ElMessage.error('请填写所有SKU的规格名称')
+          return
+        }
+        if (sku.price <= 0) {
+          ElMessage.error('SKU价格必须大于0')
+          return
+        }
+        if (sku.stock < 0) {
+          ElMessage.error('SKU库存不能为负数')
+          return
+        }
+      }
+    }
+    
     if (editingProduct.value) {
       // 更新商品
       const updateParams: UpdateProductParams = {
-        productId: editingProduct.value.productId!,
-        ...productForm.value
+        productId: editingProduct.value.productId,
+        productName: productForm.value.productName,
+        description: productForm.value.description,
+        categoryId: productForm.value.categoryId,
+        mainImages: productForm.value.mainImages,
+        detailImages: productForm.value.detailImages,
+        status: productForm.value.status
       }
-      const response = await updateProduct(updateParams)
+      
+      const response = await updateProduct(updateParams.productId, updateParams)
       if (response.code === 200) {
+        // 处理SKU更新
+        await handleSkuOperations(editingProduct.value.productId)
         ElMessage.success('商品更新成功')
       } else {
         ElMessage.error(response.msg || '更新失败')
@@ -358,6 +578,12 @@ const handleSaveProduct = async () => {
       // 添加商品
       const response = await addProduct(productForm.value)
       if (response.code === 200) {
+        // 获取新创建的商品ID
+        const newProductId = response.data
+        if (newProductId && productForm.value.skus && productForm.value.skus.length > 0) {
+          // 处理SKU添加
+          await handleSkuOperations(parseInt(newProductId))
+        }
         ElMessage.success('商品添加成功')
       } else {
         ElMessage.error(response.msg || '添加失败')
@@ -370,9 +596,11 @@ const handleSaveProduct = async () => {
       productName: '',
       description: '',
       categoryId: 1,
+      price: undefined,
       mainImages: [],
       detailImages: [],
-      status: 'on_sale'
+      status: 'on_sale',
+      skus: []
     }
     editingProduct.value = null
     await loadProducts()
@@ -382,33 +610,98 @@ const handleSaveProduct = async () => {
   }
 }
 
+// SKU操作处理
+const handleSkuOperations = async (productId: number) => {
+  if (!productForm.value.skus || productForm.value.skus.length === 0) return
+  
+  for (const sku of productForm.value.skus) {
+    // 确保sku对象有默认值
+    const safeSku = {
+      skuId: sku.skuId || 0,
+      skuName: sku.skuName || '',
+      skuType: sku.skuType || '',
+      price: sku.price || 0,
+      stock: sku.stock || 0,
+      skuImage: sku.skuImage || '',
+      status: (sku.status || 'on_sale') as "on_sale" | "off_sale",
+      productId: productId
+    }
+    
+    if (safeSku.skuId > 0) {
+      // 更新已存在的SKU（真实ID）
+      const updateParams: UpdateSkuParams = {
+        skuId: safeSku.skuId,
+        skuName: safeSku.skuName,
+        skuType: safeSku.skuType,
+        price: safeSku.price,
+        stock: safeSku.stock,
+        skuImage: safeSku.skuImage,
+        status: safeSku.status
+      }
+      await updateSku(safeSku.skuId, updateParams)
+    } else {
+      // 添加新的SKU（临时ID）
+      const addParams: AddSkuParams = {
+        productId: productId,
+        skuName: safeSku.skuName,
+        skuType: safeSku.skuType,
+        price: safeSku.price,
+        stock: safeSku.stock,
+        skuImage: safeSku.skuImage,
+        status: safeSku.status
+      }
+      await addSku(addParams)
+    }
+  }
+}
+
 const getStatusType = (status: string) => {
   const statusMap: { [key: string]: string } = {
-    'onSale': 'success',
-    'offSale': 'warning',
-    'draft': 'info'
+    'on_sale': 'success',
+    'off_sale': 'warning'
   }
   return statusMap[status] || 'info'
 }
 
 const getStatusText = (status: string) => {
   const statusMap: { [key: string]: string } = {
-    'onSale': '在售',
-    'offSale': '下架',
-    'draft': '草稿'
+    'on_sale': '在售',
+    'off_sale': '下架'
   }
   return statusMap[status] || '未知'
 }
 
-const getCategoryName = (category: string) => {
-  const categoryMap: { [key: string]: string } = {
-    'electronics': '电子产品',
-    'clothing': '服装',
-    'home': '家居',
-    'beauty': '美妆'
+const getCategoryNameById = (categoryId: number) => {
+  const categoryMap: { [key: number]: string } = {
+    1: '数码',
+    2: '生鲜',
+    3: '图书',
+    4: '衣服',
+    5: '零食',
+    6: '宠物'
   }
-  return categoryMap[category] || '其他'
+  return categoryMap[categoryId] || '其他'
 }
+
+const getMainImageUrl = (product: ProductListItem) => {
+  if (!product.mainImages) return null
+  try {
+    const images = JSON.parse(product.mainImages)
+    return images.length > 0 ? `http://localhost:3000/${images[0]}` : null
+  } catch {
+    return null
+  }
+}
+
+const formatTime = (timeStr: string) => {
+  try {
+    const date = new Date(timeStr)
+    return date.toLocaleDateString('zh-CN')
+  } catch {
+    return timeStr
+  }
+}
+
 // 页面加载时获取商品列表
 onMounted(() => {
   loadProducts()
@@ -436,6 +729,8 @@ $white: #fff;
     h2 {
       margin: 0;
       color: $text-primary;
+      font-size: 24px;
+      font-weight: 600;
     }
 
     .header-actions {
@@ -451,12 +746,13 @@ $white: #fff;
       display: flex;
       gap: 12px;
       align-items: center;
+      flex-wrap: wrap;
     }
   }
 
   .product-info {
     display: flex;
-    align-items: center;
+    align-items: flex-start;
     gap: 12px;
 
     .product-image {
@@ -464,36 +760,64 @@ $white: #fff;
       height: 60px;
       border-radius: 4px;
       object-fit: cover;
+      flex-shrink: 0;
     }
 
     .product-details {
-    .product-name {
-      font-weight: 500;
-      margin-bottom: 4px;
-      color: $text-primary;
-      
-      &.clickable {
-        cursor: pointer;
-        transition: color 0.2s;
+      flex: 1;
+      min-width: 0;
+
+      .product-name {
+        font-weight: 600;
+        margin-bottom: 4px;
+        color: $text-primary;
+        font-size: 14px;
+        line-height: 1.4;
         
-        &:hover {
-          color: $primary-color;
-          text-decoration: underline;
+        &.clickable {
+          cursor: pointer;
+          transition: color 0.2s;
+          
+          &:hover {
+            color: $primary-color;
+            text-decoration: underline;
+          }
+        }
+      }
+
+      .product-description {
+        font-size: 12px;
+        color: $text-secondary;
+        margin-bottom: 6px;
+        line-height: 1.4;
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+      }
+
+      .product-meta {
+        display: flex;
+        gap: 12px;
+        font-size: 11px;
+        color: #999;
+
+        .product-category {
+          background: #f0f2f5;
+          padding: 2px 6px;
+          border-radius: 3px;
+        }
+
+        .product-time {
+          font-style: italic;
         }
       }
     }
+  }
 
-      .product-sku {
-        font-size: 12px;
-        color: $text-secondary;
-        margin-bottom: 2px;
-      }
-
-      .product-category {
-        font-size: 12px;
-        color: $text-secondary;
-      }
-    }
+  .price-null {
+    color: #999;
+    font-style: italic;
   }
 
   .pagination-container {
@@ -501,6 +825,84 @@ $white: #fff;
     justify-content: flex-end;
     margin-top: 16px;
     padding: 16px 0;
+    border-top: 1px solid $border-color;
+  }
+
+  .el-table {
+    .el-table__header-wrapper th {
+      background-color: #f5f7fa;
+      font-weight: 600;
+    }
+
+    .el-table__body tr:hover > td {
+      background-color: #f5f7fa;
+    }
+  }
+
+  // SKU管理样式
+  .sku-management {
+    border: 1px solid #e4e7ed;
+    border-radius: 4px;
+    padding: 16px;
+    background-color: #fafafa;
+
+    .sku-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+
+      .sku-title {
+        font-weight: 600;
+        color: #303133;
+        font-size: 14px;
+      }
+    }
+
+    .sku-list {
+      .sku-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 12px;
+        margin-bottom: 8px;
+        background-color: white;
+        border: 1px solid #e4e7ed;
+        border-radius: 4px;
+
+        &:last-child {
+          margin-bottom: 0;
+        }
+
+        .sku-info {
+          display: flex;
+          align-items: center;
+          gap: 16px;
+          flex: 1;
+
+          .sku-name {
+            width: 200px;
+          }
+
+          .sku-price,
+          .sku-stock {
+            width: 120px;
+            display: flex;
+            align-items: center;
+          }
+        }
+
+        .sku-actions {
+          flex-shrink: 0;
+        }
+      }
+    }
+
+    .no-sku {
+      text-align: center;
+      padding: 20px;
+      color: #909399;
+    }
   }
 }
 </style>

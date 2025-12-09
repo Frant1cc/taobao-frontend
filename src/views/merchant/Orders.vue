@@ -188,7 +188,7 @@
           </el-select>
         </el-form-item>
         <el-form-item label="运单号">
-          <el-input v-model="shipForm.trackingNumber" placeholder="请输入运单号" />
+          <el-input v-model="shipForm.logisticsNo" placeholder="请输入运单号" />
         </el-form-item>
       </el-form>
       <template #footer>
@@ -271,7 +271,11 @@ const orders = ref<OrderListItem[]>([])
 const loadOrders = async () => {
   try {
     const status = activeStatus.value === 'all' ? undefined : activeStatus.value
-    const response = await getOrderList(currentPage.value, pageSize.value, status)
+    const response = await getOrderList({
+      pageNum: currentPage.value,
+      pageSize: pageSize.value,
+      status: status as ("pending" | "paid" | "shipped" | "completed" | "cancelled" | undefined)
+    })
     if (response.code === 200) {
       orders.value = response.data.list
       total.value = response.data.total
@@ -282,29 +286,13 @@ const loadOrders = async () => {
   }
 }
 
-// 计算属性：过滤订单
+// 计算属性：订单列表（直接返回后端API返回的数据）
 const filteredOrders = computed(() => {
-  let filtered = orders.value
-  
-  if (activeStatus.value !== 'all') {
-    filtered = filtered.filter(order => order.status === activeStatus.value)
+  // 如果 orders.value 为 undefined 或 null，返回空数组
+  if (!orders.value) {
+    return []
   }
-  
-  if (searchKeyword.value) {
-    filtered = filtered.filter(order => 
-      order.orderNumber.includes(searchKeyword.value) || 
-      order.buyerName.includes(searchKeyword.value)
-    )
-  }
-  
-  if (filterPayment.value) {
-    filtered = filtered.filter(order => order.paymentMethod === filterPayment.value)
-  }
-  
-  total.value = filtered.length
-  const start = (currentPage.value - 1) * pageSize.value
-  const end = start + pageSize.value
-  return filtered.slice(start, end)
+  return orders.value
 })
 
 // 方法
@@ -341,7 +329,7 @@ const clearSelection = () => {
 }
 
 const handleShip = (order: OrderListItem) => {
-  shippingOrder.value = order as Order
+  shippingOrder.value = order as unknown as Order
   showShipDialog.value = true
 }
 

@@ -5,7 +5,7 @@ import type { ShopInfo, UpdateShopParams, ShopStatistics, ShopResponse } from '@
 // 获取店铺信息
 export function getShopInfo(): Promise<ShopResponse<ShopInfo>> {
   return request({
-    url: '/shop/my',
+    url: '/api/shop/my',
     method: 'get'
   })
 }
@@ -13,16 +13,8 @@ export function getShopInfo(): Promise<ShopResponse<ShopInfo>> {
 // 更新店铺信息
 export function updateShopInfo(data: UpdateShopParams): Promise<ShopResponse<string>> {
   return request({
-    url: '/shop/update',
+    url: '/api/shop/update',
     method: 'put',
     data
-  })
-}
-
-// 获取店铺统计信息
-export function getShopStatistics(): Promise<ShopResponse<ShopStatistics>> {
-  return request({
-    url: '/shop/statistics/my',
-    method: 'get'
   })
 }

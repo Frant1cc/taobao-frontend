@@ -102,6 +102,12 @@ export interface ProductListItem {
   status: string
   createTime: string
   updateTime: string
+  merchantId?: number
+  shopId?: number
+  price?: number | null
+  mainImages?: string
+  detailImages?: string
+  skus?: any
 }
 
 // 添加SKU请求参数

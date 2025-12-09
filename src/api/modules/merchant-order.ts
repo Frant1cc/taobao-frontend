@@ -17,7 +17,7 @@ export const getOrderList = (
   params: OrderListParams
 ): Promise<ShopResponse<OrderListResponse>> => {
   return request({
-    url: '/shop/order/list',
+    url: '/api/shop/order/list',
     method: 'GET',
     params
   })
@@ -30,7 +30,7 @@ export const getOrderList = (
  */
 export const getOrderDetail = (orderId: number): Promise<ShopResponse<OrderDetail>> => {
   return request({
-    url: `/shop/order/${orderId}`,
+    url: `/api/shop/order/${orderId}`,
     method: 'GET'
   })
 }
@@ -46,7 +46,7 @@ export const shipOrder = (
   params: ShipOrderParams
 ): Promise<ShopResponse<string>> => {
   return request({
-    url: `/shop/order/ship/${orderId}`,
+    url: `/api/shop/order/ship/${orderId}`,
     method: 'PUT',
     data: params
   })
