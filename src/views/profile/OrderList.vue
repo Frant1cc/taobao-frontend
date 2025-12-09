@@ -18,7 +18,7 @@
           v-for="tab in filterTabs" 
           :key="tab.value"
           :class="['filter-tab', { active: activeFilter === tab.value }]"
-          @click="changeFilter(tab.value)"
+          @click="handleFilterClick(tab.value)"
         >
           {{ tab.label }}
         </button>
@@ -42,7 +42,7 @@
           <!-- 订单头部 -->
           <div class="order-header">
             <div class="order-info">
-              <span class="order-id">订单号：{{ order.id }}</span>
+              <span class="order-id">订单号：{{ order.orderId }}</span>
               <span class="order-time">{{ order.createTime }}</span>
             </div>
             <div class="order-status-badge" :class="getStatusClass(order.status)">
@@ -69,24 +69,45 @@
             </div>
           </div>
 
+          <!-- 订单地址 -->
+          <div class="order-address" v-if="order.address || order.consigneeName || order.phone">
+            <div class="address-label">收货地址：</div>
+            <div class="address-detail" v-if="order.consigneeName">
+              {{ order.consigneeName }}
+            </div>
+            <div class="address-detail" v-if="order.phone" :class="{ 'phone-with-margin': order.consigneeName }">
+              {{ order.phone }}
+            </div>
+            <div class="address-detail" v-if="order.address">
+              {{ order.address }}
+            </div>
+          </div>
+
           <!-- 订单统计 -->
           <div class="order-summary">
             <div class="total-amount">
-              共{{ order.products.length }}件商品 合计：¥{{ order.totalAmount }}
+              共{{ order.productCount }}件商品 合计：¥{{ order.totalAmount }}
             </div>
           </div>
 
           <!-- 订单操作 -->
           <div class="order-actions">
             <button 
-              v-if="order.status === 'pending_payment'" 
+              v-if="order.status === 'pending'" 
               class="action-btn primary"
               @click="payOrder(order)"
             >
               立即付款
             </button>
             <button 
-              v-if="order.status === 'pending_receipt'" 
+              v-if="order.status === 'pending'" 
+              class="action-btn secondary"
+              @click="cancelOrder(order)"
+            >
+              取消订单
+            </button>
+            <button 
+              v-if="order.status === 'shipped'" 
               class="action-btn primary"
               @click="confirmReceipt(order)"
             >
@@ -106,10 +127,19 @@
             >
               申请售后
             </button>
-            <button class="action-btn secondary" @click="viewOrderDetail(order)">
-              订单详情
-            </button>
           </div>
+        </div>
+
+        <!-- 分页组件 -->
+        <div class="pagination-container" v-if="total > pageSize">
+          <el-pagination
+            v-model:current-page="currentPage"
+            v-model:page-size="pageSize"
+            :total="total"
+            layout="total, prev, pager, next, jumper"
+            @current-change="handlePageChange"
+            @size-change="handleSizeChange"
+          />
         </div>
       </div>
     </div>
@@ -119,101 +149,180 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
-import { ElMessage } from 'element-plus'
+import { ElMessage, ElPagination } from 'element-plus'
+import { getOrderList, updateOrderStatus } from '@/api/modules/order'
+import type { GetOrderListRequest, GetOrderListResponse, OrderListItem, UpdateOrderStatusRequest } from '@/types/order'
 
 const router = useRouter()
 const route = useRoute()
 
+// 添加加载状态
+const loading = ref(false)
 
-// 订单状态映射
+
+// 订单状态映射 (适配新的API状态值)
 const statusMap = {
-  'pending_payment': { text: '待付款', class: 'pending' },
-  'pending_shipment': { text: '待发货', class: 'pending' },
-  'pending_receipt': { text: '待收货', class: 'shipping' },
+  'pending': { text: '待付款', class: 'pending' },
+  'paid': { text: '已付款', class: 'pending' },
+  'shipped': { text: '已发货', class: 'shipping' },
   'completed': { text: '已完成', class: 'completed' },
-  'refund': { text: '退款中', class: 'refund' },
   'cancelled': { text: '已取消', class: 'cancelled' }
 }
 
-// 筛选标签
+// 筛选标签 (适配新的API状态值)
 const filterTabs = [
-  { label: '全部', value: 'all' },
-  { label: '待付款', value: 'pending_payment' },
-  { label: '待发货', value: 'pending_shipment' },
-  { label: '待收货', value: 'pending_receipt' },
-  { label: '已完成', value: 'completed' }
+  { label: '全部', value: '' },
+  { label: '待付款', value: 'pending' },
+  { label: '已付款', value: 'paid' },
+  { label: '已发货', value: 'shipped' },
+  { label: '已完成', value: 'completed' },
+  { label: '已取消', value: 'cancelled' }
 ]
+
 // 响应式数据
-const activeFilter = ref('all')
-const orders = ref([
-  // 模拟数据
-  {
-    id: 'TB20231215001',
-    status: 'pending_payment',
-    createTime: '2023-12-15 10:30:25',
-    totalAmount: 299.00,
-    products: [
-      {
-        id: 'P001',
-        name: '新款智能手机',
-        spec: '黑色 128GB',
-        price: 2999.00,
-        quantity: 1,
-        image: 'https://via.placeholder.com/80x80'
+const activeFilter = ref('')
+const currentPage = ref(1)
+const pageSize = ref(10) // 固定每页显示10条记录
+const total = ref(0)
+
+// 从API获取的订单数据
+const allOrders = ref<OrderListItem[]>([])
+
+// 获取订单数据的函数
+const fetchOrders = async () => {
+  loading.value = true
+  try {
+    const params: GetOrderListRequest = {
+      pageNum: currentPage.value,
+      pageSize: pageSize.value,
+      orderStatus: activeFilter.value as "" | "pending" | "paid" | "shipped" | "completed" | "cancelled" | undefined || undefined
+    }
+    
+    const response = await getOrderList(params)
+    
+    // 详细的响应结构调试信息
+    console.log('API完整响应:', JSON.stringify(response, null, 2))
+    
+    // 根据实际API响应结构调整处理逻辑
+    if (response.code === 200) {
+      // 检查是否有data字段并且是一个对象（包含list数组）
+      if (response.data && typeof response.data === 'object' && Array.isArray(response.data.list)) {
+        console.log('使用标准数据结构处理')
+        // 使用后端返回的实际数据结构
+        allOrders.value = response.data.list.map(order => ({
+          id: order.id || '',
+          orderId: order.orderId || '',
+          status: order.status || 'pending',
+          createTime: order.createTime || new Date().toLocaleString(),
+          totalAmount: order.totalAmount || 0,
+          productCount: order.productCount || 0,
+          products: order.products && Array.isArray(order.products) ? order.products : [],
+          address: order.address || '',
+          consigneeName: order.consigneeName || '',
+          phone: order.phone || ''
+        }))
+        
+        total.value = response.data.total || 0
+      } 
+      // 如果data直接就是一个数组（根据用户提供的API数据）
+      else if (Array.isArray(response.data)) {
+        console.log('使用数组数据结构处理')
+        // 转换API数据以适配前端组件
+        allOrders.value = response.data.map((order: any) => ({
+          id: order.orderId?.toString() || '',
+          orderId: order.orderId || '',
+          status: order.status || 'pending',
+          createTime: order.createTime ? new Date(order.createTime).toLocaleString() : new Date().toLocaleString(),
+          totalAmount: order.totalAmount || 0,
+          productCount: order.orderItems && Array.isArray(order.orderItems) 
+            ? order.orderItems.reduce((count: number, item: any) => count + (item.quantity || 0), 0) 
+            : (order.products && Array.isArray(order.products) 
+                ? order.products.reduce((count: number, item: any) => count + (item.quantity || 0), 0)
+                : 0),
+          products: order.orderItems && Array.isArray(order.orderItems) 
+            ? order.orderItems.map((item: any) => ({
+                id: item.itemId?.toString() || Math.random().toString(),
+                name: item.productName || '未知商品',
+                spec: item.skuType || '默认规格',
+                price: item.price || 0,
+                quantity: item.quantity || 0,
+                image: item.image || 'https://via.placeholder.com/80x80' // 使用占位图或真实图片
+              }))
+            : (order.products && Array.isArray(order.products) 
+                ? order.products.map((item: any) => ({
+                    id: item.id?.toString() || Math.random().toString(),
+                    name: item.name || '未知商品',
+                    spec: item.spec || '默认规格',
+                    price: item.price || 0,
+                    quantity: item.quantity || 0,
+                    image: item.image || 'https://via.placeholder.com/80x80'
+                  }))
+                : []),
+          address: order.address || order.shippingAddress || order.receiverAddress || '',
+          consigneeName: order.consigneeName || '',
+          phone: order.phone || ''
+        }))
+        
+        // 设置总数量为返回数据的长度
+        total.value = response.data.length
       }
-    ]
-  },
-  {
-    id: 'TB20231214002',
-    status: 'pending_shipment',
-    createTime: '2023-12-14 16:45:12',
-    totalAmount: 156.00,
-    products: [
-      {
-        id: 'P002',
-        name: '无线蓝牙耳机',
-        spec: '白色',
-        price: 156.00,
-        quantity: 1,
-        image: 'https://via.placeholder.com/80x80'
+      else {
+        console.log('未知数据结构:', typeof response.data, response.data)
+        ElMessage.error('获取订单列表失败: 数据格式不正确')
+        // 重置数据
+        allOrders.value = []
+        total.value = 0
       }
-    ]
-  },
-  {
-    id: 'TB20231213003',
-    status: 'pending_receipt',
-    createTime: '2023-12-13 09:20:33',
-    totalAmount: 89.90,
-    products: [
-      {
-        id: 'P003',
-        name: '运动水杯',
-        spec: '蓝色 500ml',
-        price: 29.90,
-        quantity: 3,
-        image: 'https://via.placeholder.com/80x80'
-      }
-    ]
+    } else {
+      ElMessage.error('获取订单列表失败: ' + (response.msg || response.msg || '未知错误'))
+      // 重置数据
+      allOrders.value = []
+      total.value = 0
+    }
+  } catch (error) {
+    console.error('获取订单列表异常:', error)
+    ElMessage.error('获取订单列表失败: ' + (error instanceof Error ? error.message : '未知错误'))
+    // 重置数据
+    allOrders.value = []
+    total.value = 0
+  } finally {
+    loading.value = false
   }
-])
+}
+
+// 初始化总订单数
+// total.value = allOrders.value.length
 
 // 计算属性
 const pageTitle = ref('我的订单')
 
 const filteredOrders = computed(() => {
-  if (activeFilter.value === 'all') {
-    return orders.value
-  }
-  return orders.value.filter(order => order.status === activeFilter.value)
+  // 在使用API的情况下，过滤和分页都在后端完成，这里直接返回所有订单
+  return allOrders.value
 })
+
+// 分页相关方法
+const handlePageChange = (page: number) => {
+  currentPage.value = page
+  fetchOrders() // 重新获取数据
+}
+
+const handleSizeChange = (size: number) => {
+  // 固定每页显示10条记录，不随用户选择改变
+  pageSize.value = 10
+  currentPage.value = 1 // 重置到第一页
+  fetchOrders() // 重新获取数据
+}
 
 // 方法
 const goBack = () => {
   router.back()
 }
 
-const changeFilter = (filter: string) => {
+const handleFilterClick = (filter: string) => {
   activeFilter.value = filter
+  currentPage.value = 1 // 切换筛选条件时重置到第一页
+  fetchOrders() // 重新获取数据
   // 页面标题统一显示为"我的订单"
   pageTitle.value = '我的订单'
 }
@@ -226,9 +335,54 @@ const getStatusText = (status: string) => {
   return (statusMap as Record<string, { text: string; class: string }>)[status]?.text || '未知状态'
 }
 
-const payOrder = (order: any) => {
-  ElMessage.success(`正在支付订单：${order.id}`)
-  // 实际开发中这里会跳转到支付页面
+const payOrder = async (order: any) => {
+  try {
+    // 调用API更新订单状态为"已付款"
+    const params: UpdateOrderStatusRequest = {
+      orderId: parseInt(order.id),
+      status: 'paid'
+    }
+    
+    const response = await updateOrderStatus(params)
+    
+    if (response.code === 200) {
+      ElMessage.success('支付成功，订单状态已更新')
+      // 更新本地订单状态
+      order.status = 'paid'
+      // 重新获取订单列表以确保数据同步
+      await fetchOrders()
+    } else {
+      ElMessage.error('支付失败: ' + (response.msg || '未知错误'))
+    }
+  } catch (error) {
+    console.error('支付过程中出现错误:', error)
+    ElMessage.error('支付失败: ' + (error instanceof Error ? error.message : '未知错误'))
+  }
+}
+
+const cancelOrder = async (order: any) => {
+  try {
+    // 调用API更新订单状态为"已取消"
+    const params: UpdateOrderStatusRequest = {
+      orderId: parseInt(order.id),
+      status: 'cancelled'
+    }
+    
+    const response = await updateOrderStatus(params)
+    
+    if (response.code === 200) {
+      ElMessage.success('订单已取消')
+      // 更新本地订单状态
+      order.status = 'cancelled'
+      // 重新获取订单列表以确保数据同步
+      await fetchOrders()
+    } else {
+      ElMessage.error('取消订单失败: ' + (response.msg || '未知错误'))
+    }
+  } catch (error) {
+    console.error('取消订单过程中出现错误:', error)
+    ElMessage.error('取消订单失败: ' + (error instanceof Error ? error.message : '未知错误'))
+  }
 }
 
 const confirmReceipt = (order: any) => {
@@ -255,14 +409,19 @@ onMounted(() => {
   // 根据路由参数设置初始筛选状态
   const status = route.query.status as string
   if (status === '待付款') {
-    activeFilter.value = 'pending_payment'
+    activeFilter.value = 'pending'
   } else if (status === '待发货') {
-    activeFilter.value = 'pending_shipment'
+    activeFilter.value = 'paid'
   } else if (status === '待收货') {
-    activeFilter.value = 'pending_receipt'
+    activeFilter.value = 'shipped'
   } else if (status === '已完成') {
     activeFilter.value = 'completed'
+  } else if (status === '已取消') {
+    activeFilter.value = 'cancelled'
   }
+  
+  // 获取订单数据
+  fetchOrders()
 })
 </script>
 
@@ -543,6 +702,32 @@ onMounted(() => {
   color: #666;
 }
 
+/* 订单地址样式 */
+.order-address {
+  padding: 10px 20px;
+  border-top: 1px solid #f0f0f0;
+  background-color: #fafafa;
+}
+
+.address-label {
+  font-size: 12px;
+  color: #999;
+  margin-bottom: 4px;
+}
+
+.address-detail {
+  font-size: 14px;
+  color: #333;
+  line-height: 1.4;
+  margin-bottom: 4px;
+}
+
+.address-detail:last-child {
+  margin-bottom: 0;
+}
+
+
+
 /* 订单统计样式 */
 .order-summary {
   padding: 0 20px;
@@ -609,5 +794,15 @@ onMounted(() => {
 .action-btn:focus-visible {
   outline: none !important;
   box-shadow: none !important;
+}
+
+/* 分页容器样式 */
+.pagination-container {
+  display: flex;
+  justify-content: center;
+  padding: 20px 0;
+  background: white;
+  border-radius: 8px;
+  margin-top: 15px;
 }
 </style>

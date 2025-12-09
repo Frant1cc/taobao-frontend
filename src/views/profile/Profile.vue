@@ -35,14 +35,14 @@
           <span class="status-label">待收货</span>
           <span class="order-count">{{ orderStats.shippedOrderCount }}</span>
         </div>
-        <div class="status-item" @click="handleOrderClick('待评价')">
+        <div class="status-item" @click="handleOrderClick('已完成')">
           <div class="status-icon">⭐</div>
-          <span class="status-label">待评价</span>
+          <span class="status-label">已完成</span>
           <span class="order-count">{{ orderStats.completedOrderCount }}</span>
         </div>
-        <div class="status-item" @click="handleOrderClick('退款/售后')">
+        <div class="status-item" @click="handleOrderClick('已取消')">
           <div class="status-icon">🔄</div>
-          <span class="status-label">退款/售后</span>
+          <span class="status-label">已取消</span>
           <span class="order-count">{{ orderStats.cancelledOrderCount }}</span>
         </div>
       </div>
