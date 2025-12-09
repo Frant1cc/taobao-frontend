@@ -12,12 +12,13 @@ const userStore = useUserStore()
 const currentBannerIndex = ref(0)
 let bannerInterval: number | null = null
 
-// 模拟轮播图数据
+// 轮播图数据
 const bannerImages = [
-  'https://picsum.photos/800/300?random=1',
-  'https://picsum.photos/800/300?random=2',
-  'https://picsum.photos/800/300?random=3',
-  'https://picsum.photos/800/300?random=4'
+  '/src/assets/image1.png',
+  '/src/assets/image2.png',
+  '/src/assets/image3.png',
+  '/src/assets/image4.png',
+  '/src/assets/image5.png'
 ]
 
 // 商品分类数据
@@ -495,10 +496,10 @@ $white: #fff;
     
     .banner {
       background-color: $gray-light;
-      height: 270px; // 增加轮播图区域高度
+      height: 320px; // 轮播图区域高度改为320px
       margin-bottom: 30px;
       border-radius: 8px;
-      max-width: 80%; // 减小轮播图区域宽度
+      width: 690px; // 轮播图区域宽度改为690px
       margin-left: auto;
       margin-right: auto;
       overflow: hidden;
