@@ -15,7 +15,7 @@ import type { ShopResponse } from '@/types/shop'
  */
 export const getOrderList = (
   params: OrderListParams
-): Promise<ShopResponse<OrderListResponse>> => {
+): Promise<ShopResponse<any>> => {
   return request({
     url: '/api/shop/order/list',
     method: 'GET',

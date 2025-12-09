@@ -70,18 +70,17 @@
         style="width: 100%"
         @selection-change="handleSelectionChange"
       >
-        <el-table-column type="selection" width="55" />
         <el-table-column label="订单信息" min-width="300">
           <template #default="{ row }">
             <div class="order-info">
               <div class="order-number">
-                <strong>{{ row.orderNumber }}</strong>
+                <strong>{{ row.orderId }}</strong>
                 <el-tag :type="getStatusType(row.status)" size="small">
                   {{ getStatusText(row.status) }}
                 </el-tag>
               </div>
-              <div class="order-time">{{ row.createTime }}</div>
-              <div class="buyer-info">买家：{{ row.buyerName }}</div>
+              <div class="order-time">{{ formatDateTime(row.createTime) }}</div>
+              <div class="buyer-info">买家ID：{{ row.userId }}</div>
             </div>
           </template>
         </el-table-column>
@@ -108,20 +107,19 @@
             </div>
           </template>
         </el-table-column>
-        <el-table-column label="金额" width="120">
+        <el-table-column label="金额" width="140">
           <template #default="{ row }">
             <div class="amount-info">
               <div class="total-amount">¥{{ row.totalAmount }}</div>
-              <div class="payment-method">{{ getPaymentText(row.paymentMethod) }}</div>
             </div>
           </template>
         </el-table-column>
         <el-table-column label="收货信息" width="200">
           <template #default="{ row }">
             <div class="shipping-info">
-              <div class="receiver">{{ row.receiverName }}</div>
-              <div class="phone">{{ row.receiverPhone }}</div>
-              <div class="address">{{ row.receiverAddress }}</div>
+              <div class="receiver">{{ row.consigneeName || '未知' }}</div>
+              <div class="phone">{{ row.phone || '未知' }}</div>
+              <div class="address">{{ row.shippingAddress || '未知' }}</div>
             </div>
           </template>
         </el-table-column>
@@ -129,7 +127,7 @@
           <template #default="{ row }">
             <div class="action-buttons">
               <el-button 
-                v-if="row.status === 'toShip'" 
+                v-if="row.status === 'toShip' || row.status === 'paid'" 
                 type="primary" 
                 size="small"
                 @click="handleShip(row)"
@@ -137,17 +135,7 @@
                 发货
               </el-button>
               <el-button 
-                v-if="row.status === 'shipped'" 
-                size="small"
-                @click="handleViewTracking(row)"
-              >
-                查看物流
-              </el-button>
-              <el-button size="small" @click="handleViewDetail(row)">
-                详情
-              </el-button>
-              <el-button 
-                v-if="row.status === 'pending'" 
+                v-if="row.status === 'toShip' || row.status === 'paid' || row.status === 'shipped'" 
                 size="small" 
                 type="danger"
                 @click="handleCancel(row)"
@@ -277,8 +265,32 @@ const loadOrders = async () => {
       status: status as ("pending" | "paid" | "shipped" | "completed" | "cancelled" | undefined)
     })
     if (response.code === 200) {
-      orders.value = response.data.list
-      total.value = response.data.total
+      // 适配后端返回的数据格式
+      orders.value = response.data.map((order: any) => ({
+        orderId: order.orderId,
+        orderNo: order.orderNo,
+        userId: order.userId,
+        totalAmount: order.totalAmount,
+        status: order.status,
+        shippingAddress: order.shippingAddress,
+        createTime: order.createTime,
+        updateTime: order.updateTime,
+        // 新增字段适配
+        consigneeName: order.consigneeName,
+        phone: order.phone,
+        paymentTime: order.paymentTime,
+        paid: order.paid || false,
+        // 商品信息
+        products: order.orderItems?.map((item: any) => ({
+          id: item.itemId?.toString(),
+          name: item.productName,
+          image: '', // 需要根据实际情况获取图片
+          spec: item.skuType,
+          quantity: item.quantity,
+          price: item.price
+        })) || []
+      }))
+      total.value = response.data.length
     }
   } catch (error) {
     ElMessage.error('获取订单列表失败')
@@ -403,7 +415,7 @@ const getStatusType = (status: string) => {
 const getStatusText = (status: string) => {
   const statusMap: { [key: string]: string } = {
     'pending': '待付款',
-    'toShip': '待发货',
+    'paid': '待发货',
     'shipped': '已发货',
     'completed': '已完成',
     'cancelled': '已取消'
@@ -418,6 +430,29 @@ const getPaymentText = (payment: string) => {
     'bank': '银行卡'
   }
   return paymentMap[payment] || '其他'
+}
+
+// 获取付款状态文本
+const getPaymentStatusText = (paid: boolean) => {
+  return paid ? '已付款' : '未付款'
+}
+
+// 格式化日期时间
+const formatDateTime = (dateTime: string) => {
+  if (!dateTime) return ''
+  try {
+    const date = new Date(dateTime)
+    return date.toLocaleString('zh-CN', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit'
+    })
+  } catch (error) {
+    return dateTime
+  }
 }
 </script>
 

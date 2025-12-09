@@ -24,7 +24,6 @@ export interface ProductSku {
   skuName: string
   skuType: string
   price: number
-  stock: number
   soldCount: number
   skuImage: string
   status: string
@@ -116,7 +115,6 @@ export interface AddSkuParams {
   skuName: string
   skuType: string
   price: number
-  stock: number
   skuImage: string
   status: 'on_sale' | 'off_sale'
 }
@@ -127,7 +125,6 @@ export interface UpdateSkuParams {
   skuName: string
   skuType: string
   price: number
-  stock: number
   skuImage: string
   status: 'on_sale' | 'off_sale'
 }

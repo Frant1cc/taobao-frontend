@@ -15,6 +15,9 @@ export interface OrderListResponse {
   list: OrderListItem[]
 }
 
+// 商家订单列表响应数据（后端直接返回数组）
+export interface MerchantOrderListResponse extends Array<OrderListItem> {}
+
 // 订单列表项
 export interface OrderListItem {
   orderId: number
@@ -25,6 +28,20 @@ export interface OrderListItem {
   shippingAddress: string
   createTime: string
   updateTime: string
+  // 新增字段
+  consigneeName?: string
+  phone?: string
+  paymentTime?: string | null
+  paid: boolean
+  // 商品信息
+  products?: Array<{
+    id: string
+    name: string
+    image: string
+    spec: string
+    quantity: number
+    price: number
+  }>
 }
 
 // 订单详情

@@ -2,8 +2,8 @@
   <div class="merchant-settings">
     <!-- 页面标题 -->
     <div class="page-header">
-      <h2>用户设置</h2>
-      <p class="page-description">管理您的个人信息和基本设置</p>
+      <h2>商家设置</h2>
+      <p class="page-description">管理您的店铺信息和基本设置</p>
     </div>
 
     <!-- 设置内容 -->
@@ -17,11 +17,11 @@
         >
           <el-menu-item index="basic">
             <el-icon><User /></el-icon>
-            <span>基本信息</span>
+            <span>店铺信息</span>
           </el-menu-item>
           <el-menu-item index="logo">
             <el-icon><Picture /></el-icon>
-            <span>个人头像</span>
+            <span>店铺Logo</span>
           </el-menu-item>
         </el-menu>
       </div>
@@ -35,15 +35,15 @@
               <h3>基本信息</h3>
             </template>
             <el-form :model="basicForm" label-width="120px">
-              <el-form-item label="用户名">
-                <el-input v-model="basicForm.shopName" placeholder="请输入用户名" />
+              <el-form-item label="店铺名称">
+                <el-input v-model="basicForm.shopName" placeholder="请输入店铺名称" />
               </el-form-item>
-              <el-form-item label="用户简介">
+              <el-form-item label="店铺简介">
                 <el-input
-                  v-model="basicForm.description"
+                  v-model="basicForm.shopDescription"
                   type="textarea"
                   :rows="4"
-                  placeholder="请输入用户简介"
+                  placeholder="请输入店铺简介"
                   maxlength="200"
                   show-word-limit
                 />
@@ -65,7 +65,7 @@
             <div class="logo-upload">
               <div class="logo-preview">
                 <el-image
-                  :src="logoForm.logoUrl"
+                  :src="logoForm.shopLogo"
                   fit="cover"
                   class="current-logo"
                 />
@@ -104,6 +104,7 @@ import {
   Picture
 } from '@element-plus/icons-vue'
 import { useUserStore } from '@/stores/user'
+import { getShopInfo, updateShopInfo } from '@/api/modules/shop'
 import type { ShopInfo, UpdateShopParams } from '@/types/shop'
 
 // 当前激活的标签页
@@ -117,11 +118,11 @@ const userInfo = computed(() => userStore.userInfo)
 // 表单数据
 const basicForm = reactive({
   shopName: '',
-  description: ''
+  shopDescription: ''
 })
 
 const logoForm = reactive({
-  logoUrl: 'https://via.placeholder.com/200x200'
+  shopLogo: 'https://via.placeholder.com/200x200'
 })
 
 // 方法
@@ -129,41 +130,46 @@ const handleMenuSelect = (index: string) => {
   activeTab.value = index
 }
 
-// 加载用户信息
-const loadUserInfo = async () => {
+// 加载商家信息
+const loadShopInfo = async () => {
   try {
-    // 如果用户信息不存在，则从用户仓库获取
-    if (!userInfo.value) {
-      await userStore.fetchUserInfo()
-    }
-    
-    // 填充表单数据
-    if (userInfo.value) {
-      basicForm.shopName = userInfo.value.username || userInfo.value.account || ''
-      basicForm.description = (userInfo.value as any).description || ''
-      logoForm.logoUrl = userInfo.value.avatarUrl || 'https://via.placeholder.com/200x200'
+    const response = await getShopInfo()
+    if (response.code === 200 && response.data) {
+      const shopInfo = response.data
+      // 填充表单数据
+      basicForm.shopName = shopInfo.shopName || ''
+      basicForm.shopDescription = shopInfo.shopDescription || ''
+      logoForm.shopLogo = shopInfo.shopLogo || 'https://via.placeholder.com/200x200'
+    } else {
+      ElMessage.error('获取商家信息失败')
     }
   } catch (error) {
-    ElMessage.error('获取用户信息失败')
-    console.error('获取用户信息失败:', error)
+    ElMessage.error('获取商家信息失败')
+    console.error('获取商家信息失败:', error)
   }
 }
 
 const saveBasicInfo = async () => {
   try {
-    // 更新用户信息
-    await userStore.updateUserInfo({
-      username: basicForm.shopName,
-      description: basicForm.description,
-      avatarUrl: logoForm.logoUrl
-    })
+    // 更新商家信息
+    const updateParams: UpdateShopParams = {
+      shopName: basicForm.shopName,
+      shopDescription: basicForm.shopDescription,
+      shopLogo: logoForm.shopLogo,
+      shopBanner: '' // 暂时留空，后续可以添加店铺横幅功能
+    }
     
-    ElMessage.success('用户信息更新成功')
-    // 重新加载用户信息
-    await loadUserInfo()
+    const response = await updateShopInfo(updateParams)
+    if (response.code === 200) {
+      ElMessage.success('商家信息更新成功')
+      // 重新加载商家信息
+      await loadShopInfo()
+    } else {
+      ElMessage.error('更新商家信息失败')
+    }
   } catch (error) {
-    ElMessage.error('更新用户信息失败')
-    console.error('更新用户信息失败:', error)
+    ElMessage.error('更新商家信息失败')
+    console.error('更新商家信息失败:', error)
   }
 }
 
@@ -183,41 +189,57 @@ const beforeLogoUpload = (file: File) => {
   return true
 }
 
-const handleLogoUpload = (options: any) => {
-  // 模拟上传过程
+const handleLogoUpload = async (options: any) => {
   const file = options.file
   const reader = new FileReader()
-  reader.onload = (e) => {
-    logoForm.logoUrl = e.target?.result as string
-    ElMessage.success('头像上传成功')
+  reader.onload = async (e) => {
+    const base64Data = e.target?.result as string
+    try {
+      const updateParams: UpdateShopParams = {
+        shopName: basicForm.shopName,
+        shopDescription: basicForm.shopDescription,
+        shopLogo: base64Data,
+        shopBanner: '' // 暂时留空，后续可以添加店铺横幅功能
+      }
+      
+      const response = await updateShopInfo(updateParams)
+      if (response.code === 200) {
+        logoForm.shopLogo = base64Data
+        ElMessage.success('店铺Logo上传成功')
+      } else {
+        ElMessage.error(response.msg || '上传失败')
+      }
+    } catch (error) {
+      ElMessage.error('上传失败，请重试')
+    }
   }
   reader.readAsDataURL(file)
 }
 
 const removeLogo = () => {
-  ElMessageBox.confirm('确定要删除头像吗？', '提示', {
+  ElMessageBox.confirm('确定要删除店铺Logo吗？', '提示', {
     confirmButtonText: '确定',
     cancelButtonText: '取消',
     type: 'warning'
   }).then(() => {
-    logoForm.logoUrl = 'https://via.placeholder.com/200x200'
-    ElMessage.success('头像已删除')
+    logoForm.shopLogo = 'https://via.placeholder.com/200x200'
+    ElMessage.success('店铺Logo已删除')
   })
 }
 
 // 重置基本信息表单
-const resetBasicForm = () => {
-  if (userInfo.value) {
-    basicForm.shopName = userInfo.value.username || userInfo.value.account || ''
-    basicForm.description = (userInfo.value as any).description || ''
-    logoForm.logoUrl = userInfo.value.avatarUrl || 'https://via.placeholder.com/200x200'
+const resetBasicForm = async () => {
+  try {
+    await loadShopInfo()
+    ElMessage.success('表单已重置')
+  } catch (error) {
+    ElMessage.error('重置表单失败')
   }
-  ElMessage.success('表单已重置')
 }
 
-// 页面加载时获取用户信息
+// 页面加载时获取商家信息
 onMounted(() => {
-  loadUserInfo()
+  loadShopInfo()
 })
 </script>
 

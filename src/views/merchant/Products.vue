@@ -46,7 +46,6 @@
     <!-- 商品列表 -->
     <el-card>
       <el-table :data="filteredProducts" style="width: 100%" v-loading="loading">
-        <el-table-column type="selection" width="55" />
         <el-table-column label="商品信息" min-width="350">
           <template #default="{ row }">
             <div class="product-info">
@@ -68,20 +67,7 @@
             </div>
           </template>
         </el-table-column>
-        <el-table-column label="价格" width="120" align="center">
-          <template #default="{ row }">
-            <span :class="{ 'price-null': !row.price }">
-              {{ row.price ? `¥${row.price}` : '未设置' }}
-            </span>
-          </template>
-        </el-table-column>
-        <el-table-column label="库存" width="100" align="center">
-          <template #default="{ row }">
-            <el-tag :type="row.skus ? 'success' : 'info'" size="small">
-              {{ row.skus ? '有SKU' : '无SKU' }}
-            </el-tag>
-          </template>
-        </el-table-column>
+
         <el-table-column label="商品ID" width="100" align="center">
           <template #default="{ row }">
             {{ row.productId }}
@@ -152,15 +138,6 @@
             placeholder="请输入商品描述"
           />
         </el-form-item>
-        <el-form-item label="商品价格">
-          <el-input-number
-            v-model="productForm.price"
-            :min="0"
-            :precision="2"
-            placeholder="请输入商品价格"
-          />
-          <span style="margin-left: 8px; color: #666;">元</span>
-        </el-form-item>
         <el-form-item label="商品图片">
           <el-upload
             action="#"
@@ -202,15 +179,6 @@
                       size="small"
                     />
                     <span style="margin-left: 4px; color: #666;">元</span>
-                  </div>
-                  <div class="sku-stock">
-                    <el-input-number
-                      v-model="sku.stock"
-                      :min="0"
-                      placeholder="库存"
-                      size="small"
-                    />
-                    <span style="margin-left: 4px; color: #666;">件</span>
                   </div>
                 </div>
                 <div class="sku-actions">
@@ -283,11 +251,10 @@ const showAddDialog = ref(false)
 const editingProduct = ref<ProductListItem | null>(null)
 
 // 商品表单
-const productForm = ref<AddProductParams & { price?: number; skus?: ProductSku[] }>({
+const productForm = ref<AddProductParams & { skus?: ProductSku[] }>({
   productName: '',
   description: '',
   categoryId: 1,
-  price: undefined,
   mainImages: [],
   detailImages: [],
   status: 'on_sale',
@@ -407,7 +374,6 @@ const handleEdit = (product: ProductListItem) => {
     productName: product.productName,
     description: product.description,
     categoryId: product.categoryId,
-    price: product.price || undefined,
     mainImages: product.mainImages ? JSON.parse(product.mainImages) : [],
     detailImages: product.detailImages ? JSON.parse(product.detailImages) : [],
     status: product.status as 'on_sale' | 'off_sale',
@@ -431,7 +397,6 @@ const handleAddSku = () => {
     skuName: '',
     skuType: 'normal',
     price: 0,
-    stock: 0,
     soldCount: 0,
     skuImage: '',
     status: 'on_sale',
@@ -546,10 +511,6 @@ const handleSaveProduct = async () => {
           ElMessage.error('SKU价格必须大于0')
           return
         }
-        if (sku.stock < 0) {
-          ElMessage.error('SKU库存不能为负数')
-          return
-        }
       }
     }
     
@@ -596,7 +557,6 @@ const handleSaveProduct = async () => {
       productName: '',
       description: '',
       categoryId: 1,
-      price: undefined,
       mainImages: [],
       detailImages: [],
       status: 'on_sale',
@@ -621,7 +581,6 @@ const handleSkuOperations = async (productId: number) => {
       skuName: sku.skuName || '',
       skuType: sku.skuType || '',
       price: sku.price || 0,
-      stock: sku.stock || 0,
       skuImage: sku.skuImage || '',
       status: (sku.status || 'on_sale') as "on_sale" | "off_sale",
       productId: productId
@@ -634,7 +593,6 @@ const handleSkuOperations = async (productId: number) => {
         skuName: safeSku.skuName,
         skuType: safeSku.skuType,
         price: safeSku.price,
-        stock: safeSku.stock,
         skuImage: safeSku.skuImage,
         status: safeSku.status
       }
@@ -646,7 +604,6 @@ const handleSkuOperations = async (productId: number) => {
         skuName: safeSku.skuName,
         skuType: safeSku.skuType,
         price: safeSku.price,
-        stock: safeSku.stock,
         skuImage: safeSku.skuImage,
         status: safeSku.status
       }
@@ -687,7 +644,23 @@ const getMainImageUrl = (product: ProductListItem) => {
   if (!product.mainImages) return null
   try {
     const images = JSON.parse(product.mainImages)
-    return images.length > 0 ? `http://localhost:3000/${images[0]}` : null
+    if (images.length === 0) return null
+    
+    const imagePath = images[0]
+    // 如果图片路径已经是完整URL，直接返回
+    if (imagePath.startsWith('http://') || imagePath.startsWith('https://')) {
+      return imagePath
+    }
+    
+    // 处理路径格式，避免双斜杠问题
+    const baseUrl = import.meta.env.VITE_IMAGE_BASE_URL || ''
+    if (!baseUrl) return imagePath
+    
+    // 确保baseUrl以斜杠结尾，imagePath不以斜杠开头
+    const cleanBaseUrl = baseUrl.endsWith('/') ? baseUrl.slice(0, -1) : baseUrl
+    const cleanImagePath = imagePath.startsWith('/') ? imagePath.slice(1) : imagePath
+    
+    return `${cleanBaseUrl}/${cleanImagePath}`
   } catch {
     return null
   }
@@ -842,20 +815,20 @@ $white: #fff;
   // SKU管理样式
   .sku-management {
     border: 1px solid #e4e7ed;
-    border-radius: 4px;
-    padding: 16px;
+    border-radius: 6px;
+    padding: 20px;
     background-color: #fafafa;
 
     .sku-header {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      margin-bottom: 16px;
+      margin-bottom: 20px;
 
       .sku-title {
         font-weight: 600;
         color: #303133;
-        font-size: 14px;
+        font-size: 16px;
       }
     }
 
@@ -864,11 +837,11 @@ $white: #fff;
         display: flex;
         justify-content: space-between;
         align-items: center;
-        padding: 12px;
-        margin-bottom: 8px;
+        padding: 16px;
+        margin-bottom: 12px;
         background-color: white;
         border: 1px solid #e4e7ed;
-        border-radius: 4px;
+        border-radius: 6px;
 
         &:last-child {
           margin-bottom: 0;
@@ -877,16 +850,16 @@ $white: #fff;
         .sku-info {
           display: flex;
           align-items: center;
-          gap: 16px;
+          gap: 20px;
           flex: 1;
 
           .sku-name {
-            width: 200px;
+            width: 280px;
           }
 
           .sku-price,
           .sku-stock {
-            width: 120px;
+            width: 150px;
             display: flex;
             align-items: center;
           }
@@ -900,7 +873,7 @@ $white: #fff;
 
     .no-sku {
       text-align: center;
-      padding: 20px;
+      padding: 30px;
       color: #909399;
     }
   }
