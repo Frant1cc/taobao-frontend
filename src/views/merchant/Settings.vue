@@ -161,7 +161,7 @@ const saveBasicInfo = async () => {
       shopName: basicForm.shopName,
       shopDescription: basicForm.shopDescription,
       shopLogo: logoForm.shopLogo,
-      shopBanner: '', // 暂时留空，后续可以添加店铺横幅功能
+      shopBanner: '',
       status: currentShopStatus.value
     }
     
@@ -219,9 +219,9 @@ const handleLogoUpload = async (options: any) => {
       
       const updateResponse = await updateShopInfo(updateParams)
       if (updateResponse.code === 200) {
-        // 更新前端显示的Logo（这里需要根据实际返回的路径格式调整）
-        // 假设返回的是相对路径，需要拼接完整的URL
-        logoForm.shopLogo = logoPath.startsWith('http') ? logoPath : `/api/${logoPath}`
+        // 更新前端显示的Logo，使用环境变量中的图片基础URL
+        const imageBaseUrl = import.meta.env.VITE_IMAGE_BASE_URL || ''
+        logoForm.shopLogo = logoPath.startsWith('http') ? logoPath : `${imageBaseUrl}${logoPath}`
         ElMessage.success('店铺Logo上传成功')
       } else {
         ElMessage.error(updateResponse.msg || '更新店铺信息失败')
