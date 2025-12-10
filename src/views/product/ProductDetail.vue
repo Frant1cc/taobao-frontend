@@ -291,7 +291,7 @@ const fetchProductData = async () => {
       // 根据SKU数据生成新的规格选项
       specsOptions.push({
         name: 'size',
-        label: '尺码',
+        label: '规格',
         options: productData.skus.map((sku: ProductSku) => sku.skuName)
       })
       
