@@ -18,3 +18,15 @@ export function updateShopInfo(data: UpdateShopParams): Promise<ShopResponse<str
     data
   })
 }
+
+// 上传店铺Logo
+export function uploadShopLogo(data: FormData): Promise<ShopResponse<string>> {
+  return request({
+    url: '/api/shop/logo/upload',
+    method: 'post',
+    data,
+    headers: {
+      'Content-Type': 'multipart/form-data'
+    }
+  })
+}

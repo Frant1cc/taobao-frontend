@@ -7,7 +7,7 @@ export interface ShopInfo {
   shopDescription: string
   shopLogo: string
   shopBanner: string
-  status: 'active' | 'inactive' | 'pending'
+  status: 'normal' | 'closed' | 'auditing'
   createTime: string
   updateTime: string
 }
@@ -18,6 +18,7 @@ export interface UpdateShopParams {
   shopDescription: string
   shopLogo: string
   shopBanner: string
+  status: 'normal' | 'closed' | 'auditing'
 }
 
 // 店铺统计信息

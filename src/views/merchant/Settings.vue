@@ -104,7 +104,7 @@ import {
   Picture
 } from '@element-plus/icons-vue'
 import { useUserStore } from '@/stores/user'
-import { getShopInfo, updateShopInfo } from '@/api/modules/shop'
+import { getShopInfo, updateShopInfo,uploadShopLogo } from '@/api/modules/shop'
 import type { ShopInfo, UpdateShopParams } from '@/types/shop'
 
 // 当前激活的标签页
@@ -125,6 +125,9 @@ const logoForm = reactive({
   shopLogo: 'https://via.placeholder.com/200x200'
 })
 
+// 当前店铺状态
+const currentShopStatus = ref<'normal' | 'closed' | 'auditing'>('normal')
+
 // 方法
 const handleMenuSelect = (index: string) => {
   activeTab.value = index
@@ -140,6 +143,8 @@ const loadShopInfo = async () => {
       basicForm.shopName = shopInfo.shopName || ''
       basicForm.shopDescription = shopInfo.shopDescription || ''
       logoForm.shopLogo = shopInfo.shopLogo || 'https://via.placeholder.com/200x200'
+      // 保存店铺状态
+      currentShopStatus.value = shopInfo.status || 'normal'
     } else {
       ElMessage.error('获取商家信息失败')
     }
@@ -156,7 +161,8 @@ const saveBasicInfo = async () => {
       shopName: basicForm.shopName,
       shopDescription: basicForm.shopDescription,
       shopLogo: logoForm.shopLogo,
-      shopBanner: '' // 暂时留空，后续可以添加店铺横幅功能
+      shopBanner: '', // 暂时留空，后续可以添加店铺横幅功能
+      status: currentShopStatus.value
     }
     
     const response = await updateShopInfo(updateParams)
@@ -191,29 +197,42 @@ const beforeLogoUpload = (file: File) => {
 
 const handleLogoUpload = async (options: any) => {
   const file = options.file
-  const reader = new FileReader()
-  reader.onload = async (e) => {
-    const base64Data = e.target?.result as string
-    try {
+  try {
+    // 创建FormData对象
+    const formData = new FormData()
+    formData.append('logo', file)
+    
+    // 使用专门的上传Logo接口
+    const response = await uploadShopLogo(formData)
+    if (response.code === 200) {
+      // 上传成功后，获取返回的文件路径
+      const logoPath = response.data
+      
+      // 更新店铺信息，使用返回的Logo路径
       const updateParams: UpdateShopParams = {
         shopName: basicForm.shopName,
         shopDescription: basicForm.shopDescription,
-        shopLogo: base64Data,
-        shopBanner: '' // 暂时留空，后续可以添加店铺横幅功能
+        shopLogo: logoPath,
+        shopBanner: '', // 暂时留空，后续可以添加店铺横幅功能
+        status: currentShopStatus.value
       }
       
-      const response = await updateShopInfo(updateParams)
-      if (response.code === 200) {
-        logoForm.shopLogo = base64Data
+      const updateResponse = await updateShopInfo(updateParams)
+      if (updateResponse.code === 200) {
+        // 更新前端显示的Logo（这里需要根据实际返回的路径格式调整）
+        // 假设返回的是相对路径，需要拼接完整的URL
+        logoForm.shopLogo = logoPath.startsWith('http') ? logoPath : `/api/${logoPath}`
         ElMessage.success('店铺Logo上传成功')
       } else {
-        ElMessage.error(response.msg || '上传失败')
+        ElMessage.error(updateResponse.msg || '更新店铺信息失败')
       }
-    } catch (error) {
-      ElMessage.error('上传失败，请重试')
+    } else {
+      ElMessage.error(response.msg || '上传失败')
     }
+  } catch (error) {
+    ElMessage.error('上传失败，请重试')
+    console.error('上传失败:', error)
   }
-  reader.readAsDataURL(file)
 }
 
 const removeLogo = () => {
