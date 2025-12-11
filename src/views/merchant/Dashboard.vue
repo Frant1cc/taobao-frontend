@@ -102,22 +102,38 @@
         </el-button>
       </div>
       <el-table :data="recentOrders" style="width: 100%">
-        <el-table-column prop="id" label="订单号" width="120" />
-        <el-table-column prop="product" label="商品" />
-        <el-table-column prop="customer" label="买家" width="100" />
-        <el-table-column prop="amount" label="金额" width="100">
+        <el-table-column prop="orderId" label="订单ID" width="120" />
+        <el-table-column label="商品" min-width="200">
           <template #default="{ row }">
-            ¥{{ row.amount }}
+            <div v-if="row.products && row.products.length > 0">
+              {{ row.products[0].name }}
+              <span v-if="row.products.length > 1">等{{ row.products.length }}件商品</span>
+            </div>
+            <span v-else>无商品信息</span>
+          </template>
+        </el-table-column>
+        <el-table-column label="买家" width="100">
+          <template #default="{ row }">
+            {{ row.consigneeName || '未知买家' }}
+          </template>
+        </el-table-column>
+        <el-table-column prop="totalAmount" label="金额" width="100">
+          <template #default="{ row }">
+            ¥{{ row.totalAmount?.toFixed(2) || '0.00' }}
           </template>
         </el-table-column>
         <el-table-column prop="status" label="状态" width="100">
           <template #default="{ row }">
             <el-tag :type="getStatusType(row.status)" size="small">
-              {{ row.status }}
+              {{ getStatusText(row.status) }}
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column prop="time" label="时间" width="180" />
+        <el-table-column label="时间" width="180">
+          <template #default="{ row }">
+            {{ formatTime(row.createTime) }}
+          </template>
+        </el-table-column>
       </el-table>
     </div>
   </div>
@@ -133,23 +149,28 @@ import {
   Setting
 } from '@element-plus/icons-vue'
 import { useUserStore } from '@/stores/user'
-import { getShopInfo } from '@/api/modules/shop'
-import type { ShopInfo } from '@/types/shop'
+import { useShopStore } from '@/stores/shop'
+import { getOrderList } from '@/api/modules/merchant-order'
+import type { OrderListItem } from '@/types/order'
 
 const userStore = useUserStore()
+const shopStore = useShopStore()
 const currentDate = ref(new Date().toLocaleDateString('zh-CN'))
 
 // 用户信息（从用户仓库获取）
 const userInfo = computed(() => userStore.userInfo)
 
-// 店铺信息
-const shopInfo = ref<ShopInfo | null>(null)
+// 店铺信息（从店铺仓库获取）
+const shopInfo = computed(() => shopStore.currentShop)
 
 // 数据概览（使用模拟数据，因为统计接口不存在）
 const revenue = ref(12568.5)
 const orders = ref(42)
 const visitors = ref(1568)
 const products = ref(28)
+
+// 最近订单数据
+const recentOrders = ref<OrderListItem[]>([])
 
 // 获取用户类型文本
 const getUserTypeText = (userType: string) => {
@@ -170,13 +191,35 @@ const loadData = async () => {
       await userStore.fetchUserInfo()
     }
     
-    // 获取店铺信息
-    const shopResponse = await getShopInfo()
-    if (shopResponse.code === 200) {
-      shopInfo.value = shopResponse.data
+    // 如果店铺信息不存在，尝试从店铺仓库加载
+    if (!shopStore.currentShop) {
+      await shopStore.fetchShopInfo()
     }
+    
+    // 获取最近订单
+    await loadRecentOrders()
   } catch (error) {
     console.error('加载数据失败:', error)
+  }
+}
+
+// 加载最近订单
+const loadRecentOrders = async () => {
+  try {
+    const response = await getOrderList({
+      pageNum: 1,
+      pageSize: 5
+    })
+    if (response.code === 200) {
+      // 适配后端返回的数据格式
+      if (Array.isArray(response.data)) {
+        recentOrders.value = response.data.slice(0, 5)
+      } else if (response.data && Array.isArray(response.data.list)) {
+        recentOrders.value = response.data.list.slice(0, 5)
+      }
+    }
+  } catch (error) {
+    console.error('获取最近订单失败:', error)
   }
 }
 
@@ -184,53 +227,42 @@ onMounted(() => {
   loadData()
 })
 
-const recentOrders = ref([
-  {
-    id: '20241215001',
-    product: '新款智能手机',
-    customer: '张先生',
-    amount: 2999,
-    status: '待发货',
-    time: '2024-12-15 10:30:25'
-  },
-  {
-    id: '20241215002',
-    product: '无线蓝牙耳机',
-    customer: '李女士',
-    amount: 399,
-    status: '已发货',
-    time: '2024-12-15 09:15:42'
-  },
-  {
-    id: '20241215003',
-    product: '笔记本电脑',
-    customer: '王先生',
-    amount: 5999,
-    status: '已完成',
-    time: '2024-12-14 16:20:18'
-  },
-  {
-    id: '20241215004',
-    product: '智能手表',
-    customer: '赵女士',
-    amount: 1299,
-    status: '待付款',
-    time: '2024-12-14 14:45:33'
-  }
-])
-
 const formatNumber = (num: number) => {
   return num.toLocaleString('zh-CN')
 }
 
+// 订单状态映射
 const getStatusType = (status: string) => {
   const statusMap: { [key: string]: string } = {
-    '待付款': 'warning',
-    '待发货': 'primary',
-    '已发货': 'success',
-    '已完成': 'info'
+    'pending': 'warning',
+    'paid': 'primary',
+    'shipped': 'success',
+    'completed': 'info',
+    'cancelled': 'danger'
   }
   return statusMap[status] || 'info'
+}
+
+// 获取订单状态文本
+const getStatusText = (status: string) => {
+  const statusMap: { [key: string]: string } = {
+    'pending': '待付款',
+    'paid': '待发货',
+    'shipped': '已发货',
+    'completed': '已完成',
+    'cancelled': '已取消'
+  }
+  return statusMap[status] || status
+}
+
+// 格式化时间显示
+const formatTime = (timeStr: string) => {
+  try {
+    const date = new Date(timeStr)
+    return date.toLocaleString('zh-CN')
+  } catch (error) {
+    return timeStr
+  }
 }
 </script>
 

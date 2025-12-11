@@ -104,16 +104,21 @@ import {
   Picture
 } from '@element-plus/icons-vue'
 import { useUserStore } from '@/stores/user'
-import { getShopInfo, updateShopInfo,uploadShopLogo } from '@/api/modules/shop'
-import type { ShopInfo, UpdateShopParams } from '@/types/shop'
+import { useShopStore } from '@/stores/shop'
+import type { UpdateShopParams } from '@/types/shop'
 
 // 当前激活的标签页
 const activeTab = ref('basic')
 const router = useRouter()
 const userStore = useUserStore()
+const shopStore = useShopStore()
 
 // 用户信息
 const userInfo = computed(() => userStore.userInfo)
+
+// 店铺信息
+const shopInfo = computed(() => shopStore.currentShop)
+const shopLogoUrl = computed(() => shopStore.shopLogoUrl)
 
 // 表单数据
 const basicForm = reactive({
@@ -136,18 +141,17 @@ const handleMenuSelect = (index: string) => {
 // 加载商家信息
 const loadShopInfo = async () => {
   try {
-    const response = await getShopInfo()
-    if (response.code === 200 && response.data) {
-      const shopInfo = response.data
-      // 填充表单数据
-      basicForm.shopName = shopInfo.shopName || ''
-      basicForm.shopDescription = shopInfo.shopDescription || ''
-      logoForm.shopLogo = shopInfo.shopLogo || 'https://via.placeholder.com/200x200'
-      // 保存店铺状态
-      currentShopStatus.value = shopInfo.status || 'normal'
-    } else {
-      ElMessage.error('获取商家信息失败')
-    }
+    const shopInfo = await shopStore.fetchShopInfo()
+    
+    // 填充表单数据
+    basicForm.shopName = shopInfo.shopName || ''
+    basicForm.shopDescription = shopInfo.shopDescription || ''
+    
+    // 使用store中的shopLogoUrl计算属性
+    logoForm.shopLogo = shopLogoUrl.value
+    
+    // 保存店铺状态
+    currentShopStatus.value = shopInfo.status || 'normal'
   } catch (error) {
     ElMessage.error('获取商家信息失败')
     console.error('获取商家信息失败:', error)
@@ -160,19 +164,15 @@ const saveBasicInfo = async () => {
     const updateParams: UpdateShopParams = {
       shopName: basicForm.shopName,
       shopDescription: basicForm.shopDescription,
-      shopLogo: logoForm.shopLogo,
+      shopLogo: shopInfo.value?.shopLogo || '',
       shopBanner: '',
       status: currentShopStatus.value
     }
     
-    const response = await updateShopInfo(updateParams)
-    if (response.code === 200) {
-      ElMessage.success('商家信息更新成功')
-      // 重新加载商家信息
-      await loadShopInfo()
-    } else {
-      ElMessage.error('更新商家信息失败')
-    }
+    await shopStore.updateShopInfo(updateParams)
+    ElMessage.success('商家信息更新成功')
+    // 重新加载商家信息
+    await loadShopInfo()
   } catch (error) {
     ElMessage.error('更新商家信息失败')
     console.error('更新商家信息失败:', error)
@@ -198,37 +198,12 @@ const beforeLogoUpload = (file: File) => {
 const handleLogoUpload = async (options: any) => {
   const file = options.file
   try {
-    // 创建FormData对象
-    const formData = new FormData()
-    formData.append('logo', file)
+    // 使用shop store的uploadShopLogo方法
+    const logoPath = await shopStore.uploadShopLogo(file)
     
-    // 使用专门的上传Logo接口
-    const response = await uploadShopLogo(formData)
-    if (response.code === 200) {
-      // 上传成功后，获取返回的文件路径
-      const logoPath = response.data
-      
-      // 更新店铺信息，使用返回的Logo路径
-      const updateParams: UpdateShopParams = {
-        shopName: basicForm.shopName,
-        shopDescription: basicForm.shopDescription,
-        shopLogo: logoPath,
-        shopBanner: '', // 暂时留空，后续可以添加店铺横幅功能
-        status: currentShopStatus.value
-      }
-      
-      const updateResponse = await updateShopInfo(updateParams)
-      if (updateResponse.code === 200) {
-        // 更新前端显示的Logo，使用环境变量中的图片基础URL
-        const imageBaseUrl = import.meta.env.VITE_IMAGE_BASE_URL || ''
-        logoForm.shopLogo = logoPath.startsWith('http') ? logoPath : `${imageBaseUrl}${logoPath}`
-        ElMessage.success('店铺Logo上传成功')
-      } else {
-        ElMessage.error(updateResponse.msg || '更新店铺信息失败')
-      }
-    } else {
-      ElMessage.error(response.msg || '上传失败')
-    }
+    // 更新前端显示的Logo
+    logoForm.shopLogo = shopLogoUrl.value
+    ElMessage.success('店铺Logo上传成功')
   } catch (error) {
     ElMessage.error('上传失败，请重试')
     console.error('上传失败:', error)

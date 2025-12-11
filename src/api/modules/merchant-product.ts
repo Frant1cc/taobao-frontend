@@ -5,7 +5,8 @@ import type {
   UpdateProductParams, 
   ProductListResponse,
   AddSkuParams,
-  UpdateSkuParams
+  UpdateSkuParams,
+  AddProductWithImagesParams
 } from '@/types/product'
 import type { ShopResponse } from '@/types/shop'
 
@@ -19,6 +20,53 @@ export const addProduct = (params: AddProductParams): Promise<ShopResponse<strin
     url: '/api/shop/product/add',
     method: 'POST',
     data: params
+  })
+}
+
+/**
+ * 商家添加商品（支持直接上传图片文件）
+ * @param params 商品创建信息
+ * @param mainImageFiles 商品主图文件列表
+ * @param detailImageFiles 商品详情图文件列表
+ * @returns 创建结果
+ */
+export const addProductWithImages = (
+  params: AddProductWithImagesParams,
+  mainImageFiles?: File[],
+  detailImageFiles?: File[]
+): Promise<ShopResponse<string>> => {
+  const formData = new FormData()
+  
+  // 添加商品信息（转换为JSON字符串）
+  const productData = {
+    productName: params.productName,
+    description: params.description,
+    categoryId: params.categoryId,
+    status: params.status
+  }
+  formData.append('product', new Blob([JSON.stringify(productData)], { type: 'application/json' }))
+  
+  // 添加主图文件
+  if (mainImageFiles && mainImageFiles.length > 0) {
+    mainImageFiles.forEach((file, index) => {
+      formData.append('mainImages', file)
+    })
+  }
+  
+  // 添加详情图文件
+  if (detailImageFiles && detailImageFiles.length > 0) {
+    detailImageFiles.forEach((file, index) => {
+      formData.append('detailImages', file)
+    })
+  }
+  
+  return request({
+    url: '/api/shop/product/add-with-images',
+    method: 'POST',
+    data: formData,
+    headers: {
+      'Content-Type': 'multipart/form-data'
+    }
   })
 }
 

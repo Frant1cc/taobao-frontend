@@ -65,13 +65,23 @@ export interface SearchParams {
 
 // 商家端商品管理相关类型定义
 
+// 添加商品请求参数（支持文件上传）
+export interface AddProductWithImagesParams {
+  productName: string
+  description: string
+  categoryId: number
+  status: 'on_sale' | 'off_sale'
+  mainImageFiles?: File[]
+  detailImageFiles?: File[]
+}
+
 // 添加商品请求参数
 export interface AddProductParams {
   productName: string
   description: string
   categoryId: number
-  mainImages: string[]
-  detailImages: string[]
+  mainImages: string
+  detailImages: string
   status: 'on_sale' | 'off_sale'
 }
 
@@ -81,8 +91,8 @@ export interface UpdateProductParams {
   productName: string
   description: string
   categoryId: number
-  mainImages: string[]
-  detailImages: string[]
+  mainImages: string
+  detailImages: string
   status: 'on_sale' | 'off_sale'
 }
 

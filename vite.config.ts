@@ -22,6 +22,11 @@ export default defineConfig({
         target: 'http://47.118.20.132:8085',
         changeOrigin: true,
         rewrite: (path) => path
+      },
+      '/oss': {
+        target: 'https://taobao-hqh.oss-cn-beijing.aliyuncs.com',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/oss/, '')
       }
     }
   }

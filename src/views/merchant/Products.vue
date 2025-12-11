@@ -138,13 +138,47 @@
             placeholder="请输入商品描述"
           />
         </el-form-item>
-        <el-form-item label="商品图片">
+        <!-- 商品主图上传 -->
+        <el-form-item label="商品主图">
           <el-upload
-            action="#"
+            ref="mainImageUpload"
+            action="/api/oss/upload"
             list-type="picture-card"
-            :auto-upload="false"
+            :headers="{ 'Content-Type': 'multipart/form-data' }"
+            :data="{ folder: 'product_main' }"
+            :on-success="handleMainImageSuccess"
+            :on-remove="handleMainImageRemove"
+            :on-error="handleImageError"
+            multiple
           >
             <el-icon><Plus /></el-icon>
+            <template #tip>
+              <div class="el-upload__tip">
+                建议尺寸：800x800像素，最多上传5张主图
+              </div>
+            </template>
+          </el-upload>
+        </el-form-item>
+        
+        <!-- 商品详情图上传 -->
+        <el-form-item label="商品详情图">
+          <el-upload
+            ref="detailImageUpload"
+            action="/api/oss/upload"
+            list-type="picture-card"
+            :headers="{ 'Content-Type': 'multipart/form-data' }"
+            :data="{ folder: 'product_detail' }"
+            :on-success="handleDetailImageSuccess"
+            :on-remove="handleDetailImageRemove"
+            :on-error="handleImageError"
+            multiple
+          >
+            <el-icon><Plus /></el-icon>
+            <template #tip>
+              <div class="el-upload__tip">
+                建议尺寸：宽度800像素，高度自适应，最多上传10张详情图
+              </div>
+            </template>
           </el-upload>
         </el-form-item>
         
@@ -233,6 +267,7 @@ import {
   updateSku,
   deleteSku
 } from '@/api/modules/merchant-product'
+import { uploadToOss, batchUploadToOss } from '@/api/modules/oss-upload'
 import type { ProductListItem, AddProductParams, UpdateProductParams, ProductSku, AddSkuParams, UpdateSkuParams } from '@/types/product'
 
 // 搜索和筛选
@@ -255,14 +290,24 @@ const productForm = ref<AddProductParams & { skus?: ProductSku[] }>({
   productName: '',
   description: '',
   categoryId: 1,
-  mainImages: [],
-  detailImages: [],
+  mainImages: '',
+  detailImages: '',
   status: 'on_sale',
   skus: []
 })
 
+// 主图URL列表
+const mainImageUrls = ref<string[]>([])
+
+// 详情图URL列表
+const detailImageUrls = ref<string[]>([])
+
 // 商品数据
 const products = ref<ProductListItem[]>([])
+
+// 上传组件引用
+const mainImageUpload = ref()
+const detailImageUpload = ref()
 
 // 加载商品列表
 const loadProducts = async () => {
@@ -318,6 +363,60 @@ const filteredProducts = computed(() => {
   return products.value
 })
 
+// 主图上传成功处理
+const handleMainImageSuccess = (response: any, file: any, fileList: any[]) => {
+  if (response.code === 200 && response.data) {
+    const imageUrl = response.data.url
+    if (imageUrl && !mainImageUrls.value.includes(imageUrl)) {
+      mainImageUrls.value.push(imageUrl)
+      ElMessage.success('主图上传成功')
+    }
+  } else {
+    ElMessage.error('主图上传失败：' + (response.msg || '未知错误'))
+  }
+}
+
+// 主图删除处理
+const handleMainImageRemove = (file: any, fileList: any[]) => {
+  const imageUrl = file.response?.data?.url || file.url
+  if (imageUrl) {
+    const index = mainImageUrls.value.indexOf(imageUrl)
+    if (index > -1) {
+      mainImageUrls.value.splice(index, 1)
+    }
+  }
+}
+
+// 详情图上传成功处理
+const handleDetailImageSuccess = (response: any, file: any, fileList: any[]) => {
+  if (response.code === 200 && response.data) {
+    const imageUrl = response.data.url
+    if (imageUrl && !detailImageUrls.value.includes(imageUrl)) {
+      detailImageUrls.value.push(imageUrl)
+      ElMessage.success('详情图上传成功')
+    }
+  } else {
+    ElMessage.error('详情图上传失败：' + (response.msg || '未知错误'))
+  }
+}
+
+// 详情图删除处理
+const handleDetailImageRemove = (file: any, fileList: any[]) => {
+  const imageUrl = file.response?.data?.url || file.url
+  if (imageUrl) {
+    const index = detailImageUrls.value.indexOf(imageUrl)
+    if (index > -1) {
+      detailImageUrls.value.splice(index, 1)
+    }
+  }
+}
+
+// 图片上传错误处理
+const handleImageError = (error: any, file: any, fileList: any[]) => {
+  console.error('图片上传失败:', error)
+  ElMessage.error('图片上传失败，请重试')
+}
+
 // 方法
 const handleAddProduct = () => {
   editingProduct.value = null
@@ -325,9 +424,19 @@ const handleAddProduct = () => {
     productName: '',
     description: '',
     categoryId: 1,
-    mainImages: [],
-    detailImages: [],
+    mainImages: '',
+    detailImages: '',
     status: 'on_sale'
+  }
+  // 清空URL列表
+  mainImageUrls.value = []
+  detailImageUrls.value = []
+  // 清空上传组件
+  if (mainImageUpload.value) {
+    mainImageUpload.value.clearFiles()
+  }
+  if (detailImageUpload.value) {
+    detailImageUpload.value.clearFiles()
   }
   showAddDialog.value = true
 }
@@ -489,26 +598,25 @@ const handleDelete = async (product: ProductListItem) => {
 
 const handleSaveProduct = async () => {
   try {
-    // 验证表单数据
+    // 表单验证
     if (!productForm.value.productName.trim()) {
       ElMessage.error('请输入商品名称')
       return
     }
     
-    if (!productForm.value.categoryId) {
-      ElMessage.error('请选择商品分类')
+    if (!productForm.value.description.trim()) {
+      ElMessage.error('请输入商品描述')
       return
     }
     
-    // 验证SKU数据
     if (productForm.value.skus && productForm.value.skus.length > 0) {
       for (const sku of productForm.value.skus) {
         if (!sku.skuName.trim()) {
-          ElMessage.error('请填写所有SKU的规格名称')
+          ElMessage.error('请输入SKU名称')
           return
         }
-        if (sku.price <= 0) {
-          ElMessage.error('SKU价格必须大于0')
+        if (!sku.price || sku.price <= 0) {
+          ElMessage.error('请输入有效的SKU价格')
           return
         }
       }
@@ -521,8 +629,8 @@ const handleSaveProduct = async () => {
         productName: productForm.value.productName,
         description: productForm.value.description,
         categoryId: productForm.value.categoryId,
-        mainImages: productForm.value.mainImages,
-        detailImages: productForm.value.detailImages,
+        mainImages: mainImageUrls.value.length > 0 ? mainImageUrls.value.join(',') : '',
+        detailImages: detailImageUrls.value.length > 0 ? detailImageUrls.value.join(',') : '',
         status: productForm.value.status
       }
       
@@ -536,15 +644,44 @@ const handleSaveProduct = async () => {
         return
       }
     } else {
-      // 添加商品
-      const response = await addProduct(productForm.value)
+      // 添加商品 - 使用URL字符串而不是文件上传
+      const addParams: AddProductParams = {
+        productName: productForm.value.productName,
+        description: productForm.value.description,
+        categoryId: productForm.value.categoryId,
+        mainImages: mainImageUrls.value.length > 0 ? mainImageUrls.value.join(',') : '',
+        detailImages: detailImageUrls.value.length > 0 ? detailImageUrls.value.join(',') : '',
+        status: productForm.value.status
+      }
+      
+      // 先添加商品
+      const response = await addProduct(addParams)
+      
       if (response.code === 200) {
         // 获取新创建的商品ID
         const newProductId = response.data
-        if (newProductId && productForm.value.skus && productForm.value.skus.length > 0) {
-          // 处理SKU添加
-          await handleSkuOperations(parseInt(newProductId))
+        
+        // 如果有SKU数据，单独添加SKU
+        if (productForm.value.skus && productForm.value.skus.length > 0 && newProductId) {
+          try {
+            for (const sku of productForm.value.skus) {
+              const skuData = {
+                productId: parseInt(newProductId),
+                skuName: sku.skuName,
+                skuType: sku.skuType || '',
+                price: sku.price,
+                soldCount: sku.soldCount || 0,
+                skuImage: sku.skuImage || '',
+                status: 'on_sale' as const
+              }
+              await addSku(skuData)
+            }
+          } catch (error) {
+            console.error('添加SKU失败:', error)
+            ElMessage.warning('商品添加成功，但SKU添加失败')
+          }
         }
+        
         ElMessage.success('商品添加成功')
       } else {
         ElMessage.error(response.msg || '添加失败')
@@ -554,14 +691,14 @@ const handleSaveProduct = async () => {
     
     showAddDialog.value = false
     productForm.value = {
-      productName: '',
-      description: '',
-      categoryId: 1,
-      mainImages: [],
-      detailImages: [],
-      status: 'on_sale',
-      skus: []
-    }
+    productName: '',
+    description: '',
+    categoryId: 1,
+    mainImages: '',
+    detailImages: '',
+    status: 'on_sale',
+    skus: []
+  }
     editingProduct.value = null
     await loadProducts()
   } catch (error) {
