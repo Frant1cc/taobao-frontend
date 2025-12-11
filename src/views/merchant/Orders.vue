@@ -255,6 +255,26 @@ const shipForm = ref<ShipOrderParams>({
 // 订单数据
 const orders = ref<OrderListItem[]>([])
 
+// 获取完整图片URL（参考商品管理页面的实现）
+const getFullImageUrl = (imagePath: string) => {
+  if (!imagePath) return 'https://via.placeholder.com/60x60'
+  
+  // 如果图片路径已经是完整URL，直接返回
+  if (imagePath.startsWith('http://') || imagePath.startsWith('https://')) {
+    return imagePath
+  }
+  
+  // 处理路径格式，避免双斜杠问题
+  const baseUrl = import.meta.env.VITE_IMAGE_BASE_URL || ''
+  if (!baseUrl) return imagePath
+  
+  // 确保baseUrl以斜杠结尾，imagePath不以斜杠开头
+  const cleanBaseUrl = baseUrl.endsWith('/') ? baseUrl.slice(0, -1) : baseUrl
+  const cleanImagePath = imagePath.startsWith('/') ? imagePath.slice(1) : imagePath
+  
+  return `${cleanBaseUrl}/${cleanImagePath}`
+}
+
 // 加载订单列表
 const loadOrders = async () => {
   try {
@@ -280,11 +300,11 @@ const loadOrders = async () => {
         phone: order.phone,
         paymentTime: order.paymentTime,
         paid: order.paid || false,
-        // 商品信息
+        // 商品信息 - 使用skuImage路径渲染图片
         products: order.orderItems?.map((item: any) => ({
           id: item.itemId?.toString(),
           name: item.productName,
-          image: '', // 需要根据实际情况获取图片
+          image: getFullImageUrl(item.skuImage), // 使用skuImage路径
           spec: item.skuType,
           quantity: item.quantity,
           price: item.price

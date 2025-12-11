@@ -169,3 +169,22 @@ export const deleteSku = (skuId: number): Promise<ShopResponse<string>> => {
     method: 'DELETE'
   })
 }
+
+/**
+ * 商家上传SKU图片
+ * @param skuImageFile SKU图片文件
+ * @returns 上传结果
+ */
+export const uploadSkuImage = (skuImageFile: File): Promise<ShopResponse<string>> => {
+  const formData = new FormData()
+  formData.append('skuImage', skuImageFile)
+  
+  return request({
+    url: '/api/product/sku/image/upload',
+    method: 'POST',
+    data: formData,
+    headers: {
+      'Content-Type': 'multipart/form-data'
+    }
+  })
+}

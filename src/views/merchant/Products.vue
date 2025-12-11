@@ -142,19 +142,18 @@
         <el-form-item label="商品主图">
           <el-upload
             ref="mainImageUpload"
-            action="/api/oss/upload"
+            action="/api/shop/product/main-image/upload"
             list-type="picture-card"
-            :headers="{ 'Content-Type': 'multipart/form-data' }"
-            :data="{ folder: 'product_main' }"
+            :headers="{ Authorization: `Bearer ${authToken}` }"
             :on-success="handleMainImageSuccess"
             :on-remove="handleMainImageRemove"
             :on-error="handleImageError"
-            multiple
+            :limit="1"
           >
             <el-icon><Plus /></el-icon>
             <template #tip>
               <div class="el-upload__tip">
-                建议尺寸：800x800像素，最多上传5张主图
+                建议尺寸：800x800像素，只能上传1张主图
               </div>
             </template>
           </el-upload>
@@ -164,19 +163,18 @@
         <el-form-item label="商品详情图">
           <el-upload
             ref="detailImageUpload"
-            action="/api/oss/upload"
+            action="/api/shop/product/detail-image/upload"
             list-type="picture-card"
-            :headers="{ 'Content-Type': 'multipart/form-data' }"
-            :data="{ folder: 'product_detail' }"
+            :headers="{ Authorization: `Bearer ${authToken}` }"
             :on-success="handleDetailImageSuccess"
             :on-remove="handleDetailImageRemove"
             :on-error="handleImageError"
-            multiple
+            :limit="1"
           >
             <el-icon><Plus /></el-icon>
             <template #tip>
               <div class="el-upload__tip">
-                建议尺寸：宽度800像素，高度自适应，最多上传10张详情图
+                建议尺寸：宽度800像素，高度自适应，只能上传1张详情图
               </div>
             </template>
           </el-upload>
@@ -213,6 +211,40 @@
                       size="small"
                     />
                     <span style="margin-left: 4px; color: #666;">元</span>
+                  </div>
+                  <!-- SKU图片上传 -->
+                  <div class="sku-image">
+                    <el-upload
+                      :http-request="(options: any) => handleSkuImageUpload(options, index)"
+                      :show-file-list="false"
+                      accept="image/*"
+                    >
+                      <el-button size="small" type="primary">
+                        <el-icon><Plus /></el-icon>
+                        上传图片
+                      </el-button>
+                      <template #tip>
+                        <div class="el-upload__tip">
+                          上传SKU图片
+                        </div>
+                      </template>
+                    </el-upload>
+                    <!-- 显示已上传的SKU图片 -->
+                    <div v-if="sku.skuImage" class="sku-image-preview">
+                      <el-image
+                        :src="getFullImageUrl(sku.skuImage)"
+                        fit="cover"
+                        style="width: 40px; height: 40px; border-radius: 4px;"
+                      />
+                      <el-button
+                        type="danger"
+                        size="small"
+                        @click="handleRemoveSkuImage(index)"
+                        style="margin-left: 8px;"
+                      >
+                        删除
+                      </el-button>
+                    </div>
                   </div>
                 </div>
                 <div class="sku-actions">
@@ -265,7 +297,8 @@ import {
   deleteProduct,
   addSku,
   updateSku,
-  deleteSku
+  deleteSku,
+  uploadSkuImage
 } from '@/api/modules/merchant-product'
 import { uploadToOss, batchUploadToOss } from '@/api/modules/oss-upload'
 import type { ProductListItem, AddProductParams, UpdateProductParams, ProductSku, AddSkuParams, UpdateSkuParams } from '@/types/product'
@@ -308,6 +341,9 @@ const products = ref<ProductListItem[]>([])
 // 上传组件引用
 const mainImageUpload = ref()
 const detailImageUpload = ref()
+
+// 认证token
+const authToken = ref(localStorage.getItem('authToken') || '')
 
 // 加载商品列表
 const loadProducts = async () => {
@@ -366,9 +402,9 @@ const filteredProducts = computed(() => {
 // 主图上传成功处理
 const handleMainImageSuccess = (response: any, file: any, fileList: any[]) => {
   if (response.code === 200 && response.data) {
-    const imageUrl = response.data.url
-    if (imageUrl && !mainImageUrls.value.includes(imageUrl)) {
-      mainImageUrls.value.push(imageUrl)
+    const imagePath = response.data
+    if (imagePath) {
+      mainImageUrls.value = [imagePath]
       ElMessage.success('主图上传成功')
     }
   } else {
@@ -378,21 +414,15 @@ const handleMainImageSuccess = (response: any, file: any, fileList: any[]) => {
 
 // 主图删除处理
 const handleMainImageRemove = (file: any, fileList: any[]) => {
-  const imageUrl = file.response?.data?.url || file.url
-  if (imageUrl) {
-    const index = mainImageUrls.value.indexOf(imageUrl)
-    if (index > -1) {
-      mainImageUrls.value.splice(index, 1)
-    }
-  }
+  mainImageUrls.value = []
 }
 
 // 详情图上传成功处理
 const handleDetailImageSuccess = (response: any, file: any, fileList: any[]) => {
   if (response.code === 200 && response.data) {
-    const imageUrl = response.data.url
-    if (imageUrl && !detailImageUrls.value.includes(imageUrl)) {
-      detailImageUrls.value.push(imageUrl)
+    const imagePath = response.data
+    if (imagePath) {
+      detailImageUrls.value = [imagePath]
       ElMessage.success('详情图上传成功')
     }
   } else {
@@ -402,13 +432,7 @@ const handleDetailImageSuccess = (response: any, file: any, fileList: any[]) => 
 
 // 详情图删除处理
 const handleDetailImageRemove = (file: any, fileList: any[]) => {
-  const imageUrl = file.response?.data?.url || file.url
-  if (imageUrl) {
-    const index = detailImageUrls.value.indexOf(imageUrl)
-    if (index > -1) {
-      detailImageUrls.value.splice(index, 1)
-    }
-  }
+  detailImageUrls.value = []
 }
 
 // 图片上传错误处理
@@ -483,8 +507,8 @@ const handleEdit = (product: ProductListItem) => {
     productName: product.productName,
     description: product.description,
     categoryId: product.categoryId,
-    mainImages: product.mainImages ? JSON.parse(product.mainImages) : [],
-    detailImages: product.detailImages ? JSON.parse(product.detailImages) : [],
+    mainImages: product.mainImages || '',
+    detailImages: product.detailImages || '',
     status: product.status as 'on_sale' | 'off_sale',
     skus: skus
   }
@@ -550,8 +574,8 @@ const handleToggleStatus = async (product: ProductListItem) => {
       productName: product.productName,
       description: product.description,
       categoryId: product.categoryId,
-      mainImages: product.mainImages ? JSON.parse(product.mainImages) : [],
-      detailImages: product.detailImages ? JSON.parse(product.detailImages) : [],
+      mainImages: product.mainImages || '',
+      detailImages: product.detailImages || '',
       status: newStatus
     }
     
@@ -649,8 +673,9 @@ const handleSaveProduct = async () => {
         productName: productForm.value.productName,
         description: productForm.value.description,
         categoryId: productForm.value.categoryId,
-        mainImages: mainImageUrls.value.length > 0 ? mainImageUrls.value.join(',') : '',
-        detailImages: detailImageUrls.value.length > 0 ? detailImageUrls.value.join(',') : '',
+        mainImages: mainImageUrls.value.length > 0 ? mainImageUrls.value[0]! : '',
+        detailImages: detailImageUrls.value.length > 0 ? detailImageUrls.value[0]! : '',
+
         status: productForm.value.status
       }
       
@@ -674,7 +699,7 @@ const handleSaveProduct = async () => {
                 skuImage: sku.skuImage || '',
                 status: 'on_sale' as const
               }
-              await addSku(skuData)
+              await addSku({ ...skuData, stock: 50 })
             }
           } catch (error) {
             console.error('添加SKU失败:', error)
@@ -718,6 +743,7 @@ const handleSkuOperations = async (productId: number) => {
       skuName: sku.skuName || '',
       skuType: sku.skuType || '',
       price: sku.price || 0,
+      stock: 50,
       skuImage: sku.skuImage || '',
       status: (sku.status || 'on_sale') as "on_sale" | "off_sale",
       productId: productId
@@ -730,6 +756,7 @@ const handleSkuOperations = async (productId: number) => {
         skuName: safeSku.skuName,
         skuType: safeSku.skuType,
         price: safeSku.price,
+        stock: safeSku.stock,
         skuImage: safeSku.skuImage,
         status: safeSku.status
       }
@@ -741,6 +768,7 @@ const handleSkuOperations = async (productId: number) => {
         skuName: safeSku.skuName,
         skuType: safeSku.skuType,
         price: safeSku.price,
+        stock: safeSku.stock,
         skuImage: safeSku.skuImage,
         status: safeSku.status
       }
@@ -801,6 +829,54 @@ const getMainImageUrl = (product: ProductListItem) => {
   } catch {
     return null
   }
+}
+
+// SKU图片上传处理
+const handleSkuImageUpload = async (options: any, skuIndex: number) => {
+  const file = options.file
+  try {
+    const response = await uploadSkuImage(file)
+    if (response.code === 200) {
+      const skuImagePath = response.data
+      if (productForm.value.skus && productForm.value.skus[skuIndex]) {
+        productForm.value.skus[skuIndex].skuImage = skuImagePath
+        ElMessage.success('SKU图片上传成功')
+      }
+    } else {
+      ElMessage.error(response.msg || 'SKU图片上传失败')
+    }
+  } catch (error) {
+    console.error('SKU图片上传失败:', error)
+    ElMessage.error('SKU图片上传失败，请重试')
+  }
+}
+
+// 删除SKU图片
+const handleRemoveSkuImage = (skuIndex: number) => {
+  if (productForm.value.skus && productForm.value.skus[skuIndex]) {
+    productForm.value.skus[skuIndex].skuImage = ''
+    ElMessage.success('SKU图片已删除')
+  }
+}
+
+// 获取完整图片URL（用于SKU图片预览）
+const getFullImageUrl = (imagePath: string) => {
+  if (!imagePath) return ''
+  
+  // 如果图片路径已经是完整URL，直接返回
+  if (imagePath.startsWith('http://') || imagePath.startsWith('https://')) {
+    return imagePath
+  }
+  
+  // 处理路径格式，避免双斜杠问题
+  const baseUrl = import.meta.env.VITE_IMAGE_BASE_URL || ''
+  if (!baseUrl) return imagePath
+  
+  // 确保baseUrl以斜杠结尾，imagePath不以斜杠开头
+  const cleanBaseUrl = baseUrl.endsWith('/') ? baseUrl.slice(0, -1) : baseUrl
+  const cleanImagePath = imagePath.startsWith('/') ? imagePath.slice(1) : imagePath
+  
+  return `${cleanBaseUrl}/${cleanImagePath}`
 }
 
 const formatTime = (timeStr: string) => {
@@ -999,6 +1075,19 @@ $white: #fff;
             width: 150px;
             display: flex;
             align-items: center;
+          }
+
+          .sku-image {
+            width: 200px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+
+            .sku-image-preview {
+              display: flex;
+              align-items: center;
+              gap: 8px;
+            }
           }
         }
 

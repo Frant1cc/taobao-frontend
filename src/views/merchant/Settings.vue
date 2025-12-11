@@ -2,8 +2,16 @@
   <div class="merchant-settings">
     <!-- 页面标题 -->
     <div class="page-header">
-      <h2>商家设置</h2>
-      <p class="page-description">管理您的店铺信息和基本设置</p>
+      <div class="header-content">
+        <div>
+          <h2>商家设置</h2>
+          <p class="page-description">管理您的店铺信息和基本设置</p>
+        </div>
+        <el-button type="danger" @click="handleLogout">
+          <el-icon><SwitchButton /></el-icon>
+          退出登录
+        </el-button>
+      </div>
     </div>
 
     <!-- 设置内容 -->
@@ -101,7 +109,8 @@ import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import {
   User,
-  Picture
+  Picture,
+  SwitchButton
 } from '@element-plus/icons-vue'
 import { useUserStore } from '@/stores/user'
 import { useShopStore } from '@/stores/shop'
@@ -141,17 +150,23 @@ const handleMenuSelect = (index: string) => {
 // 加载商家信息
 const loadShopInfo = async () => {
   try {
-    const shopInfo = await shopStore.fetchShopInfo()
+    // 如果店铺信息不存在，尝试从店铺仓库加载
+    if (!shopStore.currentShop) {
+      await shopStore.fetchShopInfo()
+    }
+    
+    // 使用已加载的店铺信息
+    const shopInfo = shopStore.currentShop
     
     // 填充表单数据
-    basicForm.shopName = shopInfo.shopName || ''
-    basicForm.shopDescription = shopInfo.shopDescription || ''
+    basicForm.shopName = shopInfo?.shopName || ''
+    basicForm.shopDescription = shopInfo?.shopDescription || ''
     
     // 使用store中的shopLogoUrl计算属性
     logoForm.shopLogo = shopLogoUrl.value
     
     // 保存店铺状态
-    currentShopStatus.value = shopInfo.status || 'normal'
+    currentShopStatus.value = shopInfo?.status || 'normal'
   } catch (error) {
     ElMessage.error('获取商家信息失败')
     console.error('获取商家信息失败:', error)
@@ -171,8 +186,6 @@ const saveBasicInfo = async () => {
     
     await shopStore.updateShopInfo(updateParams)
     ElMessage.success('商家信息更新成功')
-    // 重新加载商家信息
-    await loadShopInfo()
   } catch (error) {
     ElMessage.error('更新商家信息失败')
     console.error('更新商家信息失败:', error)
@@ -231,6 +244,34 @@ const resetBasicForm = async () => {
   }
 }
 
+// 退出登录处理
+const handleLogout = async () => {
+  try {
+    await ElMessageBox.confirm('确定要退出登录吗？', '退出登录', {
+      confirmButtonText: '确定',
+      cancelButtonText: '取消',
+      type: 'warning'
+    })
+    
+    // 清空用户store
+    userStore.clearToken()
+    
+    // 清空店铺store
+    shopStore.clearShopInfo()
+    
+    ElMessage.success('退出登录成功')
+    
+    // 跳转到登录页面
+    router.push('/login')
+  } catch (error) {
+    // 用户取消操作，不做任何处理
+    if (error !== 'cancel') {
+      console.error('退出登录失败:', error)
+      ElMessage.error('退出登录失败')
+    }
+  }
+}
+
 // 页面加载时获取商家信息
 onMounted(() => {
   loadShopInfo()
@@ -252,15 +293,21 @@ $white: #fff;
   .page-header {
     margin-bottom: 24px;
 
-    h2 {
-      margin: 0 0 8px 0;
-      color: $text-primary;
-    }
+    .header-content {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
 
-    .page-description {
-      margin: 0;
-      color: $text-secondary;
-      font-size: 14px;
+      h2 {
+        margin: 0 0 8px 0;
+        color: $text-primary;
+      }
+
+      .page-description {
+        margin: 0;
+        color: $text-secondary;
+        font-size: 14px;
+      }
     }
   }
 

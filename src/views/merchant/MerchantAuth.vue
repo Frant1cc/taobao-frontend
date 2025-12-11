@@ -141,6 +141,9 @@ const handleLogin = async () => {
       userStore.setToken(userData.token)
       userStore.setUserInfo(userData)
       
+      // 获取完整的用户信息并存入仓库
+      await userStore.fetchUserInfo()
+      
       ElMessage.success('商家登录成功')
       
       // 跳转到商家工作台

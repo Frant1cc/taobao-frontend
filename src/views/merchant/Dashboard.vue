@@ -191,11 +191,7 @@ const loadData = async () => {
       await userStore.fetchUserInfo()
     }
     
-    // 如果店铺信息不存在，尝试从店铺仓库加载
-    if (!shopStore.currentShop) {
-      await shopStore.fetchShopInfo()
-    }
-    
+    // 店铺信息已经在布局文件中加载，这里不再重复加载
     // 获取最近订单
     await loadRecentOrders()
   } catch (error) {
