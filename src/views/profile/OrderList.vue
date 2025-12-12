@@ -113,20 +113,7 @@
             >
               确认收货
             </button>
-            <button 
-              v-if="order.status === 'completed'" 
-              class="action-btn"
-              @click="viewOrderDetail(order)"
-            >
-              查看详情
-            </button>
-            <button 
-              v-if="order.status === 'completed'" 
-              class="action-btn"
-              @click="applyRefund(order)"
-            >
-              申请售后
-            </button>
+
           </div>
         </div>
 
@@ -418,9 +405,29 @@ const cancelOrder = async (order: any) => {
   }
 }
 
-const confirmReceipt = (order: any) => {
-  ElMessage.success(`确认收货订单：${order.id}`)
-  // 实际开发中这里会调用确认收货API
+const confirmReceipt = async (order: any) => {
+  try {
+    // 调用API更新订单状态为"已完成"
+    const params: UpdateOrderStatusRequest = {
+      orderId: parseInt(order.id),
+      status: 'completed'
+    }
+    
+    const response = await updateOrderStatus(params)
+    
+    if (response.code === 200) {
+      ElMessage.success('确认收货成功')
+      // 更新本地订单状态
+      order.status = 'completed'
+      // 重新获取订单列表以确保数据同步
+      await fetchOrders()
+    } else {
+      ElMessage.error('确认收货失败: ' + (response.msg || '未知错误'))
+    }
+  } catch (error) {
+    console.error('确认收货过程中出现错误:', error)
+    ElMessage.error('确认收货失败: ' + (error instanceof Error ? error.message : '未知错误'))
+  }
 }
 
 const viewOrderDetail = (order: any) => {
