@@ -1,107 +1,73 @@
 // 订单相关类型定义
 
-/**
- * 后端订单项类型 - 用于与后端API通信
- * 包含创建订单所需的核心商品信息
- */
-export interface OrderItem {
-  productId: number
-  skuId: number
-  quantity: number
-  price: number
+// 商家端订单管理相关类型定义
+
+// 获取订单列表请求参数
+export interface OrderListParams {
+  pageNum: number
+  pageSize: number
+  status?: 'pending' | 'paid' | 'shipped' | 'completed' | 'cancelled'
 }
 
-/**
- * 订单商品类型 - 用于前端展示
- */
-export interface OrderProduct {
-  id: string
-  name: string
-  spec: string
-  price: number
-  quantity: number
-  image: string
+// 订单列表响应数据
+export interface OrderListResponse {
+  total: number
+  list: OrderListItem[]
 }
 
-/**
- * 创建订单的请求参数类型
- * 用于向后端发送创建订单的请求
- */
-export interface CreateOrderRequest {
-  consignee: string
-  phone: string
-  address: string
-  orderItems: OrderItem[]
-}
+// 商家订单列表响应数据（后端直接返回数组）
+export interface MerchantOrderListResponse extends Array<OrderListItem> {}
 
-/**
- * 创建订单响应类型
- * 后端创建订单接口的响应格式
- */
-export interface CreateOrderResponse {
-  code: number
-  msg: string
-  data: number // 实际返回的是订单ID
-}
-
-/**
- * 更新订单状态的请求参数类型
- */
-export interface UpdateOrderStatusRequest {
-  orderId: number
-  status: 'pending' | 'paid' | 'shipped' | 'completed' | 'cancelled'
-}
-
-/**
- * 更新订单状态响应类型
- */
-export interface UpdateOrderStatusResponse {
-  code: number
-  msg: string
-  data: null
-}
-
-/**
- * 订单列表项类型
- */
+// 订单列表项
 export interface OrderListItem {
-  id: string
-  orderId: string
-  status: 'pending' | 'paid' | 'shipped' | 'completed' | 'cancelled' | ''
-  createTime: string
+  orderId: number
+  orderNo: string
+  userId: number
   totalAmount: number
-  productCount: number
-  products: OrderProduct[]
-  address?: string
+  status: string
+  shippingAddress: string
+  createTime: string
+  updateTime: string
+  // 新增字段
   consigneeName?: string
   phone?: string
+  paymentTime?: string | null
+  paid: boolean
+  // 商品信息
+  products?: Array<{
+    id: string
+    name: string
+    image: string
+    spec: string
+    quantity: number
+    price: number
+  }>
 }
 
-/**
- * 订单列表响应数据类型
- */
-export interface OrderListData {
-  list: OrderListItem[]
-  pageNum: number
-  pageSize: number
-  total: number
-  pages: number
+// 订单详情
+export interface OrderDetail {
+  orderId: number
+  orderNo: string
+  userId: number
+  totalAmount: number
+  status: string
+  shippingAddress: string
+  createTime: string
+  updateTime: string
 }
 
-/**
- * 获取订单列表响应类型
- */
-export interface GetOrderListResponse {
+// 发货请求参数
+export interface ShipOrderParams {
+  logisticsCompany: string
+  logisticsNo: string
+}
+
+// 分页响应通用接口
+export interface PaginationResponse<T> {
   code: number
   msg: string
-  data: OrderListData
-}
-
-/**
- * 获取订单列表请求参数类型
- */
-export interface GetOrderListRequest {
-  pageNum: number
-  pageSize: number
-  orderStatus?: 'pending' | 'paid' | 'shipped' | 'completed' | 'cancelled' | ''
+  data: {
+    total: number
+    list: T[]
+  }
 }

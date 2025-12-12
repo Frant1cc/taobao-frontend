@@ -2,8 +2,16 @@
   <div class="merchant-settings">
     <!-- 页面标题 -->
     <div class="page-header">
-      <h2>店铺设置</h2>
-      <p class="page-description">管理您的店铺信息和基本设置</p>
+      <div class="header-content">
+        <div>
+          <h2>商家设置</h2>
+          <p class="page-description">管理您的店铺信息和基本设置</p>
+        </div>
+        <el-button type="danger" @click="handleLogout">
+          <el-icon><SwitchButton /></el-icon>
+          退出登录
+        </el-button>
+      </div>
     </div>
 
     <!-- 设置内容 -->
@@ -17,31 +25,11 @@
         >
           <el-menu-item index="basic">
             <el-icon><User /></el-icon>
-            <span>基本信息</span>
+            <span>店铺信息</span>
           </el-menu-item>
           <el-menu-item index="logo">
             <el-icon><Picture /></el-icon>
             <span>店铺Logo</span>
-          </el-menu-item>
-          <el-menu-item index="contact">
-            <el-icon><Phone /></el-icon>
-            <span>联系方式</span>
-          </el-menu-item>
-          <el-menu-item index="shipping">
-            <el-icon><Van /></el-icon>
-            <span>运费设置</span>
-          </el-menu-item>
-          <el-menu-item index="payment">
-            <el-icon><Money /></el-icon>
-            <span>支付设置</span>
-          </el-menu-item>
-          <el-menu-item index="notification">
-            <el-icon><Bell /></el-icon>
-            <span>消息通知</span>
-          </el-menu-item>
-          <el-menu-item index="security">
-            <el-icon><Lock /></el-icon>
-            <span>安全设置</span>
           </el-menu-item>
         </el-menu>
       </div>
@@ -60,7 +48,7 @@
               </el-form-item>
               <el-form-item label="店铺简介">
                 <el-input
-                  v-model="basicForm.description"
+                  v-model="basicForm.shopDescription"
                   type="textarea"
                   :rows="4"
                   placeholder="请输入店铺简介"
@@ -68,43 +56,24 @@
                   show-word-limit
                 />
               </el-form-item>
-              <el-form-item label="主营类目">
-                <el-select v-model="basicForm.category" placeholder="请选择主营类目">
-                  <el-option label="服装鞋包" value="clothing" />
-                  <el-option label="数码家电" value="electronics" />
-                  <el-option label="美妆护肤" value="beauty" />
-                  <el-option label="食品生鲜" value="food" />
-                  <el-option label="家居百货" value="home" />
-                </el-select>
-              </el-form-item>
-              <el-form-item label="营业时间">
-                <el-time-picker
-                  v-model="basicForm.businessHours"
-                  is-range
-                  range-separator="至"
-                  start-placeholder="开始时间"
-                  end-placeholder="结束时间"
-                  placeholder="选择营业时间"
-                />
-              </el-form-item>
               <el-form-item>
                 <el-button type="primary" @click="saveBasicInfo">保存</el-button>
-                <el-button>重置</el-button>
+                <el-button @click="resetBasicForm">重置</el-button>
               </el-form-item>
             </el-form>
           </el-card>
         </div>
 
-        <!-- 店铺Logo -->
+        <!-- 个人头像 -->
         <div v-if="activeTab === 'logo'" class="tab-content">
           <el-card class="setting-card">
             <template #header>
-              <h3>店铺Logo</h3>
+              <h3>个人头像</h3>
             </template>
             <div class="logo-upload">
               <div class="logo-preview">
                 <el-image
-                  :src="logoForm.logoUrl"
+                  :src="logoForm.shopLogo"
                   fit="cover"
                   class="current-logo"
                 />
@@ -115,9 +84,9 @@
                     :before-upload="beforeLogoUpload"
                     :http-request="handleLogoUpload"
                   >
-                    <el-button type="primary">更换Logo</el-button>
+                    <el-button type="primary">更换头像</el-button>
                   </el-upload>
-                  <el-button @click="removeLogo">删除Logo</el-button>
+                  <el-button @click="removeLogo">删除头像</el-button>
                 </div>
               </div>
               <div class="logo-tips">
@@ -129,324 +98,98 @@
           </el-card>
         </div>
 
-        <!-- 联系方式 -->
-        <div v-if="activeTab === 'contact'" class="tab-content">
-          <el-card class="setting-card">
-            <template #header>
-              <h3>联系方式</h3>
-            </template>
-            <el-form :model="contactForm" label-width="120px">
-              <el-form-item label="客服电话">
-                <el-input v-model="contactForm.phone" placeholder="请输入客服电话" />
-              </el-form-item>
-              <el-form-item label="客服邮箱">
-                <el-input v-model="contactForm.email" placeholder="请输入客服邮箱" />
-              </el-form-item>
-              <el-form-item label="联系地址">
-                <el-input
-                  v-model="contactForm.address"
-                  type="textarea"
-                  :rows="3"
-                  placeholder="请输入联系地址"
-                />
-              </el-form-item>
-              <el-form-item label="在线客服">
-                <el-switch v-model="contactForm.onlineService" />
-                <span class="switch-label">{{ contactForm.onlineService ? '开启' : '关闭' }}在线客服</span>
-              </el-form-item>
-              <el-form-item>
-                <el-button type="primary" @click="saveContactInfo">保存</el-button>
-                <el-button>重置</el-button>
-              </el-form-item>
-            </el-form>
-          </el-card>
-        </div>
-
-        <!-- 运费设置 -->
-        <div v-if="activeTab === 'shipping'" class="tab-content">
-          <el-card class="setting-card">
-            <template #header>
-              <h3>运费设置</h3>
-            </template>
-            <el-form :model="shippingForm" label-width="120px">
-              <el-form-item label="运费模板">
-                <el-select v-model="shippingForm.template" placeholder="请选择运费模板">
-                  <el-option label="包邮" value="free" />
-                  <el-option label="按重量计费" value="weight" />
-                  <el-option label="按件数计费" value="count" />
-                  <el-option label="固定运费" value="fixed" />
-                </el-select>
-              </el-form-item>
-              <el-form-item v-if="shippingForm.template === 'fixed'" label="固定运费">
-                <el-input-number
-                  v-model="shippingForm.fixedFee"
-                  :min="0"
-                  :max="100"
-                  controls-position="right"
-                />
-                <span class="unit">元</span>
-              </el-form-item>
-              <el-form-item label="发货地址">
-                <el-cascader
-                  v-model="shippingForm.shippingAddress"
-                  :options="addressOptions"
-                  placeholder="请选择发货地址"
-                />
-              </el-form-item>
-              <el-form-item label="发货时间">
-                <el-select v-model="shippingForm.shippingTime" placeholder="请选择发货时间">
-                  <el-option label="24小时内" value="24h" />
-                  <el-option label="48小时内" value="48h" />
-                  <el-option label="3天内" value="3d" />
-                  <el-option label="5天内" value="5d" />
-                </el-select>
-              </el-form-item>
-              <el-form-item>
-                <el-button type="primary" @click="saveShippingSettings">保存</el-button>
-                <el-button>重置</el-button>
-              </el-form-item>
-            </el-form>
-          </el-card>
-        </div>
-
-        <!-- 支付设置 -->
-        <div v-if="activeTab === 'payment'" class="tab-content">
-          <el-card class="setting-card">
-            <template #header>
-              <h3>支付设置</h3>
-            </template>
-            <div class="payment-methods">
-              <div class="payment-item">
-                <div class="payment-info">
-                  <el-icon class="payment-icon"><CreditCard /></el-icon>
-                  <div class="payment-details">
-                    <h4>支付宝</h4>
-                    <p>支持支付宝支付</p>
-                  </div>
-                </div>
-                <el-switch v-model="paymentForm.alipay" />
-              </div>
-              
-              <div class="payment-item">
-                <div class="payment-info">
-                  <el-icon class="payment-icon"><CreditCard /></el-icon>
-                  <div class="payment-details">
-                    <h4>微信支付</h4>
-                    <p>支持微信支付</p>
-                  </div>
-                </div>
-                <el-switch v-model="paymentForm.wechat" />
-              </div>
-              
-              <div class="payment-item">
-                <div class="payment-info">
-                  <el-icon class="payment-icon"><CreditCard /></el-icon>
-                  <div class="payment-details">
-                    <h4>银行卡</h4>
-                    <p>支持银行卡支付</p>
-                  </div>
-                </div>
-                <el-switch v-model="paymentForm.bank" />
-              </div>
-            </div>
-            <div class="payment-actions">
-              <el-button type="primary" @click="savePaymentSettings">保存设置</el-button>
-            </div>
-          </el-card>
-        </div>
-
-        <!-- 消息通知 -->
-        <div v-if="activeTab === 'notification'" class="tab-content">
-          <el-card class="setting-card">
-            <template #header>
-              <h3>消息通知</h3>
-            </template>
-            <div class="notification-settings">
-              <div class="notification-item">
-                <div class="notification-info">
-                  <h4>新订单通知</h4>
-                  <p>当有新订单时发送通知</p>
-                </div>
-                <el-switch v-model="notificationForm.newOrder" />
-              </div>
-              
-              <div class="notification-item">
-                <div class="notification-info">
-                  <h4>库存预警</h4>
-                  <p>商品库存低于阈值时发送通知</p>
-                </div>
-                <el-switch v-model="notificationForm.stockAlert" />
-              </div>
-              
-              <div class="notification-item">
-                <div class="notification-info">
-                  <h4>退款申请</h4>
-                  <p>有用户申请退款时发送通知</p>
-                </div>
-                <el-switch v-model="notificationForm.refundRequest" />
-              </div>
-              
-              <div class="notification-item">
-                <div class="notification-info">
-                  <h4>系统消息</h4>
-                  <p>接收平台系统消息</p>
-                </div>
-                <el-switch v-model="notificationForm.systemMessage" />
-              </div>
-            </div>
-            <div class="notification-actions">
-              <el-button type="primary" @click="saveNotificationSettings">保存设置</el-button>
-            </div>
-          </el-card>
-        </div>
-
-        <!-- 安全设置 -->
-        <div v-if="activeTab === 'security'" class="tab-content">
-          <el-card class="setting-card">
-            <template #header>
-              <h3>安全设置</h3>
-            </template>
-            <div class="security-settings">
-              <div class="security-item">
-                <div class="security-info">
-                  <h4>修改密码</h4>
-                  <p>定期修改密码保障账户安全</p>
-                </div>
-                <el-button type="primary" @click="showChangePassword">修改密码</el-button>
-              </div>
-              
-              <div class="security-item">
-                <div class="security-info">
-                  <h4>登录保护</h4>
-                  <p>开启后需要验证码登录</p>
-                </div>
-                <el-switch v-model="securityForm.loginProtection" />
-              </div>
-              
-              <div class="security-item">
-                <div class="security-info">
-                  <h4>操作日志</h4>
-                  <p>记录账户重要操作</p>
-                </div>
-                <el-button @click="viewOperationLogs">查看日志</el-button>
-              </div>
-            </div>
-          </el-card>
-        </div>
       </div>
     </div>
-
-    <!-- 修改密码对话框 -->
-    <el-dialog v-model="passwordDialogVisible" title="修改密码" width="400px">
-      <el-form :model="passwordForm" label-width="80px">
-        <el-form-item label="原密码">
-          <el-input v-model="passwordForm.oldPassword" type="password" />
-        </el-form-item>
-        <el-form-item label="新密码">
-          <el-input v-model="passwordForm.newPassword" type="password" />
-        </el-form-item>
-        <el-form-item label="确认密码">
-          <el-input v-model="passwordForm.confirmPassword" type="password" />
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <el-button @click="passwordDialogVisible = false">取消</el-button>
-        <el-button type="primary" @click="changePassword">确认修改</el-button>
-      </template>
-    </el-dialog>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, reactive } from 'vue'
+import { ref, reactive, onMounted, computed } from 'vue'
+import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import {
   User,
   Picture,
-  Phone,
-  Van,
-  Money,
-  Bell,
-  Lock,
-  CreditCard
+  SwitchButton
 } from '@element-plus/icons-vue'
+import { useUserStore } from '@/stores/user'
+import { useShopStore } from '@/stores/shop'
+import type { UpdateShopParams } from '@/types/shop'
 
 // 当前激活的标签页
 const activeTab = ref('basic')
+const router = useRouter()
+const userStore = useUserStore()
+const shopStore = useShopStore()
+
+// 用户信息
+const userInfo = computed(() => userStore.userInfo)
+
+// 店铺信息
+const shopInfo = computed(() => shopStore.currentShop)
+const shopLogoUrl = computed(() => shopStore.shopLogoUrl)
 
 // 表单数据
 const basicForm = reactive({
-  shopName: '我的淘宝店铺',
-  description: '专业销售各类优质商品，提供最好的购物体验',
-  category: 'clothing',
-  businessHours: [new Date(2023, 0, 1, 9, 0), new Date(2023, 0, 1, 18, 0)]
+  shopName: '',
+  shopDescription: ''
 })
 
 const logoForm = reactive({
-  logoUrl: 'https://via.placeholder.com/200x200'
+  shopLogo: 'https://via.placeholder.com/200x200'
 })
 
-const contactForm = reactive({
-  phone: '400-123-4567',
-  email: 'service@myshop.com',
-  address: '北京市朝阳区某某街道123号',
-  onlineService: true
-})
-
-const shippingForm = reactive({
-  template: 'free',
-  fixedFee: 8,
-  shippingAddress: [],
-  shippingTime: '24h'
-})
-
-const paymentForm = reactive({
-  alipay: true,
-  wechat: true,
-  bank: false
-})
-
-const notificationForm = reactive({
-  newOrder: true,
-  stockAlert: true,
-  refundRequest: true,
-  systemMessage: true
-})
-
-const securityForm = reactive({
-  loginProtection: true
-})
-
-const passwordForm = reactive({
-  oldPassword: '',
-  newPassword: '',
-  confirmPassword: ''
-})
-
-// 对话框状态
-const passwordDialogVisible = ref(false)
-
-// 地址选项（简化版）
-const addressOptions = [
-  {
-    value: 'beijing',
-    label: '北京市',
-    children: [
-      {
-        value: 'chaoyang',
-        label: '朝阳区'
-      }
-    ]
-  }
-]
+// 当前店铺状态
+const currentShopStatus = ref<'normal' | 'closed' | 'auditing'>('normal')
 
 // 方法
 const handleMenuSelect = (index: string) => {
   activeTab.value = index
 }
 
-const saveBasicInfo = () => {
-  ElMessage.success('基本信息保存成功')
+// 加载商家信息
+const loadShopInfo = async () => {
+  try {
+    // 如果店铺信息不存在，尝试从店铺仓库加载
+    if (!shopStore.currentShop) {
+      await shopStore.fetchShopInfo()
+    }
+    
+    // 使用已加载的店铺信息
+    const shopInfo = shopStore.currentShop
+    
+    // 填充表单数据
+    basicForm.shopName = shopInfo?.shopName || ''
+    basicForm.shopDescription = shopInfo?.shopDescription || ''
+    
+    // 使用store中的shopLogoUrl计算属性
+    logoForm.shopLogo = shopLogoUrl.value
+    
+    // 保存店铺状态
+    currentShopStatus.value = shopInfo?.status || 'normal'
+  } catch (error) {
+    ElMessage.error('获取商家信息失败')
+    console.error('获取商家信息失败:', error)
+  }
+}
+
+const saveBasicInfo = async () => {
+  try {
+    // 更新商家信息
+    const updateParams: UpdateShopParams = {
+      shopName: basicForm.shopName,
+      shopDescription: basicForm.shopDescription,
+      shopLogo: shopInfo.value?.shopLogo || '',
+      shopBanner: '',
+      status: currentShopStatus.value
+    }
+    
+    await shopStore.updateShopInfo(updateParams)
+    ElMessage.success('商家信息更新成功')
+  } catch (error) {
+    ElMessage.error('更新商家信息失败')
+    console.error('更新商家信息失败:', error)
+  }
 }
 
 const beforeLogoUpload = (file: File) => {
@@ -465,60 +208,74 @@ const beforeLogoUpload = (file: File) => {
   return true
 }
 
-const handleLogoUpload = (options: any) => {
-  // 模拟上传过程
+const handleLogoUpload = async (options: any) => {
   const file = options.file
-  const reader = new FileReader()
-  reader.onload = (e) => {
-    logoForm.logoUrl = e.target?.result as string
-    ElMessage.success('Logo上传成功')
+  try {
+    // 使用shop store的uploadShopLogo方法
+    const logoPath = await shopStore.uploadShopLogo(file)
+    
+    // 更新前端显示的Logo
+    logoForm.shopLogo = shopLogoUrl.value
+    ElMessage.success('店铺Logo上传成功')
+  } catch (error) {
+    ElMessage.error('上传失败，请重试')
+    console.error('上传失败:', error)
   }
-  reader.readAsDataURL(file)
 }
 
 const removeLogo = () => {
-  ElMessageBox.confirm('确定要删除Logo吗？', '提示', {
+  ElMessageBox.confirm('确定要删除店铺Logo吗？', '提示', {
     confirmButtonText: '确定',
     cancelButtonText: '取消',
     type: 'warning'
   }).then(() => {
-    logoForm.logoUrl = 'https://via.placeholder.com/200x200'
-    ElMessage.success('Logo已删除')
+    logoForm.shopLogo = 'https://via.placeholder.com/200x200'
+    ElMessage.success('店铺Logo已删除')
   })
 }
 
-const saveContactInfo = () => {
-  ElMessage.success('联系方式保存成功')
-}
-
-const saveShippingSettings = () => {
-  ElMessage.success('运费设置保存成功')
-}
-
-const savePaymentSettings = () => {
-  ElMessage.success('支付设置保存成功')
-}
-
-const saveNotificationSettings = () => {
-  ElMessage.success('消息通知设置保存成功')
-}
-
-const showChangePassword = () => {
-  passwordDialogVisible.value = true
-}
-
-const changePassword = () => {
-  if (passwordForm.newPassword !== passwordForm.confirmPassword) {
-    ElMessage.error('两次输入的密码不一致')
-    return
+// 重置基本信息表单
+const resetBasicForm = async () => {
+  try {
+    await loadShopInfo()
+    ElMessage.success('表单已重置')
+  } catch (error) {
+    ElMessage.error('重置表单失败')
   }
-  ElMessage.success('密码修改成功')
-  passwordDialogVisible.value = false
 }
 
-const viewOperationLogs = () => {
-  ElMessage.info('查看操作日志功能开发中...')
+// 退出登录处理
+const handleLogout = async () => {
+  try {
+    await ElMessageBox.confirm('确定要退出登录吗？', '退出登录', {
+      confirmButtonText: '确定',
+      cancelButtonText: '取消',
+      type: 'warning'
+    })
+    
+    // 清空用户store
+    userStore.clearToken()
+    
+    // 清空店铺store
+    shopStore.clearShopInfo()
+    
+    ElMessage.success('退出登录成功')
+    
+    // 跳转到登录页面
+    router.push('/login')
+  } catch (error) {
+    // 用户取消操作，不做任何处理
+    if (error !== 'cancel') {
+      console.error('退出登录失败:', error)
+      ElMessage.error('退出登录失败')
+    }
+  }
 }
+
+// 页面加载时获取商家信息
+onMounted(() => {
+  loadShopInfo()
+})
 </script>
 
 <style scoped lang="scss">
@@ -536,15 +293,21 @@ $white: #fff;
   .page-header {
     margin-bottom: 24px;
 
-    h2 {
-      margin: 0 0 8px 0;
-      color: $text-primary;
-    }
+    .header-content {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
 
-    .page-description {
-      margin: 0;
-      color: $text-secondary;
-      font-size: 14px;
+      h2 {
+        margin: 0 0 8px 0;
+        color: $text-primary;
+      }
+
+      .page-description {
+        margin: 0;
+        color: $text-secondary;
+        font-size: 14px;
+      }
     }
   }
 

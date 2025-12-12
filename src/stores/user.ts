@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import { getUserInfo } from '@/api/modules/user'
+import { getUserInfo, updateUserInfo as updateUserInfoApi } from '@/api/modules/user'
 import type { LoginResponse } from '@/types/user'
 
 // 用户信息类型定义
@@ -10,6 +10,7 @@ interface UserInfo {
   email?: string
   phone?: string
   avatarUrl?: string
+  description?: string
   create_time?: string
   update_time?: string
 }
@@ -44,7 +45,11 @@ export const useUserStore = defineStore('user', {
   
   getters: {
     isLoggedIn: (state) => !!state.token,
-    username: (state) => state.userInfo?.username || ''
+    username: (state) => state.userInfo?.username || '',
+    userType: (state) => {
+      const info = state.userInfo
+      return (info && 'userType' in info ? info.userType : '') || ''
+    }
   },
   
   actions: {
@@ -101,6 +106,32 @@ export const useUserStore = defineStore('user', {
         if ((error as any).response?.status === 401) {
           this.clearToken()
         }
+        throw error
+      }
+    },
+    
+    async updateUserInfo(userData: Partial<UserInfo>) {
+      try {
+        const response = await updateUserInfoApi(userData)
+        if (response.code === 200) {
+          // 更新本地存储的用户信息
+          if (this.userInfo) {
+            this.userInfo = { ...this.userInfo, ...userData }
+          }
+          
+          // 更新本地存储
+          const storedUserInfo = localStorage.getItem('userInfo')
+          if (storedUserInfo) {
+            const userInfo = JSON.parse(storedUserInfo)
+            localStorage.setItem('userInfo', JSON.stringify({ ...userInfo, ...userData }))
+          }
+          
+          return response.data
+        } else {
+          throw new Error(response.msg || '更新用户信息失败')
+        }
+      } catch (error) {
+        console.error('更新用户信息失败:', error)
         throw error
       }
     }

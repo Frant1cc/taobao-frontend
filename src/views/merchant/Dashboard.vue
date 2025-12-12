@@ -2,8 +2,11 @@
   <div class="merchant-dashboard">
     <!-- 欢迎区域 -->
     <div class="welcome-section">
-      <h2>欢迎回来，商家用户！</h2>
+      <h2>欢迎回来，{{ userInfo?.username || userInfo?.account || '商家用户' }}！</h2>
       <p>今日是 {{ currentDate }}，祝您生意兴隆！</p>
+      <div v-if="userInfo" class="user-info-badge">
+        <span class="account-info">账号：{{ userInfo.account }}</span>
+      </div>
     </div>
 
     <!-- 数据概览卡片 -->
@@ -79,12 +82,7 @@
           </div>
         </el-card>
 
-        <el-card class="action-card" @click="$router.push('/merchant/analytics')">
-          <div class="action-content">
-            <el-icon size="32"><TrendCharts /></el-icon>
-            <span>查看数据</span>
-          </div>
-        </el-card>
+
 
         <el-card class="action-card" @click="$router.push('/merchant/settings')">
           <div class="action-content">
@@ -104,93 +102,226 @@
         </el-button>
       </div>
       <el-table :data="recentOrders" style="width: 100%">
-        <el-table-column prop="id" label="订单号" width="120" />
-        <el-table-column prop="product" label="商品" />
-        <el-table-column prop="customer" label="买家" width="100" />
-        <el-table-column prop="amount" label="金额" width="100">
+        <el-table-column prop="orderId" label="订单ID" width="120" />
+        <el-table-column label="商品" min-width="200">
           <template #default="{ row }">
-            ¥{{ row.amount }}
+            <div class="product-list">
+              <div 
+                v-for="product in row.products" 
+                :key="product.id"
+                class="product-item"
+              >
+                <el-image
+                  :src="product.image"
+                  :alt="product.name"
+                  fit="cover"
+                  class="product-image"
+                />
+                <div class="product-details">
+                  <div class="product-name">{{ product.name }}</div>
+                  <div class="product-spec">规格：{{ product.spec }}</div>
+                  <div class="product-quantity">x{{ product.quantity }}</div>
+                </div>
+              </div>
+              <div v-if="!row.products || row.products.length === 0" class="no-products">
+                无商品信息
+              </div>
+            </div>
+          </template>
+        </el-table-column>
+        <el-table-column label="买家" width="100">
+          <template #default="{ row }">
+            {{ row.consigneeName || '未知买家' }}
+          </template>
+        </el-table-column>
+        <el-table-column prop="totalAmount" label="金额" width="100">
+          <template #default="{ row }">
+            ¥{{ row.totalAmount?.toFixed(2) || '0.00' }}
           </template>
         </el-table-column>
         <el-table-column prop="status" label="状态" width="100">
           <template #default="{ row }">
             <el-tag :type="getStatusType(row.status)" size="small">
-              {{ row.status }}
+              {{ getStatusText(row.status) }}
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column prop="time" label="时间" width="180" />
+        <el-table-column label="时间" width="180">
+          <template #default="{ row }">
+            {{ formatTime(row.createTime) }}
+          </template>
+        </el-table-column>
       </el-table>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 import {
   Money,
   Document,
   User,
   Goods,
-  TrendCharts,
   Setting
 } from '@element-plus/icons-vue'
+import { useUserStore } from '@/stores/user'
+import { useShopStore } from '@/stores/shop'
+import { getOrderList } from '@/api/modules/merchant-order'
+import type { OrderListItem } from '@/types/order'
 
+const userStore = useUserStore()
+const shopStore = useShopStore()
 const currentDate = ref(new Date().toLocaleDateString('zh-CN'))
 
-// 模拟数据
+// 用户信息（从用户仓库获取）
+const userInfo = computed(() => userStore.userInfo)
+
+// 店铺信息（从店铺仓库获取）
+const shopInfo = computed(() => shopStore.currentShop)
+
+// 数据概览（使用模拟数据，因为统计接口不存在）
 const revenue = ref(12568.5)
 const orders = ref(42)
 const visitors = ref(1568)
 const products = ref(28)
 
-const recentOrders = ref([
-  {
-    id: '20241215001',
-    product: '新款智能手机',
-    customer: '张先生',
-    amount: 2999,
-    status: '待发货',
-    time: '2024-12-15 10:30:25'
-  },
-  {
-    id: '20241215002',
-    product: '无线蓝牙耳机',
-    customer: '李女士',
-    amount: 399,
-    status: '已发货',
-    time: '2024-12-15 09:15:42'
-  },
-  {
-    id: '20241215003',
-    product: '笔记本电脑',
-    customer: '王先生',
-    amount: 5999,
-    status: '已完成',
-    time: '2024-12-14 16:20:18'
-  },
-  {
-    id: '20241215004',
-    product: '智能手表',
-    customer: '赵女士',
-    amount: 1299,
-    status: '待付款',
-    time: '2024-12-14 14:45:33'
+// 最近订单数据
+const recentOrders = ref<OrderListItem[]>([])
+
+// 获取用户类型文本
+const getUserTypeText = (userType: string) => {
+  const typeMap: Record<string, string> = {
+    'merchant': '商家',
+    'customer': '普通用户',
+    'operator': '运营人员',
+    'visitor': '访客'
   }
-])
+  return typeMap[userType] || userType
+}
+
+// 加载数据
+const loadData = async () => {
+  try {
+    // 如果用户信息不存在，尝试从用户仓库加载
+    if (!userStore.userInfo) {
+      await userStore.fetchUserInfo()
+    }
+    
+    // 店铺信息已经在布局文件中加载，这里不再重复加载
+    // 获取最近订单
+    await loadRecentOrders()
+  } catch (error) {
+    console.error('加载数据失败:', error)
+  }
+}
+
+// 获取完整图片URL（参考订单管理页面的实现）
+const getFullImageUrl = (imagePath: string) => {
+  if (!imagePath) return 'https://via.placeholder.com/60x60'
+  
+  // 如果图片路径已经是完整URL，直接返回
+  if (imagePath.startsWith('http://') || imagePath.startsWith('https://')) {
+    return imagePath
+  }
+  
+  // 处理路径格式，避免双斜杠问题
+  const baseUrl = import.meta.env.VITE_IMAGE_BASE_URL || ''
+  if (!baseUrl) return imagePath
+  
+  // 确保baseUrl以斜杠结尾，imagePath不以斜杠开头
+  const cleanBaseUrl = baseUrl.endsWith('/') ? baseUrl.slice(0, -1) : baseUrl
+  const cleanImagePath = imagePath.startsWith('/') ? imagePath.slice(1) : imagePath
+  
+  return `${cleanBaseUrl}/${cleanImagePath}`
+}
+
+// 加载最近订单
+const loadRecentOrders = async () => {
+  try {
+    const response = await getOrderList({
+      pageNum: 1,
+      pageSize: 5
+    })
+    if (response.code === 200) {
+      // 适配后端返回的数据格式并处理商品信息
+      let orderData: any[] = []
+      if (Array.isArray(response.data)) {
+        orderData = response.data
+      } else if (response.data && Array.isArray(response.data.list)) {
+        orderData = response.data.list
+      }
+      
+      // 处理商品信息，与订单管理页面保持一致
+      recentOrders.value = orderData.slice(0, 5).map((order: any) => ({
+        orderId: order.orderId,
+        orderNo: order.orderNo,
+        userId: order.userId,
+        totalAmount: order.totalAmount,
+        status: order.status,
+        shippingAddress: order.shippingAddress,
+        createTime: order.createTime,
+        updateTime: order.updateTime,
+        consigneeName: order.consigneeName,
+        phone: order.phone,
+        paymentTime: order.paymentTime,
+        paid: order.paid || false,
+        // 商品信息 - 使用orderItems数据渲染商品信息
+        products: order.orderItems?.map((item: any) => ({
+          id: item.itemId?.toString(),
+          name: item.productName,
+          image: getFullImageUrl(item.skuImage),
+          spec: item.skuName,
+          quantity: item.quantity,
+          price: item.price
+        })) || []
+      }))
+    }
+  } catch (error) {
+    console.error('获取最近订单失败:', error)
+  }
+}
+
+onMounted(() => {
+  loadData()
+})
 
 const formatNumber = (num: number) => {
   return num.toLocaleString('zh-CN')
 }
 
+// 订单状态映射
 const getStatusType = (status: string) => {
   const statusMap: { [key: string]: string } = {
-    '待付款': 'warning',
-    '待发货': 'primary',
-    '已发货': 'success',
-    '已完成': 'info'
+    'pending': 'warning',
+    'paid': 'primary',
+    'shipped': 'success',
+    'completed': 'info',
+    'cancelled': 'danger'
   }
   return statusMap[status] || 'info'
+}
+
+// 获取订单状态文本
+const getStatusText = (status: string) => {
+  const statusMap: { [key: string]: string } = {
+    'pending': '待付款',
+    'paid': '待发货',
+    'shipped': '已发货',
+    'completed': '已完成',
+    'cancelled': '已取消'
+  }
+  return statusMap[status] || status
+}
+
+// 格式化时间显示
+const formatTime = (timeStr: string) => {
+  try {
+    const date = new Date(timeStr)
+    return date.toLocaleString('zh-CN')
+  } catch (error) {
+    return timeStr
+  }
 }
 </script>
 
@@ -219,8 +350,25 @@ $white: #fff;
     }
     
     p {
-      margin: 0;
+      margin: 0 0 12px 0;
       opacity: 0.9;
+    }
+    
+    .user-info-badge {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-top: 12px;
+      
+      .el-tag {
+        font-size: 12px;
+        font-weight: 500;
+      }
+      
+      .account-info {
+        font-size: 14px;
+        opacity: 0.9;
+      }
     }
   }
 
@@ -334,6 +482,56 @@ $white: #fff;
       h3 {
         margin: 0;
         color: $text-primary;
+      }
+    }
+
+    // 商品列表样式
+    .product-list {
+      .product-item {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 4px 0;
+
+        .product-image {
+          width: 40px;
+          height: 40px;
+          border-radius: 4px;
+          overflow: hidden;
+        }
+
+        .product-details {
+          flex: 1;
+          min-width: 0;
+
+          .product-name {
+            font-size: 12px;
+            font-weight: 500;
+            color: $text-primary;
+            margin-bottom: 2px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+          }
+
+          .product-spec {
+            font-size: 10px;
+            color: $text-secondary;
+            margin-bottom: 2px;
+          }
+
+          .product-quantity {
+            font-size: 10px;
+            color: $text-secondary;
+          }
+        }
+      }
+
+      .no-products {
+        font-size: 12px;
+        color: $text-secondary;
+        text-align: center;
+        padding: 8px 0;
       }
     }
   }

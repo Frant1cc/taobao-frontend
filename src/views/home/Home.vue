@@ -65,12 +65,22 @@ const featuredProducts = ref<Product[]>([])
 
 // 获取图片完整URL
 const getImageUrl = (imagePath: string) => {
+  if (!imagePath) return ''
+  
   // 如果imagePath已经是完整URL，则直接返回
-  if (imagePath && (imagePath.startsWith('http://') || imagePath.startsWith('https://'))) {
+  if (imagePath.startsWith('http://') || imagePath.startsWith('https://')) {
     return imagePath
   }
-  // 否则拼接基础URL
-  return imagePath ? `${IMAGE_BASE_URL}/${imagePath}` : ''
+  
+  // 处理路径格式，避免双斜杠问题
+  const baseUrl = IMAGE_BASE_URL || ''
+  if (!baseUrl) return imagePath
+  
+  // 确保baseUrl以斜杠结尾，imagePath不以斜杠开头
+  const cleanBaseUrl = baseUrl.endsWith('/') ? baseUrl.slice(0, -1) : baseUrl
+  const cleanImagePath = imagePath.startsWith('/') ? imagePath.slice(1) : imagePath
+  
+  return `${cleanBaseUrl}/${cleanImagePath}`
 }
 
 // 处理图片加载错误

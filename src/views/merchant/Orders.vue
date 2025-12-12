@@ -29,20 +29,6 @@
           prefix-icon="Search"
           style="width: 300px"
         />
-        <el-date-picker
-          v-model="dateRange"
-          type="daterange"
-          range-separator="至"
-          start-placeholder="开始日期"
-          end-placeholder="结束日期"
-          style="width: 240px"
-        />
-        <el-select v-model="filterPayment" placeholder="支付方式" style="width: 120px">
-          <el-option label="全部" value="" />
-          <el-option label="支付宝" value="alipay" />
-          <el-option label="微信支付" value="wechat" />
-          <el-option label="银行卡" value="bank" />
-        </el-select>
         <el-button type="primary" @click="handleSearch">搜索</el-button>
         <el-button @click="handleReset">重置</el-button>
       </div>
@@ -70,18 +56,17 @@
         style="width: 100%"
         @selection-change="handleSelectionChange"
       >
-        <el-table-column type="selection" width="55" />
         <el-table-column label="订单信息" min-width="300">
           <template #default="{ row }">
             <div class="order-info">
               <div class="order-number">
-                <strong>{{ row.orderNumber }}</strong>
+                <strong>{{ row.orderId }}</strong>
                 <el-tag :type="getStatusType(row.status)" size="small">
                   {{ getStatusText(row.status) }}
                 </el-tag>
               </div>
-              <div class="order-time">{{ row.createTime }}</div>
-              <div class="buyer-info">买家：{{ row.buyerName }}</div>
+              <div class="order-time">{{ formatDateTime(row.createTime) }}</div>
+              <div class="buyer-info">买家ID：{{ row.userId }}</div>
             </div>
           </template>
         </el-table-column>
@@ -108,20 +93,19 @@
             </div>
           </template>
         </el-table-column>
-        <el-table-column label="金额" width="120">
+        <el-table-column label="金额" width="140">
           <template #default="{ row }">
             <div class="amount-info">
               <div class="total-amount">¥{{ row.totalAmount }}</div>
-              <div class="payment-method">{{ getPaymentText(row.paymentMethod) }}</div>
             </div>
           </template>
         </el-table-column>
         <el-table-column label="收货信息" width="200">
           <template #default="{ row }">
             <div class="shipping-info">
-              <div class="receiver">{{ row.receiverName }}</div>
-              <div class="phone">{{ row.receiverPhone }}</div>
-              <div class="address">{{ row.receiverAddress }}</div>
+              <div class="receiver">{{ row.consigneeName || '未知' }}</div>
+              <div class="phone">{{ row.phone || '未知' }}</div>
+              <div class="address">{{ row.shippingAddress || '未知' }}</div>
             </div>
           </template>
         </el-table-column>
@@ -129,7 +113,7 @@
           <template #default="{ row }">
             <div class="action-buttons">
               <el-button 
-                v-if="row.status === 'toShip'" 
+                v-if="row.status === 'paid' || row.status === 'toShip'" 
                 type="primary" 
                 size="small"
                 @click="handleShip(row)"
@@ -137,17 +121,7 @@
                 发货
               </el-button>
               <el-button 
-                v-if="row.status === 'shipped'" 
-                size="small"
-                @click="handleViewTracking(row)"
-              >
-                查看物流
-              </el-button>
-              <el-button size="small" @click="handleViewDetail(row)">
-                详情
-              </el-button>
-              <el-button 
-                v-if="row.status === 'pending'" 
+                v-if="row.status === 'pending' || row.status === 'paid' || row.status === 'toShip' || row.status === 'shipped'" 
                 size="small" 
                 type="danger"
                 @click="handleCancel(row)"
@@ -180,15 +154,15 @@
       <el-form :model="shipForm" label-width="80px">
         <el-form-item label="物流公司">
           <el-select v-model="shipForm.logisticsCompany" placeholder="请选择物流公司">
-            <el-option label="顺丰速运" value="sf" />
-            <el-option label="圆通速递" value="yt" />
-            <el-option label="中通快递" value="zt" />
-            <el-option label="韵达快递" value="yd" />
-            <el-option label="申通快递" value="st" />
+            <el-option label="顺丰速运" value="顺丰速运" />
+            <el-option label="圆通速递" value="圆通速递" />
+            <el-option label="中通快递" value="中通快递" />
+            <el-option label="韵达快递" value="韵达快递" />
+            <el-option label="申通快递" value="申通快递" />
           </el-select>
         </el-form-item>
         <el-form-item label="运单号">
-          <el-input v-model="shipForm.trackingNumber" placeholder="请输入运单号" />
+          <el-input v-model="shipForm.logisticsNo" placeholder="请输入运单号" />
         </el-form-item>
       </el-form>
       <template #footer>
@@ -202,10 +176,17 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
+import { ElMessageBox, ElMessage } from 'element-plus'
 import {
   Search
 } from '@element-plus/icons-vue'
+import { 
+  getOrderList, 
+  getOrderDetail, 
+  updateOrderStatus 
+} from '@/api/modules/merchant-order'
+import type { OrderListItem, OrderDetail, ShipOrderParams } from '@/types/order'
 
 interface OrderProduct {
   id: string
@@ -228,6 +209,9 @@ interface Order {
   receiverName: string
   receiverPhone: string
   receiverAddress: string
+  orderId?: number
+  orderNo?: string
+  userId?: number
 }
 
 // 状态筛选
@@ -249,113 +233,114 @@ const selectedOrders = ref<Order[]>([])
 // 对话框控制
 const showShipDialog = ref(false)
 const shippingOrder = ref<Order | null>(null)
-const shipForm = ref({
+const shipForm = ref<ShipOrderParams>({
   logisticsCompany: '',
-  trackingNumber: ''
+  logisticsNo: ''
 })
 
-// 模拟订单数据
-const orders = ref<Order[]>([
-  {
-    id: '1',
-    orderNumber: '202412150001',
-    status: 'toShip',
-    createTime: '2024-12-15 10:30:25',
-    buyerName: '张先生',
-    products: [
-      {
-        id: '1',
-        name: '新款智能手机',
-        image: 'https://via.placeholder.com/60x60',
-        spec: '黑色 128GB',
-        quantity: 1,
-        price: 2999
-      }
-    ],
-    totalAmount: 2999,
-    paymentMethod: 'alipay',
-    receiverName: '张三',
-    receiverPhone: '138****1234',
-    receiverAddress: '北京市朝阳区xxx街道xxx号'
-  },
-  {
-    id: '2',
-    orderNumber: '202412150002',
-    status: 'shipped',
-    createTime: '2024-12-15 09:15:42',
-    buyerName: '李女士',
-    products: [
-      {
-        id: '2',
-        name: '无线蓝牙耳机',
-        image: 'https://via.placeholder.com/60x60',
-        spec: '白色',
-        quantity: 2,
-        price: 399
-      }
-    ],
-    totalAmount: 798,
-    paymentMethod: 'wechat',
-    receiverName: '李四',
-    receiverPhone: '139****5678',
-    receiverAddress: '上海市浦东新区xxx路xxx号'
-  },
-  {
-    id: '3',
-    orderNumber: '202412150003',
-    status: 'completed',
-    createTime: '2024-12-14 16:20:18',
-    buyerName: '王先生',
-    products: [
-      {
-        id: '3',
-        name: '笔记本电脑',
-        image: 'https://via.placeholder.com/60x60',
-        spec: '银色 i7 16GB',
-        quantity: 1,
-        price: 5999
-      }
-    ],
-    totalAmount: 5999,
-    paymentMethod: 'bank',
-    receiverName: '王五',
-    receiverPhone: '137****9012',
-    receiverAddress: '广州市天河区xxx大道xxx号'
-  }
-])
+// 订单数据
+const orders = ref<OrderListItem[]>([])
 
-// 计算属性：过滤订单
+// 获取完整图片URL（参考商品管理页面的实现）
+const getFullImageUrl = (imagePath: string) => {
+  if (!imagePath) return 'https://via.placeholder.com/60x60'
+  
+  // 如果图片路径已经是完整URL，直接返回
+  if (imagePath.startsWith('http://') || imagePath.startsWith('https://')) {
+    return imagePath
+  }
+  
+  // 处理路径格式，避免双斜杠问题
+  const baseUrl = import.meta.env.VITE_IMAGE_BASE_URL || ''
+  if (!baseUrl) return imagePath
+  
+  // 确保baseUrl以斜杠结尾，imagePath不以斜杠开头
+  const cleanBaseUrl = baseUrl.endsWith('/') ? baseUrl.slice(0, -1) : baseUrl
+  const cleanImagePath = imagePath.startsWith('/') ? imagePath.slice(1) : imagePath
+  
+  return `${cleanBaseUrl}/${cleanImagePath}`
+}
+
+// 加载订单列表
+const loadOrders = async () => {
+  try {
+    const status = activeStatus.value === 'all' ? undefined : activeStatus.value
+    const response = await getOrderList({
+      pageNum: currentPage.value,
+      pageSize: pageSize.value,
+      status: status as ("pending" | "paid" | "shipped" | "completed" | "cancelled" | undefined)
+    })
+    if (response.code === 200) {
+      // 适配后端返回的数据格式
+      orders.value = response.data.map((order: any) => ({
+        orderId: order.orderId,
+        orderNo: order.orderNo,
+        userId: order.userId,
+        totalAmount: order.totalAmount,
+        status: order.status,
+        shippingAddress: order.shippingAddress,
+        createTime: order.createTime,
+        updateTime: order.updateTime,
+        // 新增字段适配
+        consigneeName: order.consigneeName,
+        phone: order.phone,
+        paymentTime: order.paymentTime,
+        paid: order.paid || false,
+        // 商品信息 - 使用skuImage路径渲染图片
+        products: order.orderItems?.map((item: any) => ({
+          id: item.itemId?.toString(),
+          name: item.productName,
+          image: getFullImageUrl(item.skuImage), // 使用skuImage路径
+          spec: item.skuName,
+          quantity: item.quantity,
+          price: item.price
+        })) || []
+      }))
+      total.value = response.data.length
+    }
+  } catch (error) {
+    ElMessage.error('获取订单列表失败')
+    console.error('获取订单列表失败:', error)
+  }
+}
+
+// 计算属性：订单列表（实现前端状态过滤）
 const filteredOrders = computed(() => {
-  let filtered = orders.value
-  
-  if (activeStatus.value !== 'all') {
-    filtered = filtered.filter(order => order.status === activeStatus.value)
+  // 如果 orders.value 为 undefined 或 null，返回空数组
+  if (!orders.value) {
+    return []
   }
   
-  if (searchKeyword.value) {
-    filtered = filtered.filter(order => 
-      order.orderNumber.includes(searchKeyword.value) || 
-      order.buyerName.includes(searchKeyword.value)
-    )
+  // 如果选择"全部订单"，返回所有订单
+  if (activeStatus.value === 'all') {
+    return orders.value
   }
   
-  if (filterPayment.value) {
-    filtered = filtered.filter(order => order.paymentMethod === filterPayment.value)
-  }
-  
-  total.value = filtered.length
-  const start = (currentPage.value - 1) * pageSize.value
-  const end = start + pageSize.value
-  return filtered.slice(start, end)
+  // 根据状态过滤订单
+  return orders.value.filter(order => {
+    // 状态映射：前端状态名称 -> 后端状态名称
+    const statusMap: { [key: string]: string[] } = {
+      'pending': ['pending'],
+      'toShip': ['paid', 'toShip'],
+      'shipped': ['shipped'],
+      'completed': ['completed'],
+      'cancelled': ['cancelled']
+    }
+    
+    const targetStatuses = statusMap[activeStatus.value] || []
+    return targetStatuses.includes(order.status)
+  })
 })
 
 // 方法
 const handleTabChange = () => {
   currentPage.value = 1
+  loadOrders()
 }
 
 const handleSearch = () => {
   currentPage.value = 1
+  loadOrders()
 }
 
 const handleReset = () => {
@@ -363,6 +348,7 @@ const handleReset = () => {
   dateRange.value = []
   filterPayment.value = ''
   currentPage.value = 1
+  loadOrders()
 }
 
 const handleSelectionChange = (selection: Order[]) => {
@@ -372,44 +358,98 @@ const handleSelectionChange = (selection: Order[]) => {
 const handleBatchShip = () => {
   // 批量发货逻辑
   console.log('批量发货:', selectedOrders.value)
+  ElMessage.info('批量发货功能暂未实现')
 }
 
 const clearSelection = () => {
   selectedOrders.value = []
 }
 
-const handleShip = (order: Order) => {
-  shippingOrder.value = order
+const handleShip = (order: OrderListItem) => {
+  shippingOrder.value = order as unknown as Order
   showShipDialog.value = true
 }
 
-const handleConfirmShip = () => {
-  // 确认发货逻辑
-  if (shippingOrder.value) {
-    shippingOrder.value.status = 'shipped'
+const handleConfirmShip = async () => {
+  try {
+    if (shippingOrder.value) {
+      // 使用新的通用订单状态修改接口，状态设为'shipped'
+      const response = await updateOrderStatus(shippingOrder.value.orderId!, 'shipped')
+      if (response.code === 200) {
+        ElMessage.success('订单发货成功')
+        await loadOrders()
+      } else {
+        ElMessage.error(response.msg || '发货失败')
+      }
+    }
+  } catch (error) {
+    ElMessage.error('发货失败')
+    console.error('发货失败:', error)
   }
+  
   showShipDialog.value = false
   shipForm.value = {
     logisticsCompany: '',
-    trackingNumber: ''
+    logisticsNo: ''
   }
   shippingOrder.value = null
 }
 
-const handleViewTracking = (order: Order) => {
+const handleViewTracking = (order: OrderListItem) => {
   // 查看物流逻辑
   console.log('查看物流:', order)
+  ElMessage.info('查看物流功能暂未实现')
 }
 
-const handleViewDetail = (order: Order) => {
-  // 查看详情逻辑
-  console.log('查看详情:', order)
+const handleViewDetail = async (order: OrderListItem) => {
+  try {
+    const response = await getOrderDetail(order.orderId)
+    if (response.code === 200) {
+      console.log('订单详情:', response.data)
+      ElMessage.info('订单详情功能暂未实现')
+    } else {
+      ElMessage.error('获取订单详情失败')
+    }
+  } catch (error) {
+    ElMessage.error('获取订单详情失败')
+    console.error('获取订单详情失败:', error)
+  }
 }
 
-const handleCancel = (order: Order) => {
-  // 取消订单逻辑
-  order.status = 'cancelled'
+const handleCancel = async (order: OrderListItem) => {
+  try {
+    // 确认取消操作
+    await ElMessageBox.confirm(
+      `确定要取消订单 "${order.orderId}" 吗？此操作不可撤销。`,
+      '取消订单确认',
+      {
+        confirmButtonText: '确定取消',
+        cancelButtonText: '再想想',
+        type: 'warning'
+      }
+    )
+    
+    // 使用通用订单状态修改接口，状态设为'cancelled'
+    const response = await updateOrderStatus(order.orderId!, 'cancelled')
+    if (response.code === 200) {
+      ElMessage.success('订单取消成功')
+      await loadOrders() // 重新加载订单列表
+    } else {
+      ElMessage.error(response.msg || '取消订单失败')
+    }
+  } catch (error) {
+    // 用户取消操作
+    if (error !== 'cancel') {
+      ElMessage.error('取消订单失败')
+      console.error('取消订单失败:', error)
+    }
+  }
 }
+
+// 页面加载时获取订单列表
+onMounted(() => {
+  loadOrders()
+})
 
 const getStatusType = (status: string) => {
   const statusMap: { [key: string]: string } = {
@@ -425,6 +465,7 @@ const getStatusType = (status: string) => {
 const getStatusText = (status: string) => {
   const statusMap: { [key: string]: string } = {
     'pending': '待付款',
+    'paid': '待发货',
     'toShip': '待发货',
     'shipped': '已发货',
     'completed': '已完成',
@@ -440,6 +481,29 @@ const getPaymentText = (payment: string) => {
     'bank': '银行卡'
   }
   return paymentMap[payment] || '其他'
+}
+
+// 获取付款状态文本
+const getPaymentStatusText = (paid: boolean) => {
+  return paid ? '已付款' : '未付款'
+}
+
+// 格式化日期时间
+const formatDateTime = (dateTime: string) => {
+  if (!dateTime) return ''
+  try {
+    const date = new Date(dateTime)
+    return date.toLocaleString('zh-CN', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit'
+    })
+  } catch (error) {
+    return dateTime
+  }
 }
 </script>
 

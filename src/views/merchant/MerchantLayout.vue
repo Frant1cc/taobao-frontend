@@ -4,7 +4,8 @@
     <header class="header">
       <div class="header-left">
         <div class="logo">
-          <img src="https://via.placeholder.com/120x40" alt="淘宝商家后台" />
+          <img :src="shopLogoUrl" :alt="shopInfo?.shopName || '淘宝商家后台'" />
+          <span class="shop-name">{{ shopInfo?.shopName || '淘宝商家后台' }}</span>
         </div>
         <div class="search-box">
           <el-input
@@ -15,10 +16,9 @@
         </div>
       </div>
       <div class="header-right">
-        <div class="user-info">
-          <el-avatar :size="32" src="https://via.placeholder.com/32x32" />
-          <span class="username">商家名称</span>
-          <el-icon><ArrowDown /></el-icon>
+        <div class="user-info" @click="goToSettings">
+          <el-avatar :size="32" :src="fullAvatarUrl" />
+          <span class="username">{{ shopInfo?.shopName || '店铺名称' }}</span>
         </div>
       </div>
     </header>
@@ -63,17 +63,7 @@
             </ul>
           </div>
 
-          <div class="menu-group">
-            <div class="menu-title">数据分析</div>
-            <ul class="menu-list">
-              <li class="menu-item" :class="{ active: $route.name === 'MerchantAnalytics' }">
-                <router-link to="/merchant/analytics" class="menu-link">
-                  <el-icon><TrendCharts /></el-icon>
-                  <span>数据分析</span>
-                </router-link>
-              </li>
-            </ul>
-          </div>
+
 
           <div class="menu-group">
             <div class="menu-title">店铺设置</div>
@@ -98,13 +88,14 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
+import { useUserStore } from '@/stores/user'
+import { useShopStore } from '@/stores/shop'
 import {
   Monitor,
   Goods,
   Document,
-  TrendCharts,
   Setting,
   Search,
   ArrowDown
@@ -112,8 +103,68 @@ import {
 
 const router = useRouter()
 const route = useRoute()
-const userAvatar = ref('https://via.placeholder.com/32x32')
-const userName = ref('商家名称')
+const userStore = useUserStore()
+const shopStore = useShopStore()
+
+// 用户信息（从用户仓库获取）
+const userInfo = computed(() => userStore.userInfo)
+
+// 店铺信息（从店铺仓库获取）
+const shopInfo = computed(() => shopStore.currentShop)
+
+// 店铺Logo URL（从店铺仓库获取）
+const shopLogoUrl = computed(() => shopStore.shopLogoUrl)
+
+// 获取完整头像URL（通过代理服务器解决跨域问题）
+const getFullAvatarUrl = (avatarPath: string) => {
+  if (!avatarPath) return 'https://via.placeholder.com/32x32'
+  
+  // 如果已经是完整URL，检查是否来自阿里云OSS
+  if (avatarPath.startsWith('http://') || avatarPath.startsWith('https://')) {
+    if (avatarPath.includes('taobao-hqh.oss-cn-beijing.aliyuncs.com')) {
+      // 将阿里云OSS URL转换为本地代理路径
+      const ossPath = avatarPath.replace('https://taobao-hqh.oss-cn-beijing.aliyuncs.com/', '')
+      return `/oss/${ossPath}`
+    } else {
+      // 其他外部URL直接使用
+      return avatarPath
+    }
+  }
+  
+  // 相对路径，通过代理访问
+  return `/oss/${avatarPath}`
+}
+
+// 计算属性：完整的头像URL（使用店铺头像）
+const fullAvatarUrl = computed(() => {
+  const shopLogo = shopInfo.value?.shopLogo
+  return getFullAvatarUrl(shopLogo || '')
+})
+
+// 跳转到店铺设置页面
+const goToSettings = () => {
+  router.push('/merchant/settings')
+}
+
+// 加载用户信息和店铺信息
+onMounted(async () => {
+  if (!userStore.userInfo) {
+    try {
+      await userStore.fetchUserInfo()
+    } catch (error) {
+      console.error('加载用户信息失败:', error)
+    }
+  }
+  
+  // 加载店铺信息
+  if (!shopStore.currentShop) {
+    try {
+      await shopStore.fetchShopInfo()
+    } catch (error) {
+      console.error('加载店铺信息失败:', error)
+    }
+  }
+})
 </script>
 
 <style scoped lang="scss">
@@ -151,8 +202,21 @@ $white: #fff;
     gap: 24px;
     
     .logo {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      
       img {
         height: 32px;
+        width: 32px;
+        border-radius: 4px;
+        object-fit: cover;
+      }
+      
+      .shop-name {
+        font-size: 18px;
+        font-weight: 600;
+        color: $text-primary;
       }
     }
     
