@@ -228,7 +228,15 @@ router.beforeEach((to: any, _from: any, next: any) => {
     }
     
     // 如果是普通用户，并且当前在商家端页面，则跳转到用户端主页
+    // 但允许访问商家登录和注册页面
     if (userType !== 'merchant' && to.path.startsWith('/merchant')) {
+      // 检查是否是商家登录或注册页面
+      if (to.path === '/merchant/auth' || to.path === '/merchant/register') {
+        // 允许访问商家登录和注册页面
+        next()
+        return
+      }
+      // 其他商家端页面不允许访问
       next('/home')
       return
     }

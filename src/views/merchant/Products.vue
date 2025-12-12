@@ -676,6 +676,10 @@ const handleDelete = async (product: ProductListItem) => {
     const response = await deleteProduct(product.productId)
     if (response.code === 200) {
       ElMessage.success('商品删除成功')
+      // 关闭编辑对话框
+      showAddDialog.value = false
+      editingProduct.value = null
+      // 重新加载商品列表
       await loadProducts()
     } else {
       ElMessage.error(response.msg || '删除失败')
