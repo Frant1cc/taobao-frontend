@@ -213,8 +213,29 @@ router.beforeEach((to: any, _from: any, next: any) => {
         from: to.fullPath 
       }
     })
+  } else if (userStore.isLoggedIn) {
+    // 用户已登录，检查用户类型
+    const userType = userStore.userType
+    
+    // 如果是商家用户，并且当前不在商家端页面，则自动跳转到商家端主页
+    if (userType === 'merchant' && !to.path.startsWith('/merchant')) {
+      // 排除登录、注册等页面
+      if (!to.path.startsWith('/login') && !to.path.startsWith('/register') && 
+          !to.path.startsWith('/merchant/auth') && !to.path.startsWith('/merchant/register')) {
+        next('/merchant/dashboard')
+        return
+      }
+    }
+    
+    // 如果是普通用户，并且当前在商家端页面，则跳转到用户端主页
+    if (userType !== 'merchant' && to.path.startsWith('/merchant')) {
+      next('/home')
+      return
+    }
+    
+    next()
   } else {
-    // 否则正常导航
+    // 未登录用户正常导航
     next()
   }
 })

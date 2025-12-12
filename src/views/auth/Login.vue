@@ -118,8 +118,14 @@ const handleLogin = async () => {
     
     ElMessage.success('登录成功')
     
-    // 跳转到首页
-    router.push('/home')
+    // 根据用户类型跳转到相应的主页
+    if (data.userType === 'merchant') {
+      // 商家用户跳转到商家端主页
+      router.push('/merchant/dashboard')
+    } else {
+      // 普通用户跳转到用户端主页
+      router.push('/home')
+    }
   } catch (error: any) {
     console.error('登录失败:', error)
     ElMessage.error(error.message || '登录失败，请检查账号和密码')

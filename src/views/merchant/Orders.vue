@@ -168,11 +168,11 @@
       <el-form :model="shipForm" label-width="80px">
         <el-form-item label="物流公司">
           <el-select v-model="shipForm.logisticsCompany" placeholder="请选择物流公司">
-            <el-option label="顺丰速运" value="sf" />
-            <el-option label="圆通速递" value="yt" />
-            <el-option label="中通快递" value="zt" />
-            <el-option label="韵达快递" value="yd" />
-            <el-option label="申通快递" value="st" />
+            <el-option label="顺丰速运" value="顺丰速运" />
+            <el-option label="圆通速递" value="圆通速递" />
+            <el-option label="中通快递" value="中通快递" />
+            <el-option label="韵达快递" value="韵达快递" />
+            <el-option label="申通快递" value="申通快递" />
           </el-select>
         </el-form-item>
         <el-form-item label="运单号">
@@ -198,7 +198,7 @@ import {
 import { 
   getOrderList, 
   getOrderDetail, 
-  shipOrder 
+  updateOrderStatus 
 } from '@/api/modules/merchant-order'
 import type { OrderListItem, OrderDetail, ShipOrderParams } from '@/types/order'
 
@@ -368,7 +368,8 @@ const handleShip = (order: OrderListItem) => {
 const handleConfirmShip = async () => {
   try {
     if (shippingOrder.value) {
-      const response = await shipOrder(shippingOrder.value.orderId!, shipForm.value)
+      // 使用新的通用订单状态修改接口，状态设为'shipped'
+      const response = await updateOrderStatus(shippingOrder.value.orderId!, 'shipped')
       if (response.code === 200) {
         ElMessage.success('订单发货成功')
         await loadOrders()
@@ -410,10 +411,34 @@ const handleViewDetail = async (order: OrderListItem) => {
   }
 }
 
-const handleCancel = (order: OrderListItem) => {
-  // 取消订单逻辑
-  console.log('取消订单:', order)
-  ElMessage.info('取消订单功能暂未实现')
+const handleCancel = async (order: OrderListItem) => {
+  try {
+    // 确认取消操作
+    await ElMessageBox.confirm(
+      `确定要取消订单 "${order.orderId}" 吗？此操作不可撤销。`,
+      '取消订单确认',
+      {
+        confirmButtonText: '确定取消',
+        cancelButtonText: '再想想',
+        type: 'warning'
+      }
+    )
+    
+    // 使用通用订单状态修改接口，状态设为'cancelled'
+    const response = await updateOrderStatus(order.orderId!, 'cancelled')
+    if (response.code === 200) {
+      ElMessage.success('订单取消成功')
+      await loadOrders() // 重新加载订单列表
+    } else {
+      ElMessage.error(response.msg || '取消订单失败')
+    }
+  } catch (error) {
+    // 用户取消操作
+    if (error !== 'cancel') {
+      ElMessage.error('取消订单失败')
+      console.error('取消订单失败:', error)
+    }
+  }
 }
 
 // 页面加载时获取订单列表

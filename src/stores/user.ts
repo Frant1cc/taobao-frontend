@@ -45,7 +45,11 @@ export const useUserStore = defineStore('user', {
   
   getters: {
     isLoggedIn: (state) => !!state.token,
-    username: (state) => state.userInfo?.username || ''
+    username: (state) => state.userInfo?.username || '',
+    userType: (state) => {
+      const info = state.userInfo
+      return (info && 'userType' in info ? info.userType : '') || ''
+    }
   },
   
   actions: {

@@ -36,18 +36,17 @@ export const getOrderDetail = (orderId: number): Promise<ShopResponse<OrderDetai
 }
 
 /**
- * 商家发货
+ * 修改订单状态（通用接口）
  * @param orderId 订单ID
- * @param params 发货信息
- * @returns 发货结果
+ * @param status 订单状态
+ * @returns 修改结果
  */
-export const shipOrder = (
+export const updateOrderStatus = (
   orderId: number, 
-  params: ShipOrderParams
+  status: string
 ): Promise<ShopResponse<string>> => {
   return request({
-    url: `/api/shop/order/ship/${orderId}`,
-    method: 'PUT',
-    data: params
+    url: `/api/order/status/${orderId}?status=${status}`,
+    method: 'PUT'
   })
 }

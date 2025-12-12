@@ -141,3 +141,26 @@ export interface UpdateSkuParams {
   status: 'on_sale' | 'off_sale'
 }
 
+// 商品详情信息（包含完整SKU信息）
+export interface ProductDetail {
+  productId: number
+  productName: string
+  description: string
+  mainImages: string
+  detailImages: string
+  categoryId: number
+  merchantId: number
+  shopId: number
+  status: string
+  createTime: string
+  updateTime: string
+  skus: ProductSku[]
+}
+
+// 根据商品ID获取商品详情的响应类型
+export interface ProductDetailResponse {
+  code: number
+  msg: string
+  data: ProductDetail
+}
+

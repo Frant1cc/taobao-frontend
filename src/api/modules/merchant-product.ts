@@ -6,7 +6,8 @@ import type {
   ProductListResponse,
   AddSkuParams,
   UpdateSkuParams,
-  AddProductWithImagesParams
+  AddProductWithImagesParams,
+  ProductDetailResponse
 } from '@/types/product'
 import type { ShopResponse } from '@/types/shop'
 
@@ -186,5 +187,17 @@ export const uploadSkuImage = (skuImageFile: File): Promise<ShopResponse<string>
     headers: {
       'Content-Type': 'multipart/form-data'
     }
+  })
+}
+
+/**
+ * 根据商品ID获取商品详情（包含SKU信息）
+ * @param productId 商品ID
+ * @returns 商品详情
+ */
+export const getProductDetails = (productId: number): Promise<ProductDetailResponse> => {
+  return request({
+    url: `/api/shop/products/${productId}`,
+    method: 'GET'
   })
 }
