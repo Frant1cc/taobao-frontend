@@ -8,6 +8,7 @@ interface SelectedProduct {
   price: number
   productname: string
   skuname: string
+  image?: string
 }
 
 interface CartCheckoutState {

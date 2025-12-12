@@ -3,6 +3,7 @@ import { ref, onMounted, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { getProductDetail } from '@/api/modules/product'
 import { addCartItem } from '@/api/modules/cart'
+import { useCartCheckoutStore } from '@/stores/cartCheckout'
 import type { Product, ProductSku } from '@/types/product'
 import type { AddToCartParams } from '@/types/cart'
 
@@ -219,7 +220,32 @@ const buyNow = () => {
     return
   }
   
-  alert(`准备购买：${product.value.name} x ${quantity.value}，SKU: ${selectedSku.value.skuName}，价格: ¥${selectedSku.value.price.toFixed(2)}，库存: ${selectedSku.value.stock}`)
+  // 获取商品图片，优先使用SKU图片，其次是商品主图
+  let productImage = ''
+  if (selectedSku.value.skuImage) {
+    // 如果SKU有图片，使用SKU图片
+    productImage = selectedSku.value.skuImage.startsWith('http') 
+      ? selectedSku.value.skuImage 
+      : imageBaseUrl + selectedSku.value.skuImage
+  } 
+  
+  // 准备要传递给结算页面的商品信息
+  const checkoutItem = {
+    productId: parseInt(product.value.id),
+    skuId: selectedSku.value.skuId,
+    quantity: quantity.value,
+    price: selectedSku.value.price,
+    productname: product.value.name,
+    skuname: selectedSku.value.skuName,
+    image: productImage
+  }
+  
+  // 将商品信息存储到store中，然后跳转到结算页面
+  const cartCheckoutStore = useCartCheckoutStore()
+  cartCheckoutStore.setSelectedProducts([checkoutItem])
+  
+  // 跳转到结算页面
+  router.push('/checkout')
 }
 
 // 轮播图切换

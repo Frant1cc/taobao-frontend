@@ -32,31 +32,17 @@ const initOrderItems = () => {
   const products = cartCheckoutStore.getSelectedProducts;
   if (products && products.length > 0) {
     // 转换商品数据格式
-    orderItems.value = products.map((product: any) => ({
-      id: product.skuId.toString(),
-      name: product.productname,
-      image: product.image || 'https://img.alicdn.com/imgextra/i1/1234567890/O1CN01abcdefghijklmnopq_!!0-item_pic.jpg', // 使用默认图片
-      price: product.price,
-      quantity: product.quantity,
-      spec: product.skuname,
-      productId: product.productId,
-      skuId: product.skuId
-    }));
-  } else {
-    // 如果没有传递商品数据，使用默认数据
-    orderItems.value = [
-      {
-        id: '1',
-        name: 'Apple iPhone 15 Pro 256GB 星光色',
-        image: 'https://img.alicdn.com/imgextra/i1/1234567890/O1CN01abcdefghijklmnopq_!!0-item_pic.jpg',
-        price: 7999,
-        quantity: 1,
-        spec: '256GB · 星光色',
-        productId: 1,
-        skuId: 1
-      }
-    ];
-  }
+      orderItems.value = products.map((product: any) => ({
+        id: product.skuId.toString(),
+        name: product.productname,
+        image: product.image || 'https://img.alicdn.com/imgextra/i1/1234567890/O1CN01abcdefghijklmnopq_!!0-item_pic.jpg', // 使用传递的图片，如果没有则使用默认图片
+        price: product.price,
+        quantity: product.quantity,
+        spec: product.skuname,
+        productId: product.productId,
+        skuId: product.skuId
+      }));
+  } 
 };
 
 // 收货地址列表
@@ -263,11 +249,18 @@ const submitOrder = async () => {
           ElMessage.error('支付处理异常，请稍后重试');
         }
         
+        // 清空购物车选中商品数据
+        cartCheckoutStore.clearSelectedProducts();
+        
         // 无论支付成功与否，都跳转回首页
         router.push('/');
       }).catch(() => {
         // 用户选择稍后支付（取消支付），也跳转回首页
         ElMessage.info('已取消支付');
+        
+        // 清空购物车选中商品数据
+        cartCheckoutStore.clearSelectedProducts();
+        
         router.push('/');
       });
     } else {
@@ -319,9 +312,6 @@ onMounted(() => {
   
   // 获取用户地址列表
   fetchAddresses();
-  
-  // 清空购物车选中商品数据
-  cartCheckoutStore.clearSelectedProducts();
   
   console.log('结算页面加载完成');
 });

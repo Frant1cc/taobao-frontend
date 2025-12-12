@@ -24,6 +24,7 @@ export interface ProductSku {
   skuName: string
   skuType: string
   price: number
+  stock: number
   soldCount: number
   skuImage: string
   status: string
