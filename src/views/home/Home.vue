@@ -62,6 +62,10 @@ const prevBanner = () => {
 
 // 真实商品数据
 const featuredProducts = ref<Product[]>([])
+// 当前选中的分类
+const currentCategory = ref<{ id: number; name: string } | null>(null)
+// 加载状态
+const isLoading = ref(false)
 
 // 获取图片完整URL
 const getImageUrl = (imagePath: string) => {
@@ -179,7 +183,6 @@ const handleSearch = async () => {
         }
       })
       
-      console.log(`搜索 "${searchQuery.value.trim()}" 格式化后的商品列表:`, products)
       // 更新商品列表状态
       featuredProducts.value = products
     } else {
@@ -200,9 +203,31 @@ const handleProductClick = (product: Product) => {
   router.push(`/product/${product.id}`)
 }
 
+// 刷新推荐商品
+const refreshProducts = async () => {
+  console.log('刷新推荐商品')
+  isLoading.value = true
+  try {
+    // 如果有当前选中的分类，则刷新该分类下的商品
+    if (currentCategory.value) {
+      await handleCategoryClick(currentCategory.value)
+    } else {
+      // 否则刷新所有商品
+      await fetchProductList()
+    }
+  } catch (error) {
+    console.error('刷新商品列表失败:', error)
+  } finally {
+    isLoading.value = false
+  }
+}
+
 // 处理分类点击事件
 const handleCategoryClick = async (category: { id: number; name: string }) => {
   console.log('点击的分类ID:', category.id)
+  
+  // 保存当前选中的分类
+  currentCategory.value = category
   
   try {
     let response;
@@ -313,7 +338,10 @@ const handleCategoryClick = async (category: { id: number; name: string }) => {
         </div>
       </section>
       <section class="featured-products">
-        <h2>推荐商品</h2>
+        <div class="featured-header">
+          <h2>推荐商品</h2>
+          <button class="refresh-btn" @click="refreshProducts">刷新</button>
+        </div>
         <div class="product-list">
           <div class="product-item" v-for="product in featuredProducts" :key="product.id" @click="handleProductClick(product)">
             <div class="product-image">
@@ -601,10 +629,31 @@ $white: #fff;
     }
     
     .featured-products {
-      h2 {
-        font-size: 20px;
+      .featured-header {
+        display: flex;
+        align-items: center;
         margin-bottom: 15px;
-        color: $text-primary;
+        
+        h2 {
+          font-size: 20px;
+          margin: 0;
+          color: $text-primary;
+        }
+        
+        .refresh-btn {
+          background-color: $primary-color;
+          color: white;
+          border: none;
+          padding: 6px 12px;
+          border-radius: 4px;
+          cursor: pointer;
+          font-size: 14px;
+          margin-left: 20px;
+          
+          &:hover {
+            opacity: 0.9;
+          }
+        }
       }
       
       .product-list {
