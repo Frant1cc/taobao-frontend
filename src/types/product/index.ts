@@ -83,6 +83,16 @@ export interface AddProductParams {
   mainImages: string
   detailImages: string
   status: 'on_sale' | 'off_sale'
+  skus?: SkuItem[]
+}
+
+// SKU项定义
+export interface SkuItem {
+  skuName: string
+  skuType: string
+  price: number
+  stock: number
+  skuImage: string
 }
 
 // 更新商品请求参数

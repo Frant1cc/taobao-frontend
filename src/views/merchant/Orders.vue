@@ -29,20 +29,6 @@
           prefix-icon="Search"
           style="width: 300px"
         />
-        <el-date-picker
-          v-model="dateRange"
-          type="daterange"
-          range-separator="至"
-          start-placeholder="开始日期"
-          end-placeholder="结束日期"
-          style="width: 240px"
-        />
-        <el-select v-model="filterPayment" placeholder="支付方式" style="width: 120px">
-          <el-option label="全部" value="" />
-          <el-option label="支付宝" value="alipay" />
-          <el-option label="微信支付" value="wechat" />
-          <el-option label="银行卡" value="bank" />
-        </el-select>
         <el-button type="primary" @click="handleSearch">搜索</el-button>
         <el-button @click="handleReset">重置</el-button>
       </div>
@@ -127,7 +113,7 @@
           <template #default="{ row }">
             <div class="action-buttons">
               <el-button 
-                v-if="row.status === 'toShip' || row.status === 'paid'" 
+                v-if="row.status === 'paid' || row.status === 'toShip'" 
                 type="primary" 
                 size="small"
                 @click="handleShip(row)"
@@ -135,7 +121,7 @@
                 发货
               </el-button>
               <el-button 
-                v-if="row.status === 'toShip' || row.status === 'paid' || row.status === 'shipped'" 
+                v-if="row.status === 'pending' || row.status === 'paid' || row.status === 'toShip' || row.status === 'shipped'" 
                 size="small" 
                 type="danger"
                 @click="handleCancel(row)"
@@ -305,7 +291,7 @@ const loadOrders = async () => {
           id: item.itemId?.toString(),
           name: item.productName,
           image: getFullImageUrl(item.skuImage), // 使用skuImage路径
-          spec: item.skuType,
+          spec: item.skuName,
           quantity: item.quantity,
           price: item.price
         })) || []
@@ -318,13 +304,32 @@ const loadOrders = async () => {
   }
 }
 
-// 计算属性：订单列表（直接返回后端API返回的数据）
+// 计算属性：订单列表（实现前端状态过滤）
 const filteredOrders = computed(() => {
   // 如果 orders.value 为 undefined 或 null，返回空数组
   if (!orders.value) {
     return []
   }
-  return orders.value
+  
+  // 如果选择"全部订单"，返回所有订单
+  if (activeStatus.value === 'all') {
+    return orders.value
+  }
+  
+  // 根据状态过滤订单
+  return orders.value.filter(order => {
+    // 状态映射：前端状态名称 -> 后端状态名称
+    const statusMap: { [key: string]: string[] } = {
+      'pending': ['pending'],
+      'toShip': ['paid', 'toShip'],
+      'shipped': ['shipped'],
+      'completed': ['completed'],
+      'cancelled': ['cancelled']
+    }
+    
+    const targetStatuses = statusMap[activeStatus.value] || []
+    return targetStatuses.includes(order.status)
+  })
 })
 
 // 方法
@@ -461,6 +466,7 @@ const getStatusText = (status: string) => {
   const statusMap: { [key: string]: string } = {
     'pending': '待付款',
     'paid': '待发货',
+    'toShip': '待发货',
     'shipped': '已发货',
     'completed': '已完成',
     'cancelled': '已取消'

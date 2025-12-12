@@ -8,10 +8,6 @@
           <el-icon><Plus /></el-icon>
           发布商品
         </el-button>
-        <el-button>
-          <el-icon><Upload /></el-icon>
-          批量导入
-        </el-button>
       </div>
     </div>
 
@@ -511,12 +507,11 @@ const handleEdit = async (product: ProductListItem) => {
     const response = await getProductDetails(product.productId)
     
     if (response.code === 200 && response.data) {
-      // 直接使用返回的商品详情数据
-      const productDetail = response.data
-      
+      // 后端返回的是数组格式，取第一个元素
+      const productDetail = Array.isArray(response.data) ? response.data[0] : response.data
+      console.log('编辑商品详情:', productDetail)
       if (productDetail) {
         editingProduct.value = product
-        
         // 使用新接口返回的完整商品详情数据
         productForm.value = {
           productName: productDetail.productName,
@@ -525,8 +520,12 @@ const handleEdit = async (product: ProductListItem) => {
           mainImages: productDetail.mainImages || '',
           detailImages: productDetail.detailImages || '',
           status: productDetail.status as 'on_sale' | 'off_sale',
-          skus: productDetail.skus ? [...productDetail.skus] : [] // 创建新的数组副本
+          skus: productDetail.skus ? productDetail.skus.map((sku: ProductSku) => ({
+            ...sku,
+            stock: 50
+          })) : []
         }
+        console.log('编辑商品表单', productForm.value)
         
         // 设置图片URL列表，拼接完整URL
         try {
@@ -556,7 +555,7 @@ const handleEdit = async (product: ProductListItem) => {
           
           // 处理SKU图片，为每个SKU的skuImage拼接完整URL
           if (productDetail.skus && Array.isArray(productDetail.skus)) {
-            productDetail.skus.forEach((sku, index) => {
+            productDetail.skus.forEach((sku: ProductSku, index: number) => {
               if (sku.skuImage && productForm.value.skus && productForm.value.skus[index]) {
                 const fullUrl = getFullImageUrl(sku.skuImage)
                 productForm.value.skus[index].skuImage = fullUrl
@@ -588,8 +587,7 @@ const handleAddSku = () => {
     productForm.value.skus = []
   }
   
-  // 生成临时ID，从1开始递减（负数表示临时SKU）
-  const tempSkuId = - (productForm.value.skus.filter(sku => sku.skuId <= 0).length + 1)
+  const tempSkuId = - (productForm.value.skus!.filter(sku => (sku as any).skuId <= 0).length + 1)
   
   productForm.value.skus.push({
     skuId: tempSkuId, // 临时ID（负数）
@@ -735,54 +733,32 @@ const handleSaveProduct = async () => {
         return
       }
     } else {
-      // 添加商品 - 使用URL字符串而不是文件上传
+      // 添加商品 - 使用新的接口格式，包含SKU数据
       const addParams: AddProductParams = {
         productName: productForm.value.productName,
         description: productForm.value.description,
         categoryId: productForm.value.categoryId,
         mainImages: mainImageUrls.value.length > 0 ? JSON.stringify(mainImageUrls.value) : '[]',
         detailImages: detailImageUrls.value.length > 0 ? JSON.stringify(detailImageUrls.value) : '[]',
-        status: productForm.value.status
+        status: productForm.value.status,
+        skus: productForm.value.skus && productForm.value.skus.length > 0 
+          ? productForm.value.skus.map(sku => ({
+              skuName: sku.skuName,
+              skuType: sku.skuType || '',
+              price: sku.price,
+              stock: sku.stock || 50,
+              skuImage: sku.skuImage || ''
+            }))
+          : undefined
       }
       
-      // 先添加商品
+      console.log('添加商品参数:', addParams)
+      
+      // 使用新的接口添加商品（包含SKU数据）
       const response = await addProduct(addParams)
       
       if (response.code === 200) {
-        // 获取新创建的商品ID
-        const newProductId = response.data
-        console.log('添加商品成功，返回的商品ID:', newProductId, '类型:', typeof newProductId)
-        
-        // 如果有SKU数据，单独添加SKU
-        if (productForm.value.skus && productForm.value.skus.length > 0 && newProductId) {
-          try {
-            // 确保productId是有效的数字
-            const productId = Number(newProductId)
-            console.log('转换后的商品ID:', productId, '类型:', typeof productId)
-            
-            if (isNaN(productId) || productId <= 0) {
-              throw new Error(`获取的商品ID无效: ${newProductId}`)
-            }
-            
-            for (const sku of productForm.value.skus) {
-              const skuData: AddSkuParams = {
-                productId: productId,
-                skuName: sku.skuName,
-                skuType: sku.skuType || '',
-                price: sku.price,
-                stock: 50, // 直接设置stock字段
-                skuImage: sku.skuImage || '',
-                status: 'on_sale'
-              }
-              console.log('准备添加SKU:', skuData)
-              await addSku(skuData)
-            }
-          } catch (error) {
-            console.error('添加SKU失败:', error)
-            ElMessage.warning('商品添加成功，但SKU添加失败')
-          }
-        }
-        
+        console.log('添加商品成功，返回的数据:', response.data)
         ElMessage.success('商品添加成功')
       } else {
         ElMessage.error(response.msg || '添加失败')

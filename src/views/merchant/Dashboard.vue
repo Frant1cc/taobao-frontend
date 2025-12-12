@@ -105,11 +105,28 @@
         <el-table-column prop="orderId" label="订单ID" width="120" />
         <el-table-column label="商品" min-width="200">
           <template #default="{ row }">
-            <div v-if="row.products && row.products.length > 0">
-              {{ row.products[0].name }}
-              <span v-if="row.products.length > 1">等{{ row.products.length }}件商品</span>
+            <div class="product-list">
+              <div 
+                v-for="product in row.products" 
+                :key="product.id"
+                class="product-item"
+              >
+                <el-image
+                  :src="product.image"
+                  :alt="product.name"
+                  fit="cover"
+                  class="product-image"
+                />
+                <div class="product-details">
+                  <div class="product-name">{{ product.name }}</div>
+                  <div class="product-spec">规格：{{ product.spec }}</div>
+                  <div class="product-quantity">x{{ product.quantity }}</div>
+                </div>
+              </div>
+              <div v-if="!row.products || row.products.length === 0" class="no-products">
+                无商品信息
+              </div>
             </div>
-            <span v-else>无商品信息</span>
           </template>
         </el-table-column>
         <el-table-column label="买家" width="100">
@@ -199,6 +216,26 @@ const loadData = async () => {
   }
 }
 
+// 获取完整图片URL（参考订单管理页面的实现）
+const getFullImageUrl = (imagePath: string) => {
+  if (!imagePath) return 'https://via.placeholder.com/60x60'
+  
+  // 如果图片路径已经是完整URL，直接返回
+  if (imagePath.startsWith('http://') || imagePath.startsWith('https://')) {
+    return imagePath
+  }
+  
+  // 处理路径格式，避免双斜杠问题
+  const baseUrl = import.meta.env.VITE_IMAGE_BASE_URL || ''
+  if (!baseUrl) return imagePath
+  
+  // 确保baseUrl以斜杠结尾，imagePath不以斜杠开头
+  const cleanBaseUrl = baseUrl.endsWith('/') ? baseUrl.slice(0, -1) : baseUrl
+  const cleanImagePath = imagePath.startsWith('/') ? imagePath.slice(1) : imagePath
+  
+  return `${cleanBaseUrl}/${cleanImagePath}`
+}
+
 // 加载最近订单
 const loadRecentOrders = async () => {
   try {
@@ -207,12 +244,38 @@ const loadRecentOrders = async () => {
       pageSize: 5
     })
     if (response.code === 200) {
-      // 适配后端返回的数据格式
+      // 适配后端返回的数据格式并处理商品信息
+      let orderData: any[] = []
       if (Array.isArray(response.data)) {
-        recentOrders.value = response.data.slice(0, 5)
+        orderData = response.data
       } else if (response.data && Array.isArray(response.data.list)) {
-        recentOrders.value = response.data.list.slice(0, 5)
+        orderData = response.data.list
       }
+      
+      // 处理商品信息，与订单管理页面保持一致
+      recentOrders.value = orderData.slice(0, 5).map((order: any) => ({
+        orderId: order.orderId,
+        orderNo: order.orderNo,
+        userId: order.userId,
+        totalAmount: order.totalAmount,
+        status: order.status,
+        shippingAddress: order.shippingAddress,
+        createTime: order.createTime,
+        updateTime: order.updateTime,
+        consigneeName: order.consigneeName,
+        phone: order.phone,
+        paymentTime: order.paymentTime,
+        paid: order.paid || false,
+        // 商品信息 - 使用orderItems数据渲染商品信息
+        products: order.orderItems?.map((item: any) => ({
+          id: item.itemId?.toString(),
+          name: item.productName,
+          image: getFullImageUrl(item.skuImage),
+          spec: item.skuName,
+          quantity: item.quantity,
+          price: item.price
+        })) || []
+      }))
     }
   } catch (error) {
     console.error('获取最近订单失败:', error)
@@ -419,6 +482,56 @@ $white: #fff;
       h3 {
         margin: 0;
         color: $text-primary;
+      }
+    }
+
+    // 商品列表样式
+    .product-list {
+      .product-item {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 4px 0;
+
+        .product-image {
+          width: 40px;
+          height: 40px;
+          border-radius: 4px;
+          overflow: hidden;
+        }
+
+        .product-details {
+          flex: 1;
+          min-width: 0;
+
+          .product-name {
+            font-size: 12px;
+            font-weight: 500;
+            color: $text-primary;
+            margin-bottom: 2px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+          }
+
+          .product-spec {
+            font-size: 10px;
+            color: $text-secondary;
+            margin-bottom: 2px;
+          }
+
+          .product-quantity {
+            font-size: 10px;
+            color: $text-secondary;
+          }
+        }
+      }
+
+      .no-products {
+        font-size: 12px;
+        color: $text-secondary;
+        text-align: center;
+        padding: 8px 0;
       }
     }
   }
