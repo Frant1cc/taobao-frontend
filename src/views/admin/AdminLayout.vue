@@ -50,6 +50,13 @@
               </router-link>
             </li>
             
+            <li class="menu-item" :class="{ active: $route.path === '/admin/orders' }">
+              <router-link to="/admin/orders" class="menu-link">
+                <span class="menu-icon">📦</span>
+                <span>订单管理</span>
+              </router-link>
+            </li>
+            
             <li class="menu-item" :class="{ active: $route.path === '/admin/audit' }">
               <router-link to="/admin/audit" class="menu-link">
                 <span class="menu-icon">✅</span>
@@ -92,6 +99,7 @@ const pageTitle = computed(() => {
     '/admin/dashboard': '数据概览',
     '/admin/users': '用户管理',
     '/admin/merchants': '商家管理',
+    '/admin/orders': '订单管理',
     '/admin/audit': '审核管理',
     '/admin/settings': '系统设置'
   }

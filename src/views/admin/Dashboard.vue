@@ -137,19 +137,69 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive } from 'vue'
+import { ref, reactive, onMounted } from 'vue'
+import { ElMessage } from 'element-plus'
+import { adminAPI } from '@/api'
 
 const userChartPeriod = ref('7d')
 
 const stats = reactive({
-  totalUsers: 12543,
-  userGrowth: 12.5,
-  totalMerchants: 856,
-  merchantGrowth: 8.3,
-  totalOrders: 28976,
-  orderGrowth: 15.2,
-  totalRevenue: 1256800,
-  revenueGrowth: 18.7
+  totalUsers: 0,
+  userGrowth: 0,
+  totalMerchants: 0,
+  merchantGrowth: 0,
+  totalOrders: 0,
+  orderGrowth: 0,
+  totalRevenue: 0,
+  revenueGrowth: 0
+})
+
+// 获取统计数据
+const fetchStatistics = async () => {
+  try {
+    console.log('开始获取管理端统计数据')
+    
+    // 使用真实API获取统计数据
+    const response = await adminAPI.getAdminDashboard()
+    
+    console.log('管理端统计数据响应:', response)
+    
+    // 更新统计数据
+    Object.assign(stats, {
+      totalUsers: response.newUserCount || 0,
+      userGrowth: 12.5, // 暂时使用固定增长率
+      totalMerchants: 0, // 首页数据中没有商家总数，暂时设为0
+      merchantGrowth: 8.3, // 暂时使用固定增长率
+      totalOrders: response.newOrderCount || 0,
+      orderGrowth: 15.2, // 暂时使用固定增长率
+      totalRevenue: response.todayTransactionAmount || 0,
+      revenueGrowth: 18.7 // 暂时使用固定增长率
+    })
+    
+    console.log('统计数据更新完成:', stats)
+    
+  } catch (error: any) {
+    console.error('获取管理端统计数据失败:', error)
+    
+    // 错误时使用默认数据，避免页面崩溃
+    Object.assign(stats, {
+      totalUsers: 12543,
+      userGrowth: 12.5,
+      totalMerchants: 856,
+      merchantGrowth: 8.3,
+      totalOrders: 28976,
+      orderGrowth: 15.2,
+      totalRevenue: 1256800,
+      revenueGrowth: 18.7
+    })
+    
+    ElMessage.warning('统计数据加载失败，使用模拟数据')
+  }
+}
+
+// 组件挂载时获取数据
+onMounted(() => {
+  fetchStatistics()
 })
 
 const userChartData = ref([

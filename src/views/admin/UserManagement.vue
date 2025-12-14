@@ -212,6 +212,12 @@ import { ref, reactive, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Search, Refresh, Download } from '@element-plus/icons-vue'
 import type { FormInstance, FormRules } from 'element-plus'
+import { 
+  getUserList, 
+  getAdminUserDetail, 
+  putAdminUserStatus, 
+  putAdminUserUpdate 
+} from '@/api/modules/admin'
 
 interface User {
   user_id: number
@@ -410,37 +416,42 @@ const loadUsers = async () => {
   loading.value = true
   
   try {
-    // 模拟API调用
-    await new Promise(resolve => setTimeout(resolve, 500))
-    
-    // 模拟筛选逻辑
-    let filteredUsers = [...mockUsers]
-    
-    if (searchQuery.value) {
-      const query = searchQuery.value.toLowerCase()
-      filteredUsers = filteredUsers.filter(user => 
-        user.user_id.toString().includes(query) ||
-        user.username.toLowerCase().includes(query) ||
-        user.phone.includes(query)
-      )
+    // 构建请求参数
+    const params = {
+      pageNum: pagination.current,
+      pageSize: pagination.size,
+      account: searchQuery.value || undefined,
+      userType: filterType.value || undefined,
+      status: filterStatus.value || undefined
     }
     
-    if (filterStatus.value) {
-      filteredUsers = filteredUsers.filter(user => user.status === filterStatus.value)
-    }
+    // 调用真实API
+    const response = await getUserList(params)
     
-    if (filterType.value) {
-      filteredUsers = filteredUsers.filter(user => user.user_type === filterType.value)
-    }
+    // 转换数据格式以匹配页面结构
+    userList.value = response.list.map(user => ({
+      user_id: user.userId,
+      username: user.username || user.account,
+      phone: user.phone || '',
+      email: user.email || '',
+      user_type: user.userType as User['user_type'],
+      status: user.status as User['status'],
+      create_time: user.createTime,
+      last_login: user.updateTime,
+      order_count: 0,
+      total_spent: 0,
+      login_count: 0
+    }))
     
-    // 模拟分页
-    const start = (pagination.current - 1) * pagination.size
-    const end = start + pagination.size
-    userList.value = filteredUsers.slice(start, end)
-    pagination.total = filteredUsers.length
+    pagination.total = response.total
     
   } catch (error) {
+    console.error('加载用户列表失败:', error)
     ElMessage.error('加载用户列表失败')
+    
+    // 错误时使用模拟数据作为降级方案
+    userList.value = mockUsers.slice(0, pagination.size)
+    pagination.total = mockUsers.length
   } finally {
     loading.value = false
   }
@@ -459,9 +470,40 @@ const handleCurrentChange = (page: number) => {
 }
 
 // 查看用户详情
-const viewUserDetail = (user: User) => {
-  currentUser.value = user
-  detailVisible.value = true
+const viewUserDetail = async (user: User) => {
+  try {
+    loading.value = true
+    
+    // 调用真实API获取用户详情
+    const userDetail = await getAdminUserDetail(user.user_id)
+    
+    // 转换数据格式以匹配页面结构
+    currentUser.value = {
+      user_id: userDetail.userId,
+      username: userDetail.username || userDetail.account,
+      phone: userDetail.phone || '',
+      email: userDetail.email || '',
+      user_type: userDetail.userType as User['user_type'],
+      status: userDetail.status as User['status'],
+      create_time: userDetail.createTime,
+      last_login: userDetail.updateTime,
+      order_count: 0,
+      total_spent: 0,
+      login_count: 0
+    }
+    
+    detailVisible.value = true
+    
+  } catch (error) {
+    console.error('获取用户详情失败:', error)
+    ElMessage.error('获取用户详情失败')
+    
+    // 错误时使用当前用户数据作为降级方案
+    currentUser.value = user
+    detailVisible.value = true
+  } finally {
+    loading.value = false
+  }
 }
 
 // 打开编辑对话框
@@ -486,10 +528,13 @@ const submitEdit = async () => {
     
     loading.value = true
     
-    // 模拟API调用
-    await new Promise(resolve => setTimeout(resolve, 500))
+    // 调用真实API更新用户信息
+    await putAdminUserUpdate({
+      id: editForm.user_id,
+      username: editForm.username
+    })
     
-    // 更新用户数据
+    // 更新本地用户数据
     const userIndex = userList.value.findIndex(user => user.user_id === editForm.user_id)
     if (userIndex !== -1) {
       const target = userList.value[userIndex]
@@ -508,6 +553,7 @@ const submitEdit = async () => {
     editVisible.value = false
     
   } catch (error) {
+    console.error('更新用户信息失败:', error)
     ElMessage.error('更新用户信息失败')
   } finally {
     loading.value = false
@@ -517,6 +563,7 @@ const submitEdit = async () => {
 // 切换用户状态
 const toggleUserStatus = async (user: User) => {
   const action = user.status === 'active' ? '禁用' : '启用'
+  const newStatus = user.status === 'active' ? 'inactive' : 'active'
   
   try {
     await ElMessageBox.confirm(
@@ -529,12 +576,23 @@ const toggleUserStatus = async (user: User) => {
       }
     )
     
-    // 模拟状态切换
-    user.status = user.status === 'active' ? 'inactive' : 'active'
+    // 调用真实API更新用户状态
+    await putAdminUserStatus({
+      id: user.user_id,
+      status: newStatus
+    })
+    
+    // 更新本地状态
+    user.status = newStatus
     ElMessage.success(`${action}用户成功`)
     
-  } catch {
-    // 用户取消操作
+  } catch (error) {
+    console.error('切换用户状态失败:', error)
+    
+    // 如果是用户取消操作，不显示错误信息
+    if (error !== 'cancel') {
+      ElMessage.error(`${action}用户失败`)
+    }
   }
 }
 

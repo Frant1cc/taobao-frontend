@@ -4,10 +4,12 @@
 import * as userAPI from './modules/user'
 import * as productAPI from './modules/product'
 import * as cartAPI from './modules/cart'
+import * as adminAPI from './modules/admin'
 
 // 统一导出
 export {
   userAPI,
   productAPI,
-  cartAPI
+  cartAPI,
+  adminAPI
 }

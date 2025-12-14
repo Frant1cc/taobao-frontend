@@ -1,74 +1,61 @@
 <template>
-  <div class="admin-login">
-    <div class="login-container">
-      <div class="login-header">
-        <h1>管理后台登录</h1>
-        <p>欢迎使用淘宝管理后台</p>
-      </div>
-      
-      <el-form 
-        ref="loginFormRef" 
-        :model="loginForm" 
-        :rules="loginRules" 
-        class="login-form"
-      >
-        <el-form-item prop="username">
-          <el-input
-            v-model="loginForm.username"
-            placeholder="请输入管理员账号"
-            size="large"
-            prefix-icon="User"
-          />
-        </el-form-item>
-        
-        <el-form-item prop="password">
-          <el-input
-            v-model="loginForm.password"
-            type="password"
-            placeholder="请输入密码"
-            size="large"
-            prefix-icon="Lock"
-            show-password
-          />
-        </el-form-item>
-        
-        <el-form-item prop="captcha" class="captcha-item">
-          <div class="captcha-wrapper">
-            <el-input
-              v-model="loginForm.captcha"
-              placeholder="请输入验证码"
-              size="large"
-              prefix-icon="Key"
+  <div class="auth-page">
+    <!-- 登录表单 -->
+    <div class="auth-container">
+      <div class="auth-form">
+        <!-- 返回按钮 -->
+        <div class="back-button-container">
+          <button class="back-btn" @click="goBack">
+            <span class="back-icon">←</span>
+            返回首页
+          </button>
+        </div>
+        <div class="form-header">
+          <h2>管理后台登录</h2>
+          <p>请使用您的管理员账号密码登录</p>
+        </div>
+
+        <form @submit.prevent="handleLogin">
+          <!-- 管理员账号输入 -->
+          <div class="form-group">
+            <label for="username">管理员账号</label>
+            <input
+              id="username"
+              v-model="loginForm.username"
+              type="text"
+              placeholder="请输入管理员账号"
+              required
             />
-            <div class="captcha-image" @click="refreshCaptcha">
-              <img :src="captchaImage" alt="验证码" />
-            </div>
           </div>
-        </el-form-item>
-        
-        <el-form-item>
-          <el-button 
-            type="primary" 
-            size="large" 
-            class="login-btn"
-            :loading="loading"
-            @click="handleLogin"
-          >
-            登录
-          </el-button>
-        </el-form-item>
-      </el-form>
-      
-      <div class="login-footer">
-        <p>© 2024 淘宝管理后台 版权所有</p>
+
+          <!-- 密码输入 -->
+          <div class="form-group">
+            <label for="password">密码</label>
+            <input
+              id="password"
+              v-model="loginForm.password"
+              :type="showPassword ? 'text' : 'password'"
+              placeholder="请输入密码"
+              required
+            />
+            <span class="password-toggle" @click="togglePasswordVisibility">
+              {{ showPassword ? '隐藏' : '显示' }}
+            </span>
+          </div>
+
+
+
+          <!-- 提交按钮 -->
+          <button type="submit" class="submit-btn" :disabled="loading">
+            {{ loading ? '登录中...' : '登录' }}
+          </button>
+        </form>
+
+        <!-- 页脚 -->
+        <div class="form-footer">
+          <p>© 2024 淘宝管理后台 版权所有</p>
+        </div>
       </div>
-    </div>
-    
-    <!-- 背景装饰 -->
-    <div class="login-bg">
-      <div class="bg-shape shape-1"></div>
-      <div class="bg-shape shape-2"></div>
-      <div class="bg-shape shape-3"></div>
     </div>
   </div>
 </template>
@@ -77,275 +64,329 @@
 import { ref, reactive, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import type { FormInstance, FormRules } from 'element-plus'
+import { adminAPI } from '@/api'
+import { useUserStore } from '@/stores/user'
 
 const router = useRouter()
-const loginFormRef = ref<FormInstance>()
+const userStore = useUserStore()
 
 // 登录表单
 const loginForm = reactive({
   username: '',
-  password: '',
-  captcha: ''
+  password: ''
 })
 
-// 验证规则
-const loginRules: FormRules = {
-  username: [
-    { required: true, message: '请输入管理员账号', trigger: 'blur' },
-    { min: 3, max: 20, message: '账号长度在 3 到 20 个字符', trigger: 'blur' }
-  ],
-  password: [
-    { required: true, message: '请输入密码', trigger: 'blur' },
-    { min: 6, max: 20, message: '密码长度在 6 到 20 个字符', trigger: 'blur' }
-  ],
-  captcha: [
-    { required: true, message: '请输入验证码', trigger: 'blur' },
-    { len: 4, message: '验证码长度为4位', trigger: 'blur' }
-  ]
-}
-
-// 验证码
-const captchaImage = ref('')
 const loading = ref(false)
+const showPassword = ref(false)
 
-// 刷新验证码
-const refreshCaptcha = () => {
-  // 模拟验证码生成
-  captchaImage.value = `data:image/svg+xml;base64,${btoa(`
-    <svg width="120" height="40" xmlns="http://www.w3.org/2000/svg">
-      <rect width="100%" height="100%" fill="#f5f5f5"/>
-      <text x="60" y="25" font-family="Arial" font-size="20" text-anchor="middle" fill="#ff5021">${generateRandomCode()}</text>
-      <line x1="10" y1="15" x2="110" y2="25" stroke="#ddd" stroke-width="1"/>
-      <line x1="20" y1="35" x2="100" y2="5" stroke="#ddd" stroke-width="1"/>
-    </svg>
-  `)}`
+// 切换密码显示状态
+const togglePasswordVisibility = () => {
+  showPassword.value = !showPassword.value
 }
 
-// 生成随机验证码
-const generateRandomCode = () => {
-  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
-  let code = ''
-  for (let i = 0; i < 4; i++) {
-    code += chars.charAt(Math.floor(Math.random() * chars.length))
-  }
-  return code
+// 返回首页
+const goToHome = () => {
+  router.push('/home')
+}
+
+// 返回上一页
+const goBack = () => {
+  router.back()
 }
 
 // 处理登录
 const handleLogin = async () => {
-  if (!loginFormRef.value) return
+  // 基本表单验证
+  if (!loginForm.username.trim()) {
+    ElMessage.error('请输入管理员账号')
+    return
+  }
+  
+  if (!loginForm.password.trim()) {
+    ElMessage.error('请输入密码')
+    return
+  }
   
   try {
-    const valid = await loginFormRef.value.validate()
-    if (!valid) return
-    
     loading.value = true
     
-    // 模拟登录请求
-    await new Promise(resolve => setTimeout(resolve, 1000))
+    console.group('管理员登录请求')
+    console.log('账号:', loginForm.username)
+    console.log('密码长度:', loginForm.password.length)
+    console.groupEnd()
     
-    // 模拟登录成功
-    if (loginForm.username === 'admin' && loginForm.password === '123456') {
-      // 存储管理员信息
-      localStorage.setItem('admin_token', 'mock_admin_token')
+    // 使用真实API进行登录
+    const response = await adminAPI.adminLogin({
+      account: loginForm.username,
+      password: loginForm.password
+    })
+    
+    console.log('管理员登录响应:', response)
+    
+    // 存储管理员信息并更新用户状态
+    if (response.data && response.data.token) {
+      // 更新用户存储状态（用于路由守卫验证）
+      userStore.setToken(response.data.token)
+      userStore.setUserInfo({
+        account: response.data.account,
+        username: response.data.username || response.data.account,
+        userType: response.data.userType || 'operator',
+        token: response.data.token
+      })
+      
+      // 同时保存到管理员专用存储（用于管理后台功能）
+      localStorage.setItem('admin_token', response.data.token)
       localStorage.setItem('admin_info', JSON.stringify({
-        id: 1,
-        username: 'admin',
-        name: '系统管理员',
-        role: 'super_admin'
+        account: response.data.account,
+        username: response.data.username,
+        userType: response.data.userType,
+        token: response.data.token
       }))
       
       ElMessage.success('登录成功')
       router.push('/admin/dashboard')
     } else {
-      ElMessage.error('账号或密码错误')
-      refreshCaptcha()
+      console.error('登录响应数据异常:', response)
+      ElMessage.error('登录失败：服务器返回数据异常')
     }
     
-  } catch (error) {
-    ElMessage.error('登录失败，请重试')
+  } catch (error: any) {
+    console.error('管理员登录失败:', error)
+    
+    // 根据错误类型显示不同的提示信息
+    if (error.message.includes('网络连接失败')) {
+      ElMessage.error('网络连接失败，请检查网络设置')
+    } else if (error.message.includes('服务器内部错误')) {
+      ElMessage.error('服务器繁忙，请稍后重试')
+    } else if (error.message.includes('接口不存在')) {
+      ElMessage.error('登录接口不存在，请联系管理员')
+    } else {
+      ElMessage.error(error.message || '登录失败，请重试')
+    }
   } finally {
     loading.value = false
   }
 }
-
-// 初始化验证码
-onMounted(() => {
-  refreshCaptcha()
-})
 </script>
 
 <style scoped>
-.admin-login {
+.auth-page {
   min-height: 100vh;
-  background: linear-gradient(135deg, #ff5021 0%, #ff8c00 100%);
+  background: #f5f5f5;
+}
+
+/* 页面头部样式 */
+.auth-header {
+  background: transparent;
+  padding: 20px 0;
+  position: relative;
+  height: 60px;
+}
+
+.header-content {
+  position: absolute;
+  top: 20px;
+  left: 40px;
+  z-index: 100;
+}
+
+.back-btn {
   display: flex;
   align-items: center;
-  justify-content: center;
-  position: relative;
-  overflow: hidden;
-}
-
-.login-container {
+  cursor: pointer;
+  color: #333;
+  padding: 8px 12px;
+  border-radius: 6px;
+  transition: all 0.3s;
   background: white;
-  border-radius: 16px;
-  padding: 40px;
-  width: 400px;
-  max-width: 90vw;
-  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
-  position: relative;
-  z-index: 2;
+  border: 1px solid #e0e0e0;
+  gap: 8px;
 }
 
-.login-header {
+.back-btn:hover {
+  background: #f8f8f8;
+  border-color: #ff5021;
+  color: #ff5021;
+  transform: translateY(-1px);
+}
+
+.back-icon {
+  font-size: 16px;
+  font-weight: bold;
+}
+
+.back-text {
+  font-size: 14px;
+}
+
+/* 登录容器样式 */
+.auth-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: calc(100vh - 80px);
+  padding: 20px;
+  position: relative;
+}
+
+/* 返回按钮样式 */
+.back-button-container {
+  margin-bottom: 20px;
+}
+
+.back-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  background: white;
+  border: 1px solid #e0e0e0;
+  border-radius: 6px;
+  color: #666;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.3s;
+  width: fit-content;
+}
+
+.back-btn:hover {
+  background: #f8f8f8;
+  border-color: #ff5021;
+  color: #ff5021;
+  transform: translateY(-1px);
+}
+
+.back-icon {
+  font-size: 16px;
+  font-weight: bold;
+}
+
+.auth-form {
+  background: white;
+  border-radius: 12px;
+  padding: 40px 30px;
+  width: 100%;
+  max-width: 400px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+}
+
+.form-header {
   text-align: center;
   margin-bottom: 30px;
 }
 
-.login-header h1 {
-  font-size: 28px;
+.form-header h2 {
+  font-size: 24px;
   font-weight: 600;
   color: #333;
-  margin-bottom: 8px;
+  margin: 0 0 8px 0;
 }
 
-.login-header p {
-  color: #666;
+.form-header p {
   font-size: 14px;
+  color: #666;
+  margin: 0;
 }
 
-.login-form {
+/* 表单样式 */
+.form-group {
   margin-bottom: 20px;
+  position: relative;
 }
 
-.captcha-item {
-  margin-bottom: 0;
-}
-
-.captcha-wrapper {
-  display: flex;
-  gap: 10px;
-  align-items: center;
-}
-
-.captcha-image {
-  width: 120px;
-  height: 40px;
-  border: 1px solid #e0e0e0;
-  border-radius: 4px;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: #f5f5f5;
-}
-
-.captcha-image img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
-.login-btn {
-  width: 100%;
-  background: #ff5021;
-  border: none;
-  border-radius: 8px;
-  font-size: 16px;
+.form-group label {
+  display: block;
+  font-size: 14px;
+  color: #333;
+  margin-bottom: 8px;
   font-weight: 500;
-  height: 48px;
+}
+
+.form-group input {
+  width: 100%;
+  padding: 12px 16px;
+  border: 1px solid #e0e0e0;
+  border-radius: 6px;
+  font-size: 14px;
+  transition: all 0.3s;
+  box-sizing: border-box;
+}
+
+.form-group input:focus {
+  outline: none;
+  border-color: #ff5021;
+  box-shadow: 0 0 0 2px rgba(255, 80, 33, 0.1);
+}
+
+.password-toggle {
+  position: absolute;
+  right: 12px;
+  top: 38px;
+  font-size: 12px;
+  color: #666;
+  cursor: pointer;
+  user-select: none;
+}
+
+.password-toggle:hover {
+  color: #ff5021;
+}
+
+
+
+/* 提交按钮样式 */
+.submit-btn {
+  width: 100%;
+  padding: 14px;
+  background: #ff5021;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
   transition: all 0.3s;
 }
 
-.login-btn:hover {
-  background: #ff6b3d;
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(255, 80, 33, 0.3);
+.submit-btn:hover:not(:disabled) {
+  background: #ff3a00;
+  transform: translateY(-1px);
 }
 
-.login-footer {
+.submit-btn:disabled {
+  background: #ccc;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* 页脚样式 */
+.form-footer {
   text-align: center;
+  margin-top: 20px;
   padding-top: 20px;
   border-top: 1px solid #f0f0f0;
 }
 
-.login-footer p {
-  color: #999;
-  font-size: 12px;
+.form-footer p {
+  font-size: 14px;
+  color: #666;
   margin: 0;
-}
-
-/* 背景装饰 */
-.login-bg {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  pointer-events: none;
-}
-
-.bg-shape {
-  position: absolute;
-  border-radius: 50%;
-  opacity: 0.1;
-}
-
-.shape-1 {
-  width: 200px;
-  height: 200px;
-  background: white;
-  top: 10%;
-  left: 10%;
-  animation: float 6s ease-in-out infinite;
-}
-
-.shape-2 {
-  width: 150px;
-  height: 150px;
-  background: white;
-  bottom: 20%;
-  right: 15%;
-  animation: float 8s ease-in-out infinite reverse;
-}
-
-.shape-3 {
-  width: 100px;
-  height: 100px;
-  background: white;
-  top: 60%;
-  left: 20%;
-  animation: float 10s ease-in-out infinite;
-}
-
-@keyframes float {
-  0%, 100% {
-    transform: translateY(0px);
-  }
-  50% {
-    transform: translateY(-20px);
-  }
 }
 
 /* 响应式设计 */
 @media (max-width: 480px) {
-  .login-container {
+  .auth-container {
+    padding: 10px;
+  }
+  
+  .auth-form {
     padding: 30px 20px;
-    margin: 20px;
   }
   
-  .login-header h1 {
-    font-size: 24px;
+  .form-header h2 {
+    font-size: 20px;
   }
   
-  .captcha-wrapper {
-    flex-direction: column;
-  }
-  
-  .captcha-image {
-    width: 100%;
-    margin-top: 10px;
-  }
+
 }
 </style>
