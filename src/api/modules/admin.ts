@@ -969,14 +969,19 @@ export function postAdminUserAvatar(params: { id: number; avatar: File }): Promi
  * 
  * **注意**：此接口可能返回异常数据格式
  */
-export function getAdminOrderList(): Promise<AdminOrderListResponse> {
+export function getAdminOrderList(params?: {
+  pageNum?: number;
+  pageSize?: number;
+}): Promise<AdminOrderListResponse> {
   console.group('获取管理员订单列表请求')
+  console.log('请求参数:', params)
   console.log('请求URL:', '/api/admin/order/list')
   console.groupEnd()
 
   return request({
     url: '/api/admin/order/list',
-    method: 'get'
+    method: 'get',
+    params
   }).then(response => {
     console.log('管理员订单列表响应:', response)
     

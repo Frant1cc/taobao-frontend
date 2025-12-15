@@ -265,8 +265,11 @@ const loadOrders = async () => {
   loading.value = true
   
   try {
-    // 调用真实API获取订单列表
-    const response = await getAdminOrderList()
+    // 调用真实API获取订单列表，传递分页参数
+    const response = await getAdminOrderList({
+      pageNum: pagination.current,
+      pageSize: pagination.size
+    })
     
     // 处理响应数据
     if (response.code === 200 && response.data) {
