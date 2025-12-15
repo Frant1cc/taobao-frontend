@@ -594,6 +594,7 @@ const handleAddSku = () => {
     productId: editingProduct.value?.productId || 0,
     skuName: '',
     skuType: 'normal',
+    stock: 50,
     price: 0,
     soldCount: 0,
     skuImage: '',

@@ -142,7 +142,7 @@ export const useShopStore = defineStore('shop', {
       
       try {
         const formData = new FormData()
-        formData.append('file', file)
+        formData.append('logo', file)  // 修复：字段名改为 'logo'
         
         const response = await uploadShopLogo(formData)
         if (response.code === 200) {
