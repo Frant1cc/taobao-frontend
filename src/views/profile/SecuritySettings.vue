@@ -90,7 +90,6 @@
               <p class="rule-title">密码规则：</p>
               <ul class="rule-list">
                 <li :class="{ 'rule-valid': passwordForm.newPassword.length >= 6 }">长度6-20位字符</li>
-                <li :class="{ 'rule-valid': hasUpperCase && hasLowerCase && hasNumber }">包含字母和数字</li>
                 <li :class="{ 'rule-valid': passwordForm.newPassword === passwordForm.confirmPassword && passwordForm.newPassword.length > 0 }">两次输入一致</li>
               </ul>
             </div>
@@ -122,6 +121,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
+import { updateUserInfo } from '@/api/modules/user'
 
 const router = useRouter()
 
@@ -138,11 +138,6 @@ const passwordForm = ref({
   confirmPassword: ''
 })
 
-// 计算密码规则验证
-const hasUpperCase = computed(() => /[A-Z]/.test(passwordForm.value.newPassword))
-const hasLowerCase = computed(() => /[a-z]/.test(passwordForm.value.newPassword))
-const hasNumber = computed(() => /\d/.test(passwordForm.value.newPassword))
-
 // 密码表单验证
 const isFormValid = computed(() => {
   const { currentPassword, newPassword, confirmPassword } = passwordForm.value
@@ -150,9 +145,6 @@ const isFormValid = computed(() => {
     currentPassword.length > 0 &&
     newPassword.length >= 6 &&
     newPassword.length <= 20 &&
-    hasUpperCase.value &&
-    hasLowerCase.value &&
-    hasNumber.value &&
     newPassword === confirmPassword
   )
 })
@@ -176,12 +168,20 @@ const handlePasswordChange = async () => {
   }
 
   try {
-    // 模拟API调用
-    await new Promise(resolve => setTimeout(resolve, 1000))
-    ElMessage.success('密码修改成功！')
-    closePasswordModal()
-  } catch (error) {
-    ElMessage.error('密码修改失败，请稍后重试')
+    // 调用真实API修改密码，直接传入password参数
+    const response = await updateUserInfo({
+      password: passwordForm.value.newPassword
+    })
+    
+    if (response.code === 200) {
+      ElMessage.success('密码修改成功！')
+      closePasswordModal()
+    } else {
+      ElMessage.error(response.msg || '密码修改失败')
+    }
+  } catch (error: any) {
+    console.error('密码修改失败:', error)
+    ElMessage.error(error.response?.data?.msg || '密码修改失败，请稍后重试')
   }
 }
 

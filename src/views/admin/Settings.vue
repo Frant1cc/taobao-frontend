@@ -1,226 +1,24 @@
 <template>
   <div class="admin-settings">
-    <div class="settings-header">
-      <p class="settings-description">管理系统基本配置和参数设置</p>
-    </div>
 
     <div class="settings-content">
-      <!-- 基本设置 -->
+      <!-- 账户安全 -->
       <el-card class="setting-section" shadow="never">
         <template #header>
           <div class="section-header">
-            <span class="section-title">基本设置</span>
-            <el-button type="primary" size="small" @click="saveBasicSettings">保存</el-button>
+            <span class="section-title">账户安全</span>
           </div>
         </template>
         
-        <el-form :model="basicSettings" label-width="120px">
-          <el-form-item label="网站名称">
-            <el-input v-model="basicSettings.siteName" placeholder="请输入网站名称" />
-          </el-form-item>
-          
-          <el-form-item label="网站描述">
-            <el-input 
-              v-model="basicSettings.siteDescription" 
-              type="textarea" 
-              :rows="3" 
-              placeholder="请输入网站描述" 
-            />
-          </el-form-item>
-          
-          <el-form-item label="网站Logo">
-            <el-upload
-              class="avatar-uploader"
-              action="#"
-              :show-file-list="false"
-              :before-upload="beforeLogoUpload"
-              :on-success="handleLogoSuccess"
-            >
-              <img v-if="basicSettings.logo" :src="basicSettings.logo" class="avatar" />
-              <el-icon v-else class="avatar-uploader-icon"><plus /></el-icon>
-            </el-upload>
-          </el-form-item>
-          
-          <el-form-item label="备案信息">
-            <el-input v-model="basicSettings.icp" placeholder="请输入备案号" />
-          </el-form-item>
-        </el-form>
-      </el-card>
-
-      <!-- 用户设置 -->
-      <el-card class="setting-section" shadow="never">
-        <template #header>
-          <div class="section-header">
-            <span class="section-title">用户设置</span>
-            <el-button type="primary" size="small" @click="saveUserSettings">保存</el-button>
+        <div class="account-security">
+          <div class="security-item">
+            <div class="security-info">
+              <h4>退出登录</h4>
+              <p>安全退出当前登录的管理员账户</p>
+            </div>
+            <el-button type="danger" @click="handleLogout">退出登录</el-button>
           </div>
-        </template>
-        
-        <el-form :model="userSettings" label-width="120px">
-          <el-form-item label="用户注册">
-            <el-switch
-              v-model="userSettings.allowRegister"
-              active-text="允许"
-              inactive-text="禁止"
-            />
-          </el-form-item>
-          
-          <el-form-item label="邮箱验证">
-            <el-switch
-              v-model="userSettings.emailVerification"
-              active-text="开启"
-              inactive-text="关闭"
-            />
-          </el-form-item>
-          
-          <el-form-item label="手机验证">
-            <el-switch
-              v-model="userSettings.phoneVerification"
-              active-text="开启"
-              inactive-text="关闭"
-            />
-          </el-form-item>
-          
-          <el-form-item label="默认头像">
-            <el-upload
-              class="avatar-uploader"
-              action="#"
-              :show-file-list="false"
-              :before-upload="beforeAvatarUpload"
-              :on-success="handleAvatarSuccess"
-            >
-              <img v-if="userSettings.defaultAvatar" :src="userSettings.defaultAvatar" class="avatar" />
-              <el-icon v-else class="avatar-uploader-icon"><plus /></el-icon>
-            </el-upload>
-          </el-form-item>
-        </el-form>
-      </el-card>
-
-      <!-- 商家设置 -->
-      <el-card class="setting-section" shadow="never">
-        <template #header>
-          <div class="section-header">
-            <span class="section-title">商家设置</span>
-            <el-button type="primary" size="small" @click="saveMerchantSettings">保存</el-button>
-          </div>
-        </template>
-        
-        <el-form :model="merchantSettings" label-width="120px">
-          <el-form-item label="商家注册">
-            <el-switch
-              v-model="merchantSettings.allowRegister"
-              active-text="允许"
-              inactive-text="禁止"
-            />
-          </el-form-item>
-          
-          <el-form-item label="自动审核">
-            <el-switch
-              v-model="merchantSettings.autoAudit"
-              active-text="开启"
-              inactive-text="关闭"
-            />
-          </el-form-item>
-          
-          <el-form-item label="保证金">
-            <el-input-number
-              v-model="merchantSettings.deposit"
-              :min="0"
-              :max="10000"
-              :step="100"
-              controls-position="right"
-            />
-            <span style="margin-left: 8px; color: #666;">元</span>
-          </el-form-item>
-          
-          <el-form-item label="佣金比例">
-            <el-input-number
-              v-model="merchantSettings.commissionRate"
-              :min="0"
-              :max="50"
-              :step="0.5"
-              controls-position="right"
-            />
-            <span style="margin-left: 8px; color: #666;">%</span>
-          </el-form-item>
-        </el-form>
-      </el-card>
-
-      <!-- 安全设置 -->
-      <el-card class="setting-section" shadow="never">
-        <template #header>
-          <div class="section-header">
-            <span class="section-title">安全设置</span>
-            <el-button type="primary" size="small" @click="saveSecuritySettings">保存</el-button>
-          </div>
-        </template>
-        
-        <el-form :model="securitySettings" label-width="120px">
-          <el-form-item label="登录尝试次数">
-            <el-input-number
-              v-model="securitySettings.maxLoginAttempts"
-              :min="1"
-              :max="10"
-              controls-position="right"
-            />
-            <span style="margin-left: 8px; color: #666;">次</span>
-          </el-form-item>
-          
-          <el-form-item label="密码强度">
-            <el-select v-model="securitySettings.passwordStrength" placeholder="请选择密码强度">
-              <el-option label="低（6位以上）" value="low" />
-              <el-option label="中（8位以上，包含字母和数字）" value="medium" />
-              <el-option label="高（10位以上，包含字母、数字和特殊字符）" value="high" />
-            </el-select>
-          </el-form-item>
-          
-          <el-form-item label="会话超时">
-            <el-input-number
-              v-model="securitySettings.sessionTimeout"
-              :min="30"
-              :max="1440"
-              :step="30"
-              controls-position="right"
-            />
-            <span style="margin-left: 8px; color: #666;">分钟</span>
-          </el-form-item>
-          
-          <el-form-item label="IP白名单">
-            <el-input
-              v-model="securitySettings.ipWhitelist"
-              type="textarea"
-              :rows="3"
-              placeholder="请输入允许访问的IP地址，多个用逗号分隔"
-            />
-          </el-form-item>
-        </el-form>
-      </el-card>
-
-      <!-- 系统维护 -->
-      <el-card class="setting-section" shadow="never">
-        <template #header>
-          <div class="section-header">
-            <span class="section-title">系统维护</span>
-            <el-button type="warning" size="small" @click="handleMaintenance">执行维护</el-button>
-          </div>
-        </template>
-        
-        <el-form label-width="120px">
-          <el-form-item label="数据备份">
-            <el-button type="primary" @click="backupData">立即备份</el-button>
-            <span style="margin-left: 16px; color: #666;">最后备份时间：{{ lastBackupTime || '从未备份' }}</span>
-          </el-form-item>
-          
-          <el-form-item label="缓存清理">
-            <el-button type="warning" @click="clearCache">清理缓存</el-button>
-            <span style="margin-left: 16px; color: #666;">缓存大小：{{ cacheSize || '未知' }}</span>
-          </el-form-item>
-          
-          <el-form-item label="系统日志">
-            <el-button @click="viewLogs">查看日志</el-button>
-            <span style="margin-left: 16px; color: #666;">日志文件大小：{{ logSize || '未知' }}</span>
-          </el-form-item>
-        </el-form>
+        </div>
       </el-card>
     </div>
   </div>
@@ -228,8 +26,12 @@
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Plus } from '@element-plus/icons-vue'
+import { useUserStore } from '@/stores/user'
+
+const router = useRouter()
+const userStore = useUserStore()
 
 // 基本设置
 const basicSettings = ref({
@@ -363,6 +165,34 @@ const viewLogs = () => {
   ElMessage.info('日志查看功能开发中')
 }
 
+// 退出登录
+const handleLogout = async () => {
+  try {
+    await ElMessageBox.confirm(
+      '确定要退出登录吗？',
+      '退出确认',
+      {
+        confirmButtonText: '确定',
+        cancelButtonText: '取消',
+        type: 'warning'
+      }
+    )
+    
+    // 清除所有登录信息
+    userStore.clearToken() // 清除 store 中的用户信息和 authToken
+    localStorage.removeItem('big-user') // 清除 big-user 信息
+    localStorage.removeItem('admin_token') // 清除管理员 token
+    localStorage.removeItem('admin_info') // 清除管理员信息
+    
+    ElMessage.success('退出登录成功')
+    
+    // 跳转到登录页
+    router.push('/admin/login')
+  } catch (error) {
+    // 用户取消操作
+  }
+}
+
 onMounted(() => {
   // 模拟加载系统维护信息
   cacheSize.value = '256 MB'
@@ -481,6 +311,36 @@ onMounted(() => {
   :deep(.el-input-number),
   :deep(.el-textarea) {
     width: 100%;
+  }
+}
+
+/* 账户安全样式 */
+.account-security {
+  .security-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px 0;
+    border-bottom: 1px solid #f0f0f0;
+    
+    &:last-child {
+      border-bottom: none;
+    }
+    
+    .security-info {
+      h4 {
+        font-size: 16px;
+        font-weight: 600;
+        color: #333;
+        margin: 0 0 4px 0;
+      }
+      
+      p {
+        font-size: 14px;
+        color: #666;
+        margin: 0;
+      }
+    }
   }
 }
 </style>

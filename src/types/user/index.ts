@@ -20,6 +20,7 @@ export interface UpdateUserInfoParams {
   birthday?: string
   phone?: string
   email?: string
+  password?: string
   description?: string
   avatarUrl?: string
 }

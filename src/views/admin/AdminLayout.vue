@@ -11,15 +11,6 @@
         <div class="user-info">
           <el-avatar :size="32" :src="userAvatar" />
           <span class="username">管理员</span>
-          <el-dropdown @command="handleCommand">
-            <el-icon><arrow-down /></el-icon>
-            <template #dropdown>
-              <el-dropdown-menu>
-                <el-dropdown-item command="profile">个人信息</el-dropdown-item>
-                <el-dropdown-item command="logout">退出登录</el-dropdown-item>
-              </el-dropdown-menu>
-            </template>
-          </el-dropdown>
         </div>
       </div>
     </header>
@@ -87,12 +78,9 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
-import { ElMessage, ElMessageBox } from 'element-plus'
-import { ArrowDown } from '@element-plus/icons-vue'
+import { useRoute } from 'vue-router'
 
 const route = useRoute()
-const router = useRouter()
 
 const pageTitle = computed(() => {
   const titles: Record<string, string> = {
@@ -109,35 +97,6 @@ const pageTitle = computed(() => {
 const userAvatar = computed(() => {
   return 'https://cube.elemecdn.com/3/7c/3ea6beec64369c2642b92c6726f1epng.png'
 })
-
-const handleCommand = async (command: string) => {
-  if (command === 'logout') {
-    try {
-      await ElMessageBox.confirm(
-        '确定要退出登录吗？',
-        '退出确认',
-        {
-          confirmButtonText: '确定',
-          cancelButtonText: '取消',
-          type: 'warning'
-        }
-      )
-      
-      // 清除登录信息
-      localStorage.removeItem('admin_token')
-      localStorage.removeItem('admin_info')
-      
-      ElMessage.success('退出登录成功')
-      
-      // 跳转到登录页
-      router.push('/admin/login')
-    } catch (error) {
-      // 用户取消操作
-    }
-  } else if (command === 'profile') {
-    ElMessage.info('个人信息功能开发中')
-  }
-}
 </script>
 
 <style scoped lang="scss">
