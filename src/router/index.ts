@@ -31,6 +31,7 @@ import AdminDashboard from '../views/admin/Dashboard.vue'
 import UserManagement from '../views/admin/UserManagement.vue'
 import MerchantManagement from '../views/admin/MerchantManagement.vue'
 import AuditManagement from '../views/admin/AuditManagement.vue'
+import OrderManagement from '../views/admin/OrderManagement.vue'
 
 const routes = [
   {
@@ -189,6 +190,12 @@ const routes = [
         name: 'AdminSettings',
         component: () => import('@/views/admin/Settings.vue'),
         meta: { title: '系统设置' }
+      },
+      {
+        path: 'orders',
+        name: 'AdminOrderManagement',
+        component: OrderManagement,
+        meta: { title: '订单管理' }
       }
     ]
   }
