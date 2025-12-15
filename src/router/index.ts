@@ -30,7 +30,6 @@ import AdminLogin from '../views/admin/AdminLogin.vue'
 import AdminDashboard from '../views/admin/Dashboard.vue'
 import UserManagement from '../views/admin/UserManagement.vue'
 import MerchantManagement from '../views/admin/MerchantManagement.vue'
-import OrderManagement from '../views/admin/OrderManagement.vue'
 import AuditManagement from '../views/admin/AuditManagement.vue'
 
 const routes = [
@@ -159,6 +158,7 @@ const routes = [
     name: 'Admin',
     component: AdminLayout,
     redirect: '/admin/dashboard',
+    meta: { requiresAuth: true, role: 'admin' },
     children: [
       {
         path: 'dashboard',
@@ -177,12 +177,6 @@ const routes = [
         name: 'MerchantManagement',
         component: MerchantManagement,
         meta: { title: '商家管理' }
-      },
-      {
-        path: 'orders',
-        name: 'OrderManagement',
-        component: OrderManagement,
-        meta: { title: '订单管理' }
       },
       {
         path: 'audit',
@@ -208,6 +202,9 @@ const router = createRouter({
 // 添加路由守卫
 router.beforeEach((to: any, _from: any, next: any) => {
   const userStore = useUserStore()
+  
+  // 确保用户存储状态是最新的
+  userStore.loadFromLocalStorage()
   
   // 检查路由是否需要认证
   if (to.meta.requiresAuth && !userStore.isLoggedIn) {
@@ -247,25 +244,8 @@ router.beforeEach((to: any, _from: any, next: any) => {
       return
     }
     
-    // 检查管理端页面访问权限
-    if (to.path.startsWith('/admin') && to.path !== '/admin/login') {
-      // 访问管理端页面需要管理员权限（用户类型为operator）
-      if (userType !== 'operator') {
-        // 非管理员用户跳转到管理员登录页面
-        next('/admin/login')
-        return
-      }
-    }
-    
     next()
   } else {
-    // 未登录用户访问管理端页面（除了登录页）
-    if (to.path.startsWith('/admin') && to.path !== '/admin/login') {
-      // 未登录用户访问管理端页面，跳转到管理员登录页面
-      next('/admin/login')
-      return
-    }
-    
     // 未登录用户正常导航
     next()
   }

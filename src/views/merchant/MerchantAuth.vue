@@ -149,11 +149,13 @@ const handleLogin = async () => {
       // 跳转到商家工作台
       router.push('/merchant/dashboard')
     } else {
-      ElMessage.error(response.msg || '登录失败，请检查账号和密码')
+      // 显示接口返回的具体错误信息
+      ElMessage.error(response.msg || '登录失败')
     }
   } catch (error: any) {
     console.error('登录失败:', error)
-    ElMessage.error(error.response?.data?.msg || '登录失败，请检查账号和密码')
+    // 显示接口返回的具体错误信息
+    ElMessage.error(error.response?.data?.msg || error.message || '登录失败，请稍后重试')
   } finally {
     loading.value = false
   }
