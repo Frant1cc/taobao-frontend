@@ -6,7 +6,7 @@
         <div class="stat-icon user-icon">👥</div>
         <div class="stat-content">
           <div class="stat-value">{{ stats.newUserCount }}</div>
-          <div class="stat-label">今日新增用户</div>
+          <div class="stat-label">用户总数</div>
         </div>
       </div>
       
@@ -14,7 +14,7 @@
         <div class="stat-icon order-icon">📦</div>
         <div class="stat-content">
           <div class="stat-value">{{ stats.newOrderCount }}</div>
-          <div class="stat-label">今日新增订单</div>
+          <div class="stat-label">订单总数</div>
         </div>
       </div>
       
@@ -22,7 +22,7 @@
         <div class="stat-icon revenue-icon">�</div>
         <div class="stat-content">
           <div class="stat-value">¥{{ stats.todayTransactionAmount }}</div>
-          <div class="stat-label">今日交易额</div>
+          <div class="stat-label">交易额总数</div>
         </div>
       </div>
       
@@ -30,7 +30,7 @@
         <div class="stat-icon completed-icon">✅</div>
         <div class="stat-content">
           <div class="stat-value">{{ stats.completedOrderCount }}</div>
-          <div class="stat-label">已完成订单</div>
+          <div class="stat-label">已完成订单总数</div>
         </div>
       </div>
     </div>
