@@ -1,53 +1,11 @@
 <template>
   <div class="audit-management">
-    <!-- 审核统计 -->
-    <div class="audit-stats">
-      <div class="stat-card">
-        <div class="stat-icon">⏳</div>
-        <div class="stat-content">
-          <div class="stat-value">{{ stats.pendingCount }}</div>
-          <div class="stat-label">待审核</div>
-        </div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-icon">✅</div>
-        <div class="stat-content">
-          <div class="stat-value">{{ stats.approvedCount }}</div>
-          <div class="stat-label">已通过</div>
-        </div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-icon">❌</div>
-        <div class="stat-content">
-          <div class="stat-value">{{ stats.rejectedCount }}</div>
-          <div class="stat-label">已拒绝</div>
-        </div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-icon">📊</div>
-        <div class="stat-content">
-          <div class="stat-value">{{ stats.totalCount }}</div>
-          <div class="stat-label">总审核数</div>
-        </div>
-      </div>
-    </div>
+    
     
     <!-- 审核列表 -->
     <div class="audit-list">
       <div class="list-header">
         <h3>审核列表</h3>
-        <div class="header-actions">
-          <el-select v-model="filterType" placeholder="审核类型" clearable>
-            <el-option label="商家注册" value="merchant_register" />
-            <el-option label="商品上架" value="product_publish" />
-            <el-option label="资质认证" value="qualification" />
-          </el-select>
-          <el-select v-model="filterStatus" placeholder="审核状态" clearable>
-            <el-option label="待审核" value="pending" />
-            <el-option label="已通过" value="approved" />
-            <el-option label="已拒绝" value="rejected" />
-          </el-select>
-        </div>
       </div>
       
       <div class="audit-items">
@@ -148,10 +106,6 @@ interface AuditItem {
   icon: string
 }
 
-// 筛选条件
-const filterType = ref('')
-const filterStatus = ref('')
-
 // 加载状态
 const loading = ref(false)
 
@@ -162,13 +116,7 @@ const pagination = reactive({
   total: 0
 })
 
-// 审核统计
-const stats = reactive({
-  pendingCount: 0,
-  approvedCount: 0,
-  rejectedCount: 0,
-  totalCount: 0
-})
+
 
 // 待审核商家列表
 const pendingMerchants = ref<PendingMerchant[]>([])
@@ -197,17 +145,7 @@ let currentAuditItem: AuditItem | null = null
 
 // 过滤后的审核项
 const filteredAuditItems = computed(() => {
-  let items = auditItems.value
-  
-  if (filterType.value) {
-    items = items.filter(item => item.type === filterType.value)
-  }
-  
-  if (filterStatus.value) {
-    items = items.filter(item => item.status === filterStatus.value)
-  }
-  
-  return items
+  return auditItems.value
 })
 
 // 加载待审核商家列表
@@ -223,23 +161,12 @@ const loadPendingMerchants = async () => {
     pendingMerchants.value = response.list
     pagination.total = response.total
     
-    // 更新统计信息
-    updateStats()
-    
   } catch (error) {
     console.error('加载待审核商家列表失败:', error)
     ElMessage.error('加载待审核商家列表失败')
   } finally {
     loading.value = false
   }
-}
-
-// 更新统计信息
-const updateStats = () => {
-  stats.pendingCount = pendingMerchants.value.length
-  stats.approvedCount = 0 // 已通过的商家不在待审核列表中
-  stats.rejectedCount = 0 // 已拒绝的商家不在待审核列表中
-  stats.totalCount = pendingMerchants.value.length
 }
 
 // 处理审核
@@ -265,7 +192,6 @@ const handleAudit = async (item: AuditItem, result: string) => {
       
       // 从待审核列表中移除已审核的商家
       pendingMerchants.value = pendingMerchants.value.filter(merchant => merchant.userId !== item.id)
-      updateStats()
       ElMessage.success('审核通过成功')
       
     } catch (error) {
@@ -300,8 +226,6 @@ const submitAudit = async () => {
       merchant => merchant.userId !== currentAuditItem!.id
     )
     
-    updateStats()
-    
     if (auditForm.remark) {
       ElMessage.success(`审核${auditForm.result === 'approved' ? '通过' : '拒绝'}成功，意见：${auditForm.remark}`)
     } else {
@@ -322,9 +246,6 @@ const submitAudit = async () => {
 onMounted(() => {
   loadPendingMerchants()
 })
-
-// 初始化统计信息
-updateStats()
 </script>
 
 <style scoped>
@@ -334,50 +255,7 @@ updateStats()
   background: #f5f5f5;
 }
 
-/* 审核统计 */
-.audit-stats {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 20px;
-  margin-bottom: 30px;
-}
 
-.stat-card {
-  background: white;
-  border-radius: 12px;
-  padding: 20px;
-  display: flex;
-  align-items: center;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
-}
-
-.stat-icon {
-  font-size: 32px;
-  margin-right: 16px;
-  width: 60px;
-  height: 60px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 12px;
-  background: #f5f5f5;
-}
-
-.stat-content {
-  flex: 1;
-}
-
-.stat-value {
-  font-size: 28px;
-  font-weight: 600;
-  color: #333;
-  margin-bottom: 4px;
-}
-
-.stat-label {
-  font-size: 14px;
-  color: #666;
-}
 
 /* 审核列表 */
 .audit-list {
@@ -388,9 +266,6 @@ updateStats()
 }
 
 .list-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
   margin-bottom: 20px;
 }
 
@@ -399,11 +274,6 @@ updateStats()
   font-weight: 600;
   color: #333;
   margin: 0;
-}
-
-.header-actions {
-  display: flex;
-  gap: 10px;
 }
 
 .audit-items {
@@ -484,18 +354,8 @@ updateStats()
 }
 
 @media (max-width: 768px) {
-  .audit-stats {
-    grid-template-columns: 1fr;
-  }
-  
   .list-header {
-    flex-direction: column;
-    align-items: stretch;
-    gap: 15px;
-  }
-  
-  .header-actions {
-    justify-content: flex-start;
+    margin-bottom: 15px;
   }
   
   .item-info {
