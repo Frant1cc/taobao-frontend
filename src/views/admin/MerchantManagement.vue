@@ -317,7 +317,10 @@ const loadMerchants = async () => {
   
   try {
     // 调用真实API获取商家列表
-    const response = await adminAPI.getMerchantList()
+    const response = await adminAPI.getMerchantList({
+      pageNum: pagination.current,
+      pageSize: pagination.size
+    })
     
     // 根据后端返回的数据格式进行转换，只渲染后端返回的字段
     merchantList.value = response.list.map((user: any) => ({

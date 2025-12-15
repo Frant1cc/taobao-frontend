@@ -405,14 +405,19 @@ export function getAdminDashboard(): Promise<AdminDashboardData> {
  * 
  * **注意**：此接口返回客户用户列表
  */
-export function getCustomerList(): Promise<UserListResponse> {
+export function getCustomerList(params?: {
+  pageNum?: number;
+  pageSize?: number;
+}): Promise<UserListResponse> {
   console.group('获取客户列表请求')
+  console.log('请求参数:', params)
   console.log('请求URL:', '/api/admin/user/customer/list')
   console.groupEnd()
 
   return request({
     url: '/api/admin/user/customer/list',
-    method: 'get'
+    method: 'get',
+    params
   }).then(response => {
     console.log('客户列表响应:', response)
     
@@ -502,14 +507,19 @@ export function getCustomerList(): Promise<UserListResponse> {
  * 
  * **注意**：此接口返回商家用户列表
  */
-export function getMerchantList(): Promise<UserListResponse> {
+export function getMerchantList(params?: {
+  pageNum?: number;
+  pageSize?: number;
+}): Promise<UserListResponse> {
   console.group('获取商家列表请求')
+  console.log('请求参数:', params)
   console.log('请求URL:', '/api/admin/user/merchant/list')
   console.groupEnd()
 
   return request({
     url: '/api/admin/user/merchant/list',
-    method: 'get'
+    method: 'get',
+    params
   }).then(response => {
     console.log('商家列表响应:', response)
     

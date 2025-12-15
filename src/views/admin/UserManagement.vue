@@ -302,7 +302,10 @@ const loadUsers = async () => {
   
   try {
     // 用户管理页面只调用客户列表接口
-    const response = await getCustomerList()
+    const response = await getCustomerList({
+      pageNum: pagination.current,
+      pageSize: pagination.size
+    })
     
     // 转换数据格式以匹配页面结构
     userList.value = response.list.map(user => ({
