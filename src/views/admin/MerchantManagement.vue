@@ -52,22 +52,6 @@
             >
               启用
             </el-button>
-            <el-button 
-              v-if="row.status === 'approved' || row.status === 'disabled'"
-              size="small" 
-              type="danger"
-              @click="lockMerchant(row)"
-            >
-              锁定
-            </el-button>
-            <el-button 
-              v-if="row.status === 'locked'"
-              size="small" 
-              type="success"
-              @click="unlockMerchant(row)"
-            >
-              解锁
-            </el-button>
           </template>
         </el-table-column>
       </el-table>
@@ -149,22 +133,6 @@
         <el-form-item label="店铺名称" prop="store_name">
           <el-input v-model="editForm.store_name" />
         </el-form-item>
-        
-        <el-form-item label="商家类型" prop="merchant_type">
-          <el-select v-model="editForm.merchant_type" placeholder="请选择商家类型">
-            <el-option label="个人商家" value="personal" />
-            <el-option label="企业商家" value="enterprise" />
-          </el-select>
-        </el-form-item>
-        
-        <el-form-item label="审核状态" prop="status">
-          <el-select v-model="editForm.status" placeholder="请选择审核状态">
-            <el-option label="待审核" value="pending" />
-            <el-option label="审核通过" value="approved" />
-            <el-option label="审核拒绝" value="rejected" />
-            <el-option label="已禁用" value="disabled" />
-          </el-select>
-        </el-form-item>
       </el-form>
       
       <template #footer>
@@ -233,9 +201,7 @@ const editFormRef = ref<FormInstance>()
 const editDialogTitle = ref('编辑商家')
 const editForm = reactive({
   merchant_id: 0,
-  store_name: '',
-  merchant_type: 'personal' as Merchant['merchant_type'],
-  status: 'pending' as Merchant['status']
+  store_name: ''
 })
 
 // 编辑表单验证规则
@@ -243,12 +209,6 @@ const editRules: FormRules = {
   store_name: [
     { required: true, message: '请输入店铺名称', trigger: 'blur' },
     { min: 2, max: 50, message: '店铺名称长度在 2 到 50 个字符', trigger: 'blur' }
-  ],
-  merchant_type: [
-    { required: true, message: '请选择商家类型', trigger: 'change' }
-  ],
-  status: [
-    { required: true, message: '请选择审核状态', trigger: 'change' }
   ]
 }
 
@@ -269,7 +229,6 @@ const getStatusTag = (status: string) => {
     approved: 'success',
     rejected: 'danger',
     disabled: 'info',
-    locked: 'danger',
     // 添加其他可能的状态值
     active: 'success',
     inactive: 'info'
@@ -284,8 +243,7 @@ const getStatusText = (status: string) => {
     pending: '待审核',
     approved: '审核通过',
     rejected: '审核拒绝',
-    disabled: '已禁用',
-    locked: '已锁定'
+    disabled: '已禁用'
   }
   return texts[status] || status
 }
@@ -329,7 +287,7 @@ const loadMerchants = async () => {
       merchant_name: user.account || '未知商家', // 使用账号作为商家姓名
       phone: user.phone || '', // 后端未返回手机号，设为空
       merchant_type: 'personal', // 后端未返回商家类型，默认个人商家
-      status: user.status === 'active' ? 'approved' : user.status === 'inactive' ? 'disabled' : user.status === 'locked' ? 'pending' : 'pending', // 转换状态
+      status: user.status === 'active' ? 'approved' : user.status === 'inactive' ? 'disabled' : 'pending', // 转换状态
       product_count: 0, // 后端未返回商品数量
       order_count: 0, // 后端未返回订单数量
       total_sales: 0, // 后端未返回总销售额
@@ -374,8 +332,6 @@ const openEditDialog = (merchant: Merchant) => {
   editDialogTitle.value = `编辑商家 - ${merchant.store_name}`
   editForm.merchant_id = merchant.merchant_id
   editForm.store_name = merchant.store_name
-  editForm.merchant_type = merchant.merchant_type
-  editForm.status = merchant.status
   editVisible.value = true
 }
 
@@ -398,26 +354,8 @@ const submitEdit = async () => {
     // 更新本地商家数据
     const merchantIndex = merchantList.value.findIndex(merchant => merchant.merchant_id === editForm.merchant_id)
     if (merchantIndex !== -1) {
-      const target = merchantList.value[merchantIndex]
-      if (target) {
-        merchantList.value[merchantIndex] = {
-          ...target,
-          store_name: editForm.store_name,
-          merchant_type: editForm.merchant_type,
-          status: editForm.status,
-          merchant_id: target.merchant_id, // 确保merchant_id存在
-          merchant_name: target.merchant_name,
-          phone: target.phone,
-          product_count: target.product_count,
-          order_count: target.order_count,
-          total_sales: target.total_sales,
-          customer_count: target.customer_count,
-          create_time: target.create_time,
-          last_login: target.last_login,
-          store_description: target.store_description,
-          store_address: target.store_address,
-          business_license: target.business_license
-        }
+      if (merchantList.value[merchantIndex]) {
+        merchantList.value[merchantIndex].store_name = editForm.store_name
       }
     }
     
@@ -543,71 +481,7 @@ const toggleMerchantStatus = async (merchant: Merchant, actionType: 'enable' | '
   }
 }
 
-// 锁定商家
-const lockMerchant = async (merchant: Merchant) => {
-  try {
-    await ElMessageBox.confirm(
-      `确定要锁定商家 "${merchant.store_name}" 吗？`,
-      '锁定商家',
-      {
-        confirmButtonText: '确定',
-        cancelButtonText: '取消',
-        type: 'warning'
-      }
-    )
-    
-    // 调用新的审核商家接口进行锁定
-    await adminAPI.auditMerchant({
-      id: merchant.merchant_id,
-      status: 'locked'
-    })
-    
-    // 更新本地状态
-    merchant.status = 'disabled'
-    ElMessage.success('锁定商家成功')
-    
-  } catch (error) {
-    console.error('锁定商家失败:', error)
-    
-    // 如果是用户取消操作，不显示错误信息
-    if (error !== 'cancel') {
-      ElMessage.error('锁定商家失败')
-    }
-  }
-}
 
-// 解锁商家
-const unlockMerchant = async (merchant: Merchant) => {
-  try {
-    await ElMessageBox.confirm(
-      `确定要解锁商家 "${merchant.store_name}" 吗？`,
-      '解锁商家',
-      {
-        confirmButtonText: '确定',
-        cancelButtonText: '取消',
-        type: 'success'
-      }
-    )
-    
-    // 调用新的审核商家接口进行解锁（解锁后设为active状态）
-    await adminAPI.auditMerchant({
-      id: merchant.merchant_id,
-      status: 'active'
-    })
-    
-    // 更新本地状态
-    merchant.status = 'approved'
-    ElMessage.success('解锁商家成功')
-    
-  } catch (error) {
-    console.error('解锁商家失败:', error)
-    
-    // 如果是用户取消操作，不显示错误信息
-    if (error !== 'cancel') {
-      ElMessage.error('解锁商家失败')
-    }
-  }
-}
 
 // 导出商家数据
 const exportMerchants = () => {
