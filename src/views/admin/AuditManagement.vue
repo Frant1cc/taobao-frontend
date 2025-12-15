@@ -63,10 +63,7 @@
             <div class="item-info">
               <span>申请人：{{ item.applicant }}</span>
               <span>申请时间：{{ item.applyTime }}</span>
-              <span v-if="item.auditTime">审核时间：{{ item.auditTime }}</span>
-            </div>
-            <div v-if="item.remark" class="item-remark">
-              审核意见：{{ item.remark }}
+              <span v-if="(item as AuditItem).auditTime">审核时间：{{ (item as AuditItem).auditTime }}</span>
             </div>
           </div>
           <div class="item-actions">
@@ -125,8 +122,19 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, computed } from 'vue'
+import { ref, reactive, computed, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import { adminAPI } from '@/api'
+
+interface PendingMerchant {
+  userId: number
+  account: string
+  userType: string
+  status: string
+  username: string | null
+  createTime: string
+  updateTime: string
+}
 
 interface AuditItem {
   id: number
@@ -144,6 +152,16 @@ interface AuditItem {
 const filterType = ref('')
 const filterStatus = ref('')
 
+// 加载状态
+const loading = ref(false)
+
+// 分页信息
+const pagination = reactive({
+  current: 1,
+  size: 10,
+  total: 0
+})
+
 // 审核统计
 const stats = reactive({
   pendingCount: 0,
@@ -152,49 +170,21 @@ const stats = reactive({
   totalCount: 0
 })
 
-// 审核列表数据
-const auditItems = ref<AuditItem[]>([
-  {
-    id: 1,
+// 待审核商家列表
+const pendingMerchants = ref<PendingMerchant[]>([])
+
+// 审核列表数据（转换为前端需要的格式）
+const auditItems = computed(() => {
+  return pendingMerchants.value.map((merchant, index) => ({
+    id: merchant.userId,
     type: 'merchant_register',
-    title: '商家注册申请 - 时尚女装店',
-    applicant: '张美丽',
-    applyTime: '2024-03-20 10:30:00',
-    status: 'pending',
+    title: `商家注册申请 - ${merchant.username || merchant.account}`,
+    applicant: merchant.username || merchant.account,
+    applyTime: merchant.createTime,
+    status: 'pending' as const,
     icon: '🏪'
-  },
-  {
-    id: 2,
-    type: 'product_publish',
-    title: '商品上架申请 - iPhone 15 Pro',
-    applicant: '数码科技旗舰店',
-    applyTime: '2024-03-20 09:15:00',
-    auditTime: '2024-03-20 14:20:00',
-    status: 'approved',
-    remark: '商品信息完整，图片清晰',
-    icon: '📱'
-  },
-  {
-    id: 3,
-    type: 'qualification',
-    title: '资质认证申请 - 食品经营许可证',
-    applicant: '美食特产店',
-    applyTime: '2024-03-19 16:45:00',
-    auditTime: '2024-03-20 08:30:00',
-    status: 'rejected',
-    remark: '证件照片模糊，请重新上传',
-    icon: '📄'
-  },
-  {
-    id: 4,
-    type: 'merchant_register',
-    title: '商家注册申请 - 家居生活馆',
-    applicant: '赵家居',
-    applyTime: '2024-03-19 14:20:00',
-    status: 'pending',
-    icon: '🏪'
-  }
-])
+  }))
+})
 
 // 审核对话框
 const auditDialogVisible = ref(false)
@@ -220,34 +210,70 @@ const filteredAuditItems = computed(() => {
   return items
 })
 
+// 加载待审核商家列表
+const loadPendingMerchants = async () => {
+  loading.value = true
+  
+  try {
+    const response = await adminAPI.getPendingMerchantList({
+      pageNum: pagination.current,
+      pageSize: pagination.size
+    })
+    
+    pendingMerchants.value = response.list
+    pagination.total = response.total
+    
+    // 更新统计信息
+    updateStats()
+    
+  } catch (error) {
+    console.error('加载待审核商家列表失败:', error)
+    ElMessage.error('加载待审核商家列表失败')
+  } finally {
+    loading.value = false
+  }
+}
+
 // 更新统计信息
 const updateStats = () => {
-  stats.pendingCount = auditItems.value.filter(item => item.status === 'pending').length
-  stats.approvedCount = auditItems.value.filter(item => item.status === 'approved').length
-  stats.rejectedCount = auditItems.value.filter(item => item.status === 'rejected').length
-  stats.totalCount = auditItems.value.length
+  stats.pendingCount = pendingMerchants.value.length
+  stats.approvedCount = 0 // 已通过的商家不在待审核列表中
+  stats.rejectedCount = 0 // 已拒绝的商家不在待审核列表中
+  stats.totalCount = pendingMerchants.value.length
 }
 
 // 处理审核
-const handleAudit = (item: AuditItem, result: string) => {
+const handleAudit = async (item: AuditItem, result: string) => {
   if (result === 'approved') {
     // 直接通过
-    ElMessageBox.confirm(
-      `确定要通过 "${item.title}" 的审核吗？`,
-      '审核通过',
-      {
-        confirmButtonText: '确定',
-        cancelButtonText: '取消',
-        type: 'success'
-      }
-    ).then(() => {
-      item.status = 'approved'
-      item.auditTime = new Date().toLocaleString('zh-CN')
+    try {
+      await ElMessageBox.confirm(
+        `确定要通过 "${item.title}" 的审核吗？`,
+        '审核通过',
+        {
+          confirmButtonText: '确定',
+          cancelButtonText: '取消',
+          type: 'success'
+        }
+      )
+      
+      // 调用审核商家接口
+      await adminAPI.auditMerchant({
+        id: item.id,
+        status: 'active'
+      })
+      
+      // 从待审核列表中移除已审核的商家
+      pendingMerchants.value = pendingMerchants.value.filter(merchant => merchant.userId !== item.id)
       updateStats()
       ElMessage.success('审核通过成功')
-    }).catch(() => {
-      // 用户取消操作
-    })
+      
+    } catch (error) {
+      if (error !== 'cancel') {
+        console.error('审核通过失败:', error)
+        ElMessage.error('审核通过失败')
+      }
+    }
   } else {
     // 拒绝审核，需要填写意见
     currentAuditItem = item
@@ -263,12 +289,16 @@ const submitAudit = async () => {
   if (!currentAuditItem) return
   
   try {
-currentAuditItem.status = auditForm.result as 'pending' | 'approved' | 'rejected'
-    currentAuditItem.auditTime = new Date().toLocaleString('zh-CN')
+    // 调用审核商家接口
+    await adminAPI.auditMerchant({
+      id: currentAuditItem.id,
+      status: auditForm.result === 'approved' ? 'active' : 'inactive'
+    })
     
-    if (auditForm.remark) {
-      currentAuditItem.remark = auditForm.remark
-    }
+    // 从待审核列表中移除已审核的商家
+    pendingMerchants.value = pendingMerchants.value.filter(
+      merchant => merchant.userId !== currentAuditItem!.id
+    )
     
     updateStats()
     
@@ -283,9 +313,15 @@ currentAuditItem.status = auditForm.result as 'pending' | 'approved' | 'rejected
     auditForm.remark = ''
     
   } catch (error) {
+    console.error('审核操作失败:', error)
     ElMessage.error('审核操作失败')
   }
 }
+
+// 组件挂载时加载数据
+onMounted(() => {
+  loadPendingMerchants()
+})
 
 // 初始化统计信息
 updateStats()

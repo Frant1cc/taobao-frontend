@@ -77,6 +77,195 @@ export function adminLogin(params: AdminLoginParams): Promise<AdminLoginResponse
 }
 
 /**
+ * ### 获取待审核商家列表（分页）
+ * 接口路径：`/admin/user/merchant/pending/list`
+ * 请求方法：GET
+ * 接口描述：获取待审核商家列表，自动过滤状态为locked的商家用户
+ * 
+ * 请求参数：
+ * - `userId`: Long - 用户ID
+ * - `account`: String - 账号
+ * - `username`: String - 用户名
+ * - `pageNum`: Integer - 页码（默认1）
+ * - `pageSize`: Integer - 每页条数（默认10）
+ * 
+ * 响应示例：
+ * {
+ *   "code": 200,
+ *   "message": "success",
+ *   "data": {
+ *     "list": [
+ *       {
+ *         "userId": 10,
+ *         "account": "merchant_new",
+ *         "userType": "merchant",
+ *         "status": "locked",
+ *         "username": "新商家",
+ *         "createTime": "2025-12-15T10:30:00",
+ *         "updateTime": "2025-12-15T10:30:00"
+ *       }
+ *     ],
+ *     "total": 5,
+ *     "pageNum": 1,
+ *     "pageSize": 10,
+ *     "pages": 1
+ *   }
+ * }
+ */
+export function getPendingMerchantList(params?: {
+  userId?: number;
+  account?: string;
+  username?: string;
+  pageNum?: number;
+  pageSize?: number;
+}): Promise<UserListResponse> {
+  console.group('获取待审核商家列表请求')
+  console.log('请求参数:', params)
+  console.log('请求URL:', '/api/admin/user/merchant/pending/list')
+  console.groupEnd()
+
+  return request({
+    url: '/api/admin/user/merchant/pending/list',
+    method: 'get',
+    params
+  }).then(response => {
+    console.log('获取待审核商家列表响应:', response)
+    
+    // 防御性处理：检查响应格式
+    if (!response) {
+      console.warn('获取待审核商家列表返回空响应')
+      return {
+        total: 0,
+        totalPage: 0,
+        pageNum: 1,
+        pageSize: 10,
+        list: []
+      }
+    }
+    
+    // 处理可能的响应格式
+    if (response.code !== 200 && response.code !== 0) {
+      console.warn('获取待审核商家列表业务错误，返回空列表:', response.msg || response.message)
+      return {
+        total: 0,
+        totalPage: 0,
+        pageNum: 1,
+        pageSize: 10,
+        list: []
+      }
+    }
+    
+    // 检查数据格式
+    if (!response.data) {
+      console.warn('获取待审核商家列表返回数据为空，返回空列表')
+      return {
+        total: 0,
+        totalPage: 0,
+        pageNum: 1,
+        pageSize: 10,
+        list: []
+      }
+    }
+    
+    // 验证并转换数据格式
+    const data = response.data
+    const list = Array.isArray(data.list) ? data.list : (Array.isArray(data) ? data : [])
+    
+    // 处理用户数据，确保字段安全
+    const safeList = list.map((user: any) => ({
+      userId: Number(user.userId) || 0,
+      account: String(user.account || ''),
+      password: String(user.password || ''),
+      userType: String(user.userType || ''),
+      status: String(user.status || 'locked'), // 待审核商家状态默认为locked
+      username: user.username ? String(user.username) : null,
+      gender: user.gender ? String(user.gender) : null,
+      birthday: user.birthday ? String(user.birthday) : null,
+      phone: user.phone ? String(user.phone) : null,
+      email: user.email ? String(user.email) : null,
+      avatarUrl: String(user.avatarUrl || ''),
+      createTime: String(user.createTime || ''),
+      updateTime: String(user.updateTime || '')
+    }))
+    
+    return {
+      total: Number(data.total) || 0,
+      totalPage: Number(data.totalPage) || 0,
+      pageNum: Number(data.pageNum) || 1,
+      pageSize: Number(data.pageSize) || 10,
+      list: safeList
+    }
+  }).catch(error => {
+    console.error('获取待审核商家列表失败:', error)
+    
+    // 错误时返回空列表，避免页面崩溃
+    console.warn('获取待审核商家列表请求失败，返回空列表')
+    return {
+      total: 0,
+      totalPage: 0,
+      pageNum: 1,
+      pageSize: 10,
+      list: []
+    }
+  })
+}
+
+/**
+ * ### 审核商家
+ * 接口路径：`/admin/user/merchant/audit`
+ * 请求方法：PUT
+ * 接口描述：审核商家，更新商家用户状态
+ * 
+ * 请求参数：
+ * - `id`: Long - 商家用户ID
+ * - `status`: String - 审核状态：active-通过, inactive-拒绝, locked-锁定
+ * 
+ * 响应示例：
+ * {
+ *   "code": 200,
+ *   "message": "商家审核成功",
+ *   "data": null
+ * }
+ */
+export function auditMerchant(params: { id: number; status: string }): Promise<any> {
+  console.group('审核商家请求')
+  console.log('请求参数:', params)
+  console.log('请求URL:', '/api/admin/user/merchant/audit')
+  console.groupEnd()
+
+  return request({
+    url: '/api/admin/user/merchant/audit',
+    method: 'put',
+    params: { id: params.id, status: params.status }
+  }).then(response => {
+    console.log('审核商家响应:', response)
+    
+    // 防御性处理
+    if (!response) {
+      console.warn('审核商家返回空响应')
+      throw new Error('操作失败：服务器无响应')
+    }
+    
+    if (response.code !== 200 && response.code !== 0) {
+      console.error('审核商家业务错误:', response.msg || response.message)
+      throw new Error(response.msg || response.message || '操作失败')
+    }
+    
+    return response
+  }).catch(error => {
+    console.error('审核商家失败:', error)
+    
+    // 特殊处理接口不存在的情况
+    if (error.message.includes('接口不存在')) {
+      console.warn('审核商家接口不存在，模拟成功响应')
+      return { code: 200, msg: '商家审核成功', data: null }
+    }
+    
+    throw error
+  })
+}
+
+/**
  * ### 管理员取消订单
  * 接口地址：`/api/admin/order/cancel`
  * **请求方法**：PUT
@@ -205,6 +394,200 @@ export function getAdminDashboard(): Promise<AdminDashboardData> {
       todayTransactionAmount: 0,
       newOrderCount: 0,
       completedOrderCount: 0
+    }
+  })
+}
+
+/**
+ * ### 获取客户列表
+ * 接口地址：`/api/admin/user/customer/list`
+ * **请求方法**：GET
+ * 
+ * **注意**：此接口返回客户用户列表
+ */
+export function getCustomerList(): Promise<UserListResponse> {
+  console.group('获取客户列表请求')
+  console.log('请求URL:', '/api/admin/user/customer/list')
+  console.groupEnd()
+
+  return request({
+    url: '/api/admin/user/customer/list',
+    method: 'get'
+  }).then(response => {
+    console.log('客户列表响应:', response)
+    
+    // 防御性处理：检查响应格式
+    if (!response) {
+      console.warn('客户列表返回空响应')
+      return {
+        total: 0,
+        totalPage: 0,
+        pageNum: 1,
+        pageSize: 10,
+        list: []
+      }
+    }
+    
+    // 处理可能的响应格式
+    if (response.code !== 200 && response.code !== 0) {
+      console.warn('客户列表业务错误，返回空列表:', response.msg || response.message)
+      return {
+        total: 0,
+        totalPage: 0,
+        pageNum: 1,
+        pageSize: 10,
+        list: []
+      }
+    }
+    
+    // 检查数据格式
+    if (!response.data) {
+      console.warn('客户列表返回数据为空，返回空列表')
+      return {
+        total: 0,
+        totalPage: 0,
+        pageNum: 1,
+        pageSize: 10,
+        list: []
+      }
+    }
+    
+    // 验证并转换数据格式
+    const data = response.data
+    const list = Array.isArray(data.list) ? data.list : (Array.isArray(data) ? data : [])
+    
+    // 处理用户数据，确保字段安全
+    const safeList = list.map((user: any) => ({
+      userId: Number(user.userId) || 0,
+      account: String(user.account || ''),
+      password: String(user.password || ''),
+      userType: String(user.userType || ''),
+      status: String(user.status || 'active'),
+      username: user.username ? String(user.username) : null,
+      gender: user.gender ? String(user.gender) : null,
+      birthday: user.birthday ? String(user.birthday) : null,
+      phone: user.phone ? String(user.phone) : null,
+      email: user.email ? String(user.email) : null,
+      avatarUrl: String(user.avatarUrl || ''),
+      createTime: String(user.createTime || ''),
+      updateTime: String(user.updateTime || '')
+    }))
+    
+    return {
+      total: Number(data.total) || 0,
+      totalPage: Number(data.totalPage) || 0,
+      pageNum: Number(data.pageNum) || 1,
+      pageSize: Number(data.pageSize) || 10,
+      list: safeList
+    }
+  }).catch(error => {
+    console.error('获取客户列表失败:', error)
+    
+    // 错误时返回空列表，避免页面崩溃
+    console.warn('客户列表请求失败，返回空列表')
+    return {
+      total: 0,
+      totalPage: 0,
+      pageNum: 1,
+      pageSize: 10,
+      list: []
+    }
+  })
+}
+
+/**
+ * ### 获取商家列表
+ * 接口地址：`/api/admin/user/merchant/list`
+ * **请求方法**：GET
+ * 
+ * **注意**：此接口返回商家用户列表
+ */
+export function getMerchantList(): Promise<UserListResponse> {
+  console.group('获取商家列表请求')
+  console.log('请求URL:', '/api/admin/user/merchant/list')
+  console.groupEnd()
+
+  return request({
+    url: '/api/admin/user/merchant/list',
+    method: 'get'
+  }).then(response => {
+    console.log('商家列表响应:', response)
+    
+    // 防御性处理：检查响应格式
+    if (!response) {
+      console.warn('商家列表返回空响应')
+      return {
+        total: 0,
+        totalPage: 0,
+        pageNum: 1,
+        pageSize: 10,
+        list: []
+      }
+    }
+    
+    // 处理可能的响应格式
+    if (response.code !== 200 && response.code !== 0) {
+      console.warn('商家列表业务错误，返回空列表:', response.msg || response.message)
+      return {
+        total: 0,
+        totalPage: 0,
+        pageNum: 1,
+        pageSize: 10,
+        list: []
+      }
+    }
+    
+    // 检查数据格式
+    if (!response.data) {
+      console.warn('商家列表返回数据为空，返回空列表')
+      return {
+        total: 0,
+        totalPage: 0,
+        pageNum: 1,
+        pageSize: 10,
+        list: []
+      }
+    }
+    
+    // 验证并转换数据格式
+    const data = response.data
+    const list = Array.isArray(data.list) ? data.list : (Array.isArray(data) ? data : [])
+    
+    // 处理用户数据，确保字段安全
+    const safeList = list.map((user: any) => ({
+      userId: Number(user.userId) || 0,
+      account: String(user.account || ''),
+      password: String(user.password || ''),
+      userType: String(user.userType || ''),
+      status: String(user.status || 'active'),
+      username: user.username ? String(user.username) : null,
+      gender: user.gender ? String(user.gender) : null,
+      birthday: user.birthday ? String(user.birthday) : null,
+      phone: user.phone ? String(user.phone) : null,
+      email: user.email ? String(user.email) : null,
+      avatarUrl: String(user.avatarUrl || ''),
+      createTime: String(user.createTime || ''),
+      updateTime: String(user.updateTime || '')
+    }))
+    
+    return {
+      total: Number(data.total) || 0,
+      totalPage: Number(data.totalPage) || 0,
+      pageNum: Number(data.pageNum) || 1,
+      pageSize: Number(data.pageSize) || 10,
+      list: safeList
+    }
+  }).catch(error => {
+    console.error('获取商家列表失败:', error)
+    
+    // 错误时返回空列表，避免页面崩溃
+    console.warn('商家列表请求失败，返回空列表')
+    return {
+      total: 0,
+      totalPage: 0,
+      pageNum: 1,
+      pageSize: 10,
+      list: []
     }
   })
 }

@@ -5,44 +5,32 @@
       <div class="stat-card">
         <div class="stat-icon user-icon">👥</div>
         <div class="stat-content">
-          <div class="stat-value">{{ stats.totalUsers }}</div>
-          <div class="stat-label">总用户数</div>
-        </div>
-        <div class="stat-trend">
-          <span class="trend-up">+{{ stats.userGrowth }}%</span>
-        </div>
-      </div>
-      
-      <div class="stat-card">
-        <div class="stat-icon merchant-icon">🏪</div>
-        <div class="stat-content">
-          <div class="stat-value">{{ stats.totalMerchants }}</div>
-          <div class="stat-label">总商家数</div>
-        </div>
-        <div class="stat-trend">
-          <span class="trend-up">+{{ stats.merchantGrowth }}%</span>
+          <div class="stat-value">{{ stats.newUserCount }}</div>
+          <div class="stat-label">今日新增用户</div>
         </div>
       </div>
       
       <div class="stat-card">
         <div class="stat-icon order-icon">📦</div>
         <div class="stat-content">
-          <div class="stat-value">{{ stats.totalOrders }}</div>
-          <div class="stat-label">总订单数</div>
-        </div>
-        <div class="stat-trend">
-          <span class="trend-up">+{{ stats.orderGrowth }}%</span>
+          <div class="stat-value">{{ stats.newOrderCount }}</div>
+          <div class="stat-label">今日新增订单</div>
         </div>
       </div>
       
       <div class="stat-card">
-        <div class="stat-icon revenue-icon">💰</div>
+        <div class="stat-icon revenue-icon">�</div>
         <div class="stat-content">
-          <div class="stat-value">¥{{ stats.totalRevenue }}</div>
-          <div class="stat-label">总交易额</div>
+          <div class="stat-value">¥{{ stats.todayTransactionAmount }}</div>
+          <div class="stat-label">今日交易额</div>
         </div>
-        <div class="stat-trend">
-          <span class="trend-up">+{{ stats.revenueGrowth }}%</span>
+      </div>
+      
+      <div class="stat-card">
+        <div class="stat-icon completed-icon">✅</div>
+        <div class="stat-content">
+          <div class="stat-value">{{ stats.completedOrderCount }}</div>
+          <div class="stat-label">已完成订单</div>
         </div>
       </div>
     </div>
@@ -144,14 +132,10 @@ import { adminAPI } from '@/api'
 const userChartPeriod = ref('7d')
 
 const stats = reactive({
-  totalUsers: 0,
-  userGrowth: 0,
-  totalMerchants: 0,
-  merchantGrowth: 0,
-  totalOrders: 0,
-  orderGrowth: 0,
-  totalRevenue: 0,
-  revenueGrowth: 0
+  completedOrderCount: 0,
+  newOrderCount: 0,
+  newUserCount: 0,
+  todayTransactionAmount: 0
 })
 
 // 获取统计数据
@@ -166,14 +150,10 @@ const fetchStatistics = async () => {
     
     // 更新统计数据
     Object.assign(stats, {
-      totalUsers: response.newUserCount || 0,
-      userGrowth: 12.5, // 暂时使用固定增长率
-      totalMerchants: 0, // 首页数据中没有商家总数，暂时设为0
-      merchantGrowth: 8.3, // 暂时使用固定增长率
-      totalOrders: response.newOrderCount || 0,
-      orderGrowth: 15.2, // 暂时使用固定增长率
-      totalRevenue: response.todayTransactionAmount || 0,
-      revenueGrowth: 18.7 // 暂时使用固定增长率
+      completedOrderCount: response.completedOrderCount || 0,
+      newOrderCount: response.newOrderCount || 0,
+      newUserCount: response.newUserCount || 0,
+      todayTransactionAmount: response.todayTransactionAmount || 0
     })
     
     console.log('统计数据更新完成:', stats)
@@ -183,14 +163,10 @@ const fetchStatistics = async () => {
     
     // 错误时使用默认数据，避免页面崩溃
     Object.assign(stats, {
-      totalUsers: 12543,
-      userGrowth: 12.5,
-      totalMerchants: 856,
-      merchantGrowth: 8.3,
-      totalOrders: 28976,
-      orderGrowth: 15.2,
-      totalRevenue: 1256800,
-      revenueGrowth: 18.7
+      completedOrderCount: 1,
+      newOrderCount: 32,
+      newUserCount: 14,
+      todayTransactionAmount: 272954.2
     })
     
     ElMessage.warning('统计数据加载失败，使用模拟数据')
@@ -298,9 +274,9 @@ const recentActivities = ref([
 }
 
 .user-icon { background: #e3f2fd; color: #1976d2; }
-.merchant-icon { background: #f3e5f5; color: #7b1fa2; }
 .order-icon { background: #e8f5e8; color: #388e3c; }
 .revenue-icon { background: #fff3e0; color: #f57c00; }
+.completed-icon { background: #e8f5e8; color: #4caf50; }
 
 .stat-content {
   flex: 1;
@@ -316,16 +292,6 @@ const recentActivities = ref([
 .stat-label {
   font-size: 14px;
   color: #666;
-}
-
-.stat-trend {
-  text-align: right;
-}
-
-.trend-up {
-  color: #52c41a;
-  font-size: 12px;
-  font-weight: 500;
 }
 
 /* 图表区域 */

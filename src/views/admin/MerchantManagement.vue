@@ -1,93 +1,23 @@
 <template>
   <div class="merchant-management no-focus-all">
-    <!-- 搜索和筛选区域 -->
-    <div class="filter-section">
-      <div class="filter-row">
-        <el-input
-          v-model="searchQuery"
-          placeholder="搜索商家ID、店铺名称、手机号"
-          style="width: 300px"
-          clearable
-          @clear="handleSearch"
-          @keyup.enter="handleSearch"
-        >
-          <template #append>
-            <el-button @click="handleSearch">
-              <el-icon><search /></el-icon>
-            </el-button>
-          </template>
-        </el-input>
-        
-        <div class="filter-controls">
-          <el-select v-model="filterStatus" placeholder="审核状态" clearable>
-            <el-option label="待审核" value="pending" />
-            <el-option label="审核通过" value="approved" />
-            <el-option label="审核拒绝" value="rejected" />
-            <el-option label="已禁用" value="disabled" />
-          </el-select>
-          
-          <el-select v-model="filterType" placeholder="商家类型" clearable>
-            <el-option label="个人商家" value="personal" />
-            <el-option label="企业商家" value="enterprise" />
-          </el-select>
-          
-          <el-date-picker
-            v-model="dateRange"
-            type="daterange"
-            range-separator="至"
-            start-placeholder="注册开始日期"
-            end-placeholder="注册结束日期"
-            value-format="YYYY-MM-DD"
-          />
-        </div>
-      </div>
-      
-      <div class="action-buttons">
-        <el-button type="primary" @click="handleSearch">
-          <el-icon><search /></el-icon>
-          搜索
-        </el-button>
-        <el-button @click="resetFilters">
-          <el-icon><refresh /></el-icon>
-          重置
-        </el-button>
-        <el-button type="success" @click="exportMerchants">
-          <el-icon><download /></el-icon>
-          导出数据
-        </el-button>
-      </div>
-    </div>
-    
     <!-- 商家列表 -->
     <div class="merchant-list">
       <el-table :data="merchantList" v-loading="loading" style="width: 100%">
-        <el-table-column prop="merchant_id" label="商家ID" width="100" />
-        <el-table-column prop="store_name" label="店铺名称" width="150" />
-        <el-table-column prop="merchant_name" label="商家姓名" width="120" />
-        <el-table-column prop="phone" label="手机号" width="130" />
-        <el-table-column prop="merchant_type" label="商家类型" width="100">
-          <template #default="{ row }">
-            <el-tag :type="row.merchant_type === 'enterprise' ? 'success' : ''">
-              {{ getMerchantTypeText(row.merchant_type) }}
-            </el-tag>
-          </template>
-        </el-table-column>
-        <el-table-column prop="status" label="审核状态" width="100">
+        <el-table-column prop="merchant_id" label="商家ID" width="150" />
+        <el-table-column prop="store_name" label="店铺名称" min-width="300" />
+        <el-table-column prop="status" label="审核状态" width="120">
           <template #default="{ row }">
             <el-tag :type="getStatusTag(row.status)" effect="light">
               {{ getStatusText(row.status) }}
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column prop="product_count" label="商品数量" width="100" />
-        <el-table-column prop="order_count" label="订单数量" width="100" />
-        <el-table-column prop="create_time" label="注册时间" width="160" />
-        <el-table-column label="操作" width="250" fixed="right">
+        <el-table-column label="操作" width="280" fixed="right">
           <template #default="{ row }">
             <el-button size="small" @click="viewMerchantDetail(row)">
               查看
             </el-button>
-            <el-button size="small" type="primary" @click="editMerchant(row)">
+            <el-button size="small" type="primary" @click="openEditDialog(row)">
               编辑
             </el-button>
             <el-button 
@@ -110,7 +40,7 @@
               v-if="row.status === 'approved'"
               size="small" 
               type="warning"
-              @click="toggleMerchantStatus(row)"
+              @click="toggleMerchantStatus(row, 'disable')"
             >
               禁用
             </el-button>
@@ -118,9 +48,25 @@
               v-if="row.status === 'disabled'"
               size="small" 
               type="success"
-              @click="toggleMerchantStatus(row)"
+              @click="toggleMerchantStatus(row, 'enable')"
             >
               启用
+            </el-button>
+            <el-button 
+              v-if="row.status === 'approved' || row.status === 'disabled'"
+              size="small" 
+              type="danger"
+              @click="lockMerchant(row)"
+            >
+              锁定
+            </el-button>
+            <el-button 
+              v-if="row.status === 'locked'"
+              size="small" 
+              type="success"
+              @click="unlockMerchant(row)"
+            >
+              解锁
             </el-button>
           </template>
         </el-table-column>
@@ -141,59 +87,24 @@
     </div>
     
     <!-- 商家详情对话框 -->
-    <el-dialog v-model="detailVisible" title="商家详情" width="700px">
+    <el-dialog v-model="detailVisible" title="商家详情" width="500px">
       <div v-if="currentMerchant" class="merchant-detail">
         <div class="detail-section">
           <h4>基本信息</h4>
-          <el-descriptions :column="2" border>
+          <el-descriptions :column="1" border>
             <el-descriptions-item label="商家ID">{{ currentMerchant.merchant_id }}</el-descriptions-item>
             <el-descriptions-item label="店铺名称">{{ currentMerchant.store_name }}</el-descriptions-item>
-            <el-descriptions-item label="商家姓名">{{ currentMerchant.merchant_name }}</el-descriptions-item>
-            <el-descriptions-item label="手机号">{{ currentMerchant.phone }}</el-descriptions-item>
             <el-descriptions-item label="商家类型">{{ getMerchantTypeText(currentMerchant.merchant_type) }}</el-descriptions-item>
             <el-descriptions-item label="审核状态">{{ getStatusText(currentMerchant.status) }}</el-descriptions-item>
-            <el-descriptions-item label="注册时间">{{ currentMerchant.create_time }}</el-descriptions-item>
-            <el-descriptions-item label="最后登录">{{ currentMerchant.last_login }}</el-descriptions-item>
           </el-descriptions>
         </div>
         
         <div class="detail-section">
-          <h4>店铺信息</h4>
+          <h4>其他信息</h4>
           <el-descriptions :column="1" border>
-            <el-descriptions-item label="店铺描述">{{ currentMerchant.store_description || '暂无描述' }}</el-descriptions-item>
-            <el-descriptions-item label="店铺地址">{{ currentMerchant.store_address || '暂无地址' }}</el-descriptions-item>
-            <el-descriptions-item label="营业执照">{{ currentMerchant.business_license || '未上传' }}</el-descriptions-item>
+            <el-descriptions-item label="手机号">{{ currentMerchant.phone || '未提供' }}</el-descriptions-item>
+            <el-descriptions-item label="注册时间">{{ currentMerchant.create_time || '未提供' }}</el-descriptions-item>
           </el-descriptions>
-        </div>
-        
-        <div class="detail-section">
-          <h4>经营数据</h4>
-          <el-row :gutter="20">
-            <el-col :span="6">
-              <div class="stat-item">
-                <div class="stat-value">{{ currentMerchant.product_count || 0 }}</div>
-                <div class="stat-label">商品数量</div>
-              </div>
-            </el-col>
-            <el-col :span="6">
-              <div class="stat-item">
-                <div class="stat-value">{{ currentMerchant.order_count || 0 }}</div>
-                <div class="stat-label">订单数量</div>
-              </div>
-            </el-col>
-            <el-col :span="6">
-              <div class="stat-item">
-                <div class="stat-value">¥{{ currentMerchant.total_sales || 0 }}</div>
-                <div class="stat-label">总销售额</div>
-              </div>
-            </el-col>
-            <el-col :span="6">
-              <div class="stat-item">
-                <div class="stat-value">{{ currentMerchant.customer_count || 0 }}</div>
-                <div class="stat-label">客户数量</div>
-              </div>
-            </el-col>
-          </el-row>
         </div>
       </div>
       
@@ -226,6 +137,41 @@
         <el-button type="primary" @click="submitAudit">确定</el-button>
       </template>
     </el-dialog>
+    
+    <!-- 编辑商家对话框 -->
+    <el-dialog v-model="editVisible" :title="editDialogTitle" width="500px">
+      <el-form 
+        ref="editFormRef" 
+        :model="editForm" 
+        :rules="editRules" 
+        label-width="80px"
+      >
+        <el-form-item label="店铺名称" prop="store_name">
+          <el-input v-model="editForm.store_name" />
+        </el-form-item>
+        
+        <el-form-item label="商家类型" prop="merchant_type">
+          <el-select v-model="editForm.merchant_type" placeholder="请选择商家类型">
+            <el-option label="个人商家" value="personal" />
+            <el-option label="企业商家" value="enterprise" />
+          </el-select>
+        </el-form-item>
+        
+        <el-form-item label="审核状态" prop="status">
+          <el-select v-model="editForm.status" placeholder="请选择审核状态">
+            <el-option label="待审核" value="pending" />
+            <el-option label="审核通过" value="approved" />
+            <el-option label="审核拒绝" value="rejected" />
+            <el-option label="已禁用" value="disabled" />
+          </el-select>
+        </el-form-item>
+      </el-form>
+      
+      <template #footer>
+        <el-button @click="editVisible = false">取消</el-button>
+        <el-button type="primary" @click="submitEdit">保存</el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
@@ -233,6 +179,8 @@
 import { ref, reactive, onMounted, computed } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Search, Refresh, Download } from '@element-plus/icons-vue'
+import type { FormInstance, FormRules } from 'element-plus'
+import { adminAPI } from '@/api'
 
 interface Merchant {
   merchant_id: number
@@ -279,77 +227,31 @@ const auditForm = reactive({
 })
 let auditMerchant: Merchant | null = null
 
-// 模拟商家数据
-const mockMerchants: Merchant[] = [
-  {
-    merchant_id: 20001,
-    store_name: '时尚女装店',
-    merchant_name: '张美丽',
-    phone: '13800138001',
-    merchant_type: 'personal',
-    status: 'pending',
-    product_count: 0,
-    order_count: 0,
-    total_sales: 0,
-    customer_count: 0,
-    create_time: '2024-03-15 10:30:00',
-    last_login: '2024-03-20 14:25:00',
-    store_description: '主营时尚女装、配饰等',
-    store_address: '北京市朝阳区建国路88号',
-    business_license: '已上传'
-  },
-  {
-    merchant_id: 20002,
-    store_name: '数码科技旗舰店',
-    merchant_name: '李科技',
-    phone: '13800138002',
-    merchant_type: 'enterprise',
-    status: 'approved',
-    product_count: 156,
-    order_count: 289,
-    total_sales: 125600,
-    customer_count: 89,
-    create_time: '2024-02-20 09:15:00',
-    last_login: '2024-03-20 16:40:00',
-    store_description: '专业数码产品供应商',
-    store_address: '深圳市南山区科技园',
-    business_license: '已上传'
-  },
-  {
-    merchant_id: 20003,
-    store_name: '美食特产店',
-    merchant_name: '王美食',
-    phone: '13800138003',
-    merchant_type: 'personal',
-    status: 'rejected',
-    product_count: 0,
-    order_count: 0,
-    total_sales: 0,
-    customer_count: 0,
-    create_time: '2024-03-10 14:20:00',
-    last_login: '2024-03-18 11:10:00',
-    store_description: '各地特色美食',
-    store_address: '上海市黄浦区南京路',
-    business_license: '未上传'
-  },
-  {
-    merchant_id: 20004,
-    store_name: '家居生活馆',
-    merchant_name: '赵家居',
-    phone: '13800138004',
-    merchant_type: 'enterprise',
-    status: 'disabled',
-    product_count: 45,
-    order_count: 67,
-    total_sales: 28900,
-    customer_count: 23,
-    create_time: '2024-01-10 16:45:00',
-    last_login: '2024-03-15 09:00:00',
-    store_description: '高品质家居用品',
-    store_address: '广州市天河区珠江新城',
-    business_license: '已上传'
-  }
-]
+// 编辑相关
+const editVisible = ref(false)
+const editFormRef = ref<FormInstance>()
+const editDialogTitle = ref('编辑商家')
+const editForm = reactive({
+  merchant_id: 0,
+  store_name: '',
+  merchant_type: 'personal' as Merchant['merchant_type'],
+  status: 'pending' as Merchant['status']
+})
+
+// 编辑表单验证规则
+const editRules: FormRules = {
+  store_name: [
+    { required: true, message: '请输入店铺名称', trigger: 'blur' },
+    { min: 2, max: 50, message: '店铺名称长度在 2 到 50 个字符', trigger: 'blur' }
+  ],
+  merchant_type: [
+    { required: true, message: '请选择商家类型', trigger: 'change' }
+  ],
+  status: [
+    { required: true, message: '请选择审核状态', trigger: 'change' }
+  ]
+}
+
 
 // 获取商家类型文本
 const getMerchantTypeText = (type: string) => {
@@ -366,8 +268,14 @@ const getStatusTag = (status: string) => {
     pending: 'warning',
     approved: 'success',
     rejected: 'danger',
-    disabled: 'info'
+    disabled: 'info',
+    locked: 'danger',
+    // 添加其他可能的状态值
+    active: 'success',
+    inactive: 'info'
   }
+  
+  // 如果找不到对应的类型，默认使用 'info'
   return tags[status] || 'info'
 }
 
@@ -376,7 +284,8 @@ const getStatusText = (status: string) => {
     pending: '待审核',
     approved: '审核通过',
     rejected: '审核拒绝',
-    disabled: '已禁用'
+    disabled: '已禁用',
+    locked: '已锁定'
   }
   return texts[status] || status
 }
@@ -407,36 +316,32 @@ const loadMerchants = async () => {
   loading.value = true
   
   try {
-    // 模拟API调用
-    await new Promise(resolve => setTimeout(resolve, 500))
+    // 调用真实API获取商家列表
+    const response = await adminAPI.getMerchantList()
     
-    // 模拟筛选逻辑
-    let filteredMerchants = [...mockMerchants]
+    // 根据后端返回的数据格式进行转换，只渲染后端返回的字段
+    merchantList.value = response.list.map((user: any) => ({
+      merchant_id: user.userId || 0,
+      store_name: user.username || '未命名店铺', // 使用账号作为店铺名称
+      merchant_name: user.account || '未知商家', // 使用账号作为商家姓名
+      phone: user.phone || '', // 后端未返回手机号，设为空
+      merchant_type: 'personal', // 后端未返回商家类型，默认个人商家
+      status: user.status === 'active' ? 'approved' : user.status === 'inactive' ? 'disabled' : user.status === 'locked' ? 'pending' : 'pending', // 转换状态
+      product_count: 0, // 后端未返回商品数量
+      order_count: 0, // 后端未返回订单数量
+      total_sales: 0, // 后端未返回总销售额
+      customer_count: 0, // 后端未返回客户数量
+      create_time: user.createTime || '', // 后端未返回注册时间
+      last_login: '', // 后端未返回最后登录时间
+      store_description: '', // 后端未返回店铺描述
+      store_address: '', // 后端未返回店铺地址
+      business_license: '未上传' // 后端未返回营业执照信息
+    }))
     
-    if (searchQuery.value) {
-      const query = searchQuery.value.toLowerCase()
-      filteredMerchants = filteredMerchants.filter(merchant => 
-        merchant.merchant_id.toString().includes(query) ||
-        merchant.store_name.toLowerCase().includes(query) ||
-        merchant.phone.includes(query)
-      )
-    }
-    
-    if (filterStatus.value) {
-      filteredMerchants = filteredMerchants.filter(merchant => merchant.status === filterStatus.value)
-    }
-    
-    if (filterType.value) {
-      filteredMerchants = filteredMerchants.filter(merchant => merchant.merchant_type === filterType.value)
-    }
-    
-    // 模拟分页
-    const start = (pagination.current - 1) * pagination.size
-    const end = start + pagination.size
-    merchantList.value = filteredMerchants.slice(start, end)
-    pagination.total = filteredMerchants.length
+    pagination.total = response.total
     
   } catch (error) {
+    console.error('加载商家列表失败:', error)
     ElMessage.error('加载商家列表失败')
   } finally {
     loading.value = false
@@ -461,9 +366,67 @@ const viewMerchantDetail = (merchant: Merchant) => {
   detailVisible.value = true
 }
 
-// 编辑商家
-const editMerchant = (merchant: Merchant) => {
-  ElMessage.info(`编辑商家 ${merchant.store_name} 功能开发中`)
+// 打开编辑对话框
+const openEditDialog = (merchant: Merchant) => {
+  editDialogTitle.value = `编辑商家 - ${merchant.store_name}`
+  editForm.merchant_id = merchant.merchant_id
+  editForm.store_name = merchant.store_name
+  editForm.merchant_type = merchant.merchant_type
+  editForm.status = merchant.status
+  editVisible.value = true
+}
+
+// 提交编辑
+const submitEdit = async () => {
+  if (!editFormRef.value) return
+  
+  try {
+    const valid = await editFormRef.value.validate()
+    if (!valid) return
+    
+    loading.value = true
+    
+    // 调用真实API更新用户信息（商家就是不同身份的用户）
+    await adminAPI.putAdminUserUpdate({
+      id: editForm.merchant_id,
+      username: editForm.store_name
+    })
+    
+    // 更新本地商家数据
+    const merchantIndex = merchantList.value.findIndex(merchant => merchant.merchant_id === editForm.merchant_id)
+    if (merchantIndex !== -1) {
+      const target = merchantList.value[merchantIndex]
+      if (target) {
+        merchantList.value[merchantIndex] = {
+          ...target,
+          store_name: editForm.store_name,
+          merchant_type: editForm.merchant_type,
+          status: editForm.status,
+          merchant_id: target.merchant_id, // 确保merchant_id存在
+          merchant_name: target.merchant_name,
+          phone: target.phone,
+          product_count: target.product_count,
+          order_count: target.order_count,
+          total_sales: target.total_sales,
+          customer_count: target.customer_count,
+          create_time: target.create_time,
+          last_login: target.last_login,
+          store_description: target.store_description,
+          store_address: target.store_address,
+          business_license: target.business_license
+        }
+      }
+    }
+    
+    ElMessage.success('商家信息更新成功')
+    editVisible.value = false
+    
+  } catch (error) {
+    console.error('更新商家信息失败:', error)
+    ElMessage.error('更新商家信息失败')
+  } finally {
+    loading.value = false
+  }
 }
 
 // 处理审核
@@ -478,9 +441,20 @@ const handleAudit = (merchant: Merchant, result: string) => {
         cancelButtonText: '取消',
         type: 'success'
       }
-    ).then(() => {
-      merchant.status = 'approved'
-      ElMessage.success('审核通过成功')
+    ).then(async () => {
+      try {
+        // 调用新的审核商家接口
+        await adminAPI.auditMerchant({
+          id: merchant.merchant_id,
+          status: 'active' // 通过审核，状态设为active
+        })
+        
+        merchant.status = 'approved'
+        ElMessage.success('审核通过成功')
+      } catch (error) {
+        console.error('审核通过失败:', error)
+        ElMessage.error('审核通过失败')
+      }
     }).catch(() => {
       // 用户取消操作
     })
@@ -498,6 +472,19 @@ const submitAudit = async () => {
   if (!auditMerchant) return
   
   try {
+    // 根据审核结果确定状态值
+    const statusMap = {
+      'approved': 'active',
+      'rejected': 'inactive'
+    }
+    
+    // 调用新的审核商家接口
+    await adminAPI.auditMerchant({
+      id: auditMerchant.merchant_id,
+      status: statusMap[auditForm.result as keyof typeof statusMap] || 'inactive'
+    })
+    
+    // 更新本地状态
     auditMerchant.status = auditForm.result as 'approved' | 'pending' | 'rejected' | 'disabled'
     
     if (auditForm.remark) {
@@ -511,13 +498,16 @@ const submitAudit = async () => {
     auditForm.remark = ''
     
   } catch (error) {
+    console.error('审核操作失败:', error)
     ElMessage.error('审核操作失败')
   }
 }
 
-// 切换商家状态
-const toggleMerchantStatus = async (merchant: Merchant) => {
-  const action = merchant.status === 'approved' ? '禁用' : '启用'
+// 切换商家状态（启用/禁用）
+const toggleMerchantStatus = async (merchant: Merchant, actionType: 'enable' | 'disable') => {
+  const action = actionType === 'disable' ? '禁用' : '启用'
+  const newStatus = actionType === 'disable' ? 'inactive' : 'active'
+  const targetStatus = actionType === 'disable' ? 'disabled' : 'approved'
   
   try {
     await ElMessageBox.confirm(
@@ -530,12 +520,89 @@ const toggleMerchantStatus = async (merchant: Merchant) => {
       }
     )
     
-    // 模拟状态切换
-    merchant.status = merchant.status === 'approved' ? 'disabled' : 'approved'
+    // 调用新的审核商家接口进行状态切换
+    await adminAPI.auditMerchant({
+      id: merchant.merchant_id,
+      status: newStatus
+    })
+    
+    // 更新本地状态
+    merchant.status = targetStatus
     ElMessage.success(`${action}商家成功`)
     
-  } catch {
-    // 用户取消操作
+  } catch (error) {
+    console.error('切换商家状态失败:', error)
+    
+    // 如果是用户取消操作，不显示错误信息
+    if (error !== 'cancel') {
+      ElMessage.error(`${action}商家失败`)
+    }
+  }
+}
+
+// 锁定商家
+const lockMerchant = async (merchant: Merchant) => {
+  try {
+    await ElMessageBox.confirm(
+      `确定要锁定商家 "${merchant.store_name}" 吗？`,
+      '锁定商家',
+      {
+        confirmButtonText: '确定',
+        cancelButtonText: '取消',
+        type: 'warning'
+      }
+    )
+    
+    // 调用新的审核商家接口进行锁定
+    await adminAPI.auditMerchant({
+      id: merchant.merchant_id,
+      status: 'locked'
+    })
+    
+    // 更新本地状态
+    merchant.status = 'disabled'
+    ElMessage.success('锁定商家成功')
+    
+  } catch (error) {
+    console.error('锁定商家失败:', error)
+    
+    // 如果是用户取消操作，不显示错误信息
+    if (error !== 'cancel') {
+      ElMessage.error('锁定商家失败')
+    }
+  }
+}
+
+// 解锁商家
+const unlockMerchant = async (merchant: Merchant) => {
+  try {
+    await ElMessageBox.confirm(
+      `确定要解锁商家 "${merchant.store_name}" 吗？`,
+      '解锁商家',
+      {
+        confirmButtonText: '确定',
+        cancelButtonText: '取消',
+        type: 'success'
+      }
+    )
+    
+    // 调用新的审核商家接口进行解锁（解锁后设为active状态）
+    await adminAPI.auditMerchant({
+      id: merchant.merchant_id,
+      status: 'active'
+    })
+    
+    // 更新本地状态
+    merchant.status = 'approved'
+    ElMessage.success('解锁商家成功')
+    
+  } catch (error) {
+    console.error('解锁商家失败:', error)
+    
+    // 如果是用户取消操作，不显示错误信息
+    if (error !== 'cancel') {
+      ElMessage.error('解锁商家失败')
+    }
   }
 }
 

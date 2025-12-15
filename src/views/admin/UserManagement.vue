@@ -1,63 +1,5 @@
 <template>
   <div class="user-management no-focus-all">
-    <!-- 搜索和筛选区域 -->
-    <div class="filter-section">
-      <div class="filter-row">
-        <el-input
-          v-model="searchQuery"
-          placeholder="搜索用户ID、用户名、手机号"
-          style="width: 300px"
-          clearable
-          @clear="handleSearch"
-          @keyup.enter="handleSearch"
-        >
-          <template #append>
-            <el-button @click="handleSearch">
-              <el-icon><search /></el-icon>
-            </el-button>
-          </template>
-        </el-input>
-        
-        <div class="filter-controls">
-          <el-select v-model="filterStatus" placeholder="用户状态" clearable>
-            <el-option label="正常" value="active" />
-            <el-option label="禁用" value="inactive" />
-            <el-option label="锁定" value="locked" />
-          </el-select>
-          
-          <el-select v-model="filterType" placeholder="用户类型" clearable>
-            <el-option label="普通用户" value="customer" />
-            <el-option label="商家" value="merchant" />
-            <el-option label="运营人员" value="operator" />
-          </el-select>
-          
-          <el-date-picker
-            v-model="dateRange"
-            type="daterange"
-            range-separator="至"
-            start-placeholder="注册开始日期"
-            end-placeholder="注册结束日期"
-            value-format="YYYY-MM-DD"
-          />
-        </div>
-      </div>
-      
-      <div class="action-buttons">
-        <el-button type="primary" @click="handleSearch">
-          <el-icon><search /></el-icon>
-          搜索
-        </el-button>
-        <el-button @click="resetFilters">
-          <el-icon><refresh /></el-icon>
-          重置
-        </el-button>
-        <el-button type="success" @click="exportUsers">
-          <el-icon><download /></el-icon>
-          导出数据
-        </el-button>
-      </div>
-    </div>
-    
     <!-- 用户列表 -->
     <div class="user-list">
       <el-table :data="userList" v-loading="loading" style="width: 100%">
@@ -130,30 +72,6 @@
             <el-descriptions-item label="最后登录">{{ currentUser.last_login }}</el-descriptions-item>
           </el-descriptions>
         </div>
-        
-        <div class="detail-section">
-          <h4>统计信息</h4>
-          <el-row :gutter="20">
-            <el-col :span="8">
-              <div class="stat-item">
-                <div class="stat-value">{{ currentUser.order_count || 0 }}</div>
-                <div class="stat-label">订单数量</div>
-              </div>
-            </el-col>
-            <el-col :span="8">
-              <div class="stat-item">
-                <div class="stat-value">¥{{ currentUser.total_spent || 0 }}</div>
-                <div class="stat-label">消费总额</div>
-              </div>
-            </el-col>
-            <el-col :span="8">
-              <div class="stat-item">
-                <div class="stat-value">{{ currentUser.login_count || 0 }}</div>
-                <div class="stat-label">登录次数</div>
-              </div>
-            </el-col>
-          </el-row>
-        </div>
       </div>
       
       <template #footer>
@@ -173,29 +91,12 @@
           <el-input v-model="editForm.username" />
         </el-form-item>
         
-        <el-form-item label="手机号" prop="phone">
-          <el-input v-model="editForm.phone" />
+        <el-form-item label="手机号">
+          <el-input v-model="editForm.phone" placeholder="请输入手机号（选填）" />
         </el-form-item>
         
-        <el-form-item label="邮箱" prop="email">
-          <el-input v-model="editForm.email" />
-        </el-form-item>
-        
-        <el-form-item label="用户类型" prop="user_type">
-          <el-select v-model="editForm.user_type" placeholder="请选择用户类型">
-            <el-option label="普通用户" value="customer" />
-            <el-option label="商家" value="merchant" />
-            <el-option label="运营人员" value="operator" />
-            <el-option label="访客" value="visitor" />
-          </el-select>
-        </el-form-item>
-        
-        <el-form-item label="用户状态" prop="status">
-          <el-select v-model="editForm.status" placeholder="请选择用户状态">
-            <el-option label="正常" value="active" />
-            <el-option label="禁用" value="inactive" />
-            <el-option label="锁定" value="locked" />
-          </el-select>
+        <el-form-item label="邮箱">
+          <el-input v-model="editForm.email" placeholder="请输入邮箱（选填）" />
         </el-form-item>
       </el-form>
       
@@ -213,7 +114,7 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import { Search, Refresh, Download } from '@element-plus/icons-vue'
 import type { FormInstance, FormRules } from 'element-plus'
 import { 
-  getUserList, 
+  getCustomerList,
   getAdminUserDetail, 
   putAdminUserStatus, 
   putAdminUserUpdate 
@@ -260,9 +161,7 @@ const editForm = reactive({
   user_id: 0,
   username: '',
   phone: '',
-  email: '',
-  user_type: 'customer' as User['user_type'],
-  status: 'active' as User['status']
+  email: ''
 })
 
 // 编辑表单验证规则
@@ -270,20 +169,6 @@ const editRules: FormRules = {
   username: [
     { required: true, message: '请输入用户名', trigger: 'blur' },
     { min: 2, max: 20, message: '用户名长度在 2 到 20 个字符', trigger: 'blur' }
-  ],
-  phone: [
-    { required: true, message: '请输入手机号', trigger: 'blur' },
-    { pattern: /^1[3-9]\d{9}$/, message: '请输入正确的手机号', trigger: 'blur' }
-  ],
-  email: [
-    { required: true, message: '请输入邮箱', trigger: 'blur' },
-    { type: 'email', message: '请输入正确的邮箱地址', trigger: 'blur' }
-  ],
-  user_type: [
-    { required: true, message: '请选择用户类型', trigger: 'change' }
-  ],
-  status: [
-    { required: true, message: '请选择用户状态', trigger: 'change' }
   ]
 }
 
@@ -416,17 +301,8 @@ const loadUsers = async () => {
   loading.value = true
   
   try {
-    // 构建请求参数
-    const params = {
-      pageNum: pagination.current,
-      pageSize: pagination.size,
-      account: searchQuery.value || undefined,
-      userType: filterType.value || undefined,
-      status: filterStatus.value || undefined
-    }
-    
-    // 调用真实API
-    const response = await getUserList(params)
+    // 用户管理页面只调用客户列表接口
+    const response = await getCustomerList()
     
     // 转换数据格式以匹配页面结构
     userList.value = response.list.map(user => ({
@@ -513,8 +389,6 @@ const openEditDialog = (user: User) => {
   editForm.username = user.username
   editForm.phone = user.phone
   editForm.email = user.email
-  editForm.user_type = user.user_type
-  editForm.status = user.status
   editVisible.value = true
 }
 
@@ -531,21 +405,30 @@ const submitEdit = async () => {
     // 调用真实API更新用户信息
     await putAdminUserUpdate({
       id: editForm.user_id,
-      username: editForm.username
+      username: editForm.username,
+      ...(editForm.phone ? { phone: editForm.phone } : {}),
+      ...(editForm.email ? { email: editForm.email } : {})
     })
     
     // 更新本地用户数据
     const userIndex = userList.value.findIndex(user => user.user_id === editForm.user_id)
     if (userIndex !== -1) {
       const target = userList.value[userIndex]
-      userList.value[userIndex] = {
-        ...target,
-        ...editForm,
-        create_time: target?.create_time ?? '',
-        last_login: target?.last_login ?? '',
-        order_count: target?.order_count ?? 0,
-        total_spent: target?.total_spent ?? 0,
-        login_count: target?.login_count ?? 0
+      if (target) {
+        userList.value[userIndex] = {
+          ...target,
+          user_id: target.user_id,
+          username: editForm.username,
+          phone: editForm.phone || target.phone,
+          email: editForm.email || target.email,
+          user_type: target.user_type,
+          status: target.status,
+          create_time: target.create_time,
+          last_login: target.last_login,
+          order_count: target.order_count || 0,
+          total_spent: target.total_spent || 0,
+          login_count: target.login_count || 0
+        }
       }
     }
     

@@ -1,37 +1,5 @@
 <template>
   <div class="order-management">
-    <!-- 页面标题 -->
-    <div class="page-header">
-      <h2>订单管理</h2>
-      <div class="header-actions">
-        <el-button type="primary" :icon="Refresh" @click="loadOrders">刷新</el-button>
-      </div>
-    </div>
-
-    <!-- 搜索和筛选 -->
-    <el-card class="filter-card">
-      <div class="filter-row">
-        <el-input
-          v-model="searchQuery"
-          placeholder="搜索订单号、收货人姓名..."
-          prefix-icon="Search"
-          style="width: 300px"
-          @keyup.enter="handleSearch"
-        />
-        
-        <el-select v-model="filterStatus" placeholder="订单状态" clearable>
-          <el-option label="全部" value="" />
-          <el-option label="待付款" value="pending" />
-          <el-option label="已付款" value="paid" />
-          <el-option label="已发货" value="shipped" />
-          <el-option label="已完成" value="completed" />
-          <el-option label="已取消" value="cancelled" />
-        </el-select>
-
-        <el-button type="primary" :icon="Search" @click="handleSearch">搜索</el-button>
-        <el-button :icon="Refresh" @click="handleReset">重置</el-button>
-      </div>
-    </el-card>
 
     <!-- 订单列表 -->
     <el-card>
@@ -41,8 +9,7 @@
         style="width: 100%"
         @selection-change="handleSelectionChange"
       >
-        <el-table-column type="selection" width="55" />
-        
+
         <el-table-column label="订单信息" min-width="200">
           <template #default="{ row }">
             <div class="order-info">
