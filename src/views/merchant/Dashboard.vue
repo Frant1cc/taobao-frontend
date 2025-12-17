@@ -9,61 +9,6 @@
       </div>
     </div>
 
-    <!-- 数据概览卡片 -->
-    <div class="stats-grid">
-      <el-card class="stat-card">
-        <div class="stat-content">
-          <div class="stat-icon revenue">
-            <el-icon><Money /></el-icon>
-          </div>
-          <div class="stat-info">
-            <div class="stat-value">¥{{ formatNumber(revenue) }}</div>
-            <div class="stat-label">今日收入</div>
-            <div class="stat-change positive">+12.5%</div>
-          </div>
-        </div>
-      </el-card>
-
-      <el-card class="stat-card">
-        <div class="stat-content">
-          <div class="stat-icon orders">
-            <el-icon><Document /></el-icon>
-          </div>
-          <div class="stat-info">
-            <div class="stat-value">{{ formatNumber(orders) }}</div>
-            <div class="stat-label">今日订单</div>
-            <div class="stat-change positive">+8.3%</div>
-          </div>
-        </div>
-      </el-card>
-
-      <el-card class="stat-card">
-        <div class="stat-content">
-          <div class="stat-icon visitors">
-            <el-icon><User /></el-icon>
-          </div>
-          <div class="stat-info">
-            <div class="stat-value">{{ formatNumber(visitors) }}</div>
-            <div class="stat-label">店铺访客</div>
-            <div class="stat-change positive">+15.2%</div>
-          </div>
-        </div>
-      </el-card>
-
-      <el-card class="stat-card">
-        <div class="stat-content">
-          <div class="stat-icon products">
-            <el-icon><Goods /></el-icon>
-          </div>
-          <div class="stat-info">
-            <div class="stat-value">{{ formatNumber(products) }}</div>
-            <div class="stat-label">在售商品</div>
-            <div class="stat-change neutral">-</div>
-          </div>
-        </div>
-      </el-card>
-    </div>
-
     <!-- 快捷操作 -->
     <div class="quick-actions-section">
       <h3>快捷操作</h3>
