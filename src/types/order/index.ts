@@ -78,14 +78,15 @@ export interface PaginationResponse<T> {
 
 // 创建订单请求参数
 export interface CreateOrderRequest {
-  userId: number
-  products: Array<{
+  orderItems: Array<{
     productId: number
     quantity: number
     price: number
-    specId?: number
+    skuId?: number
   }>
-  shippingAddress: string
+  address: string
+  consignee: string
+  iphone: string
   remark?: string
 }
 
@@ -113,7 +114,6 @@ export interface UpdateOrderStatusResponse {
 export interface GetOrderListRequest {
   pageNum: number
   pageSize: number
-  status?: string
   orderStatus?: string
   keyword?: string
 }

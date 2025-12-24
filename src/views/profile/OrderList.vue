@@ -192,7 +192,7 @@ const fetchOrders = async () => {
     const params: GetOrderListRequest = {
       pageNum: currentPage.value,
       pageSize: pageSize.value,
-      status: activeFilter.value as "" | "pending" | "paid" | "shipped" | "completed" | "cancelled" | undefined || undefined
+      orderStatus: activeFilter.value as "" | "pending" | "paid" | "shipped" | "completed" | "cancelled" | undefined || undefined
     }
     
     const response = await getOrderList(params)

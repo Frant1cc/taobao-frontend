@@ -186,14 +186,15 @@ const submitOrder = async () => {
 
   // 构造订单数据
   const orderData = {
-    userId: userStore.userInfo?.userId || 0, // 使用用户ID
-    products: orderItems.value.map(item => ({
+    orderItems: orderItems.value.map(item => ({
       productId: item.productId,
       quantity: item.quantity,
       price: item.price,
-      specId: item.skuId
+      skuId: item.skuId
     })),
-    shippingAddress: selectedAddress.value.fullAddress,
+    address: selectedAddress.value.fullAddress,
+    consignee: selectedAddress.value.recipientName,
+    iphone: selectedAddress.value.phone,
     remark: '' // 可以从用户输入获取备注
   };
 
