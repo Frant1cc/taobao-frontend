@@ -1,6 +1,6 @@
 // 商品相关API接口
 import request from '@/api/request'
-import type { ProductListParams, SearchParams } from '@/types/product'
+import type { ProductListParams } from '@/types/product'
 
 /**
  * ### 获取首页商品列表

@@ -178,15 +178,11 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { ElMessageBox, ElMessage } from 'element-plus'
-import {
-  Search
-} from '@element-plus/icons-vue'
 import { 
   getOrderList, 
-  getOrderDetail, 
   updateOrderStatus 
 } from '@/api/modules/merchant-order'
-import type { OrderListItem, OrderDetail, ShipOrderParams } from '@/types/order'
+import type { OrderListItem, ShipOrderParams } from '@/types/order'
 
 interface OrderProduct {
   id: string
@@ -395,26 +391,9 @@ const handleConfirmShip = async () => {
   shippingOrder.value = null
 }
 
-const handleViewTracking = (order: OrderListItem) => {
-  // 查看物流逻辑
-  console.log('查看物流:', order)
-  ElMessage.info('查看物流功能暂未实现')
-}
 
-const handleViewDetail = async (order: OrderListItem) => {
-  try {
-    const response = await getOrderDetail(order.orderId)
-    if (response.code === 200) {
-      console.log('订单详情:', response.data)
-      ElMessage.info('订单详情功能暂未实现')
-    } else {
-      ElMessage.error('获取订单详情失败')
-    }
-  } catch (error) {
-    ElMessage.error('获取订单详情失败')
-    console.error('获取订单详情失败:', error)
-  }
-}
+
+
 
 const handleCancel = async (order: OrderListItem) => {
   try {
@@ -474,19 +453,9 @@ const getStatusText = (status: string) => {
   return statusMap[status] || '未知'
 }
 
-const getPaymentText = (payment: string) => {
-  const paymentMap: { [key: string]: string } = {
-    'alipay': '支付宝',
-    'wechat': '微信支付',
-    'bank': '银行卡'
-  }
-  return paymentMap[payment] || '其他'
-}
 
-// 获取付款状态文本
-const getPaymentStatusText = (paid: boolean) => {
-  return paid ? '已付款' : '未付款'
-}
+
+
 
 // 格式化日期时间
 const formatDateTime = (dateTime: string) => {

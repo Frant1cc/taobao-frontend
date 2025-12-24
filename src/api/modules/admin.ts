@@ -8,7 +8,6 @@ import type {
   UserListParams,
   AdminOrderListResponse,
   AdminOrderDetailResponse,
-  AdminOrderListItem,
   AdminOrderDetail,
   OrderCancelParams,
   OrderCancelResponse

@@ -6,6 +6,7 @@ import AddressEditor, { type AddressFormData } from '@/components/AddressEditor.
 import { getAddressList, updateAddress, deleteAddress, setDefaultAddress } from '@/api/modules/address';
 import { createOrder, updateOrderStatus } from '@/api/modules/order';
 import { useCartCheckoutStore } from '@/stores/cartCheckout';
+import { useUserStore } from '@/stores/user';
 import type { Address, UpdateAddressRequest } from '@/types/address'
 
 // 结算商品类型定义
@@ -22,6 +23,7 @@ interface CheckoutItem {
 
 const router = useRouter();
 const cartCheckoutStore = useCartCheckoutStore();
+const userStore = useUserStore();
 
 // 订单商品数据（从购物车传递过来）
 const orderItems = ref<CheckoutItem[]>([]);
@@ -184,15 +186,15 @@ const submitOrder = async () => {
 
   // 构造订单数据
   const orderData = {
-    consignee: selectedAddress.value.recipientName,
-    phone: selectedAddress.value.phone,
-    address: selectedAddress.value.fullAddress,
-    orderItems: orderItems.value.map(item => ({
+    userId: userStore.userInfo?.userId || 0, // 使用用户ID
+    products: orderItems.value.map(item => ({
       productId: item.productId,
-      skuId: item.skuId,
       quantity: item.quantity,
-      price: item.price
-    }))
+      price: item.price,
+      specId: item.skuId
+    })),
+    shippingAddress: selectedAddress.value.fullAddress,
+    remark: '' // 可以从用户输入获取备注
   };
 
   try {
@@ -215,8 +217,9 @@ const submitOrder = async () => {
       ElMessage.success('订单提交成功！');
       
       // 根据实际响应结构调整处理逻辑
-      // 假设响应格式为 { code: 200, data: orderId, msg: "success" }
-      const orderId = response.data;
+      // 响应格式为 { code: 200, data: {orderId, orderNo, totalAmount, status}, msg: "success" }
+      const orderResponse = response.data;
+      const orderId = orderResponse.orderId;
       
       // 显示支付确认弹窗
       ElMessageBox.confirm(
@@ -242,7 +245,7 @@ const submitOrder = async () => {
           if (updateResponse.code === 200) {
             ElMessage.success('支付成功！');
           } else {
-            ElMessage.error(updateResponse.msg || '支付失败，请稍后重试');
+            ElMessage.error(updateResponse.message || '支付失败，请稍后重试');
           }
         } catch (error) {
           console.error('更新订单状态失败:', error);
@@ -264,7 +267,7 @@ const submitOrder = async () => {
         router.push('/');
       });
     } else {
-      ElMessage.error(response.msg || '订单提交失败');
+      ElMessage.error(response.message || '订单提交失败');
     }
   } catch (error: any) {
     if (error === 'cancel') {

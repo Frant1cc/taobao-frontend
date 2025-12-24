@@ -25,7 +25,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { useUserStore } from '@/stores/user'
@@ -33,137 +33,9 @@ import { useUserStore } from '@/stores/user'
 const router = useRouter()
 const userStore = useUserStore()
 
-// 基本设置
-const basicSettings = ref({
-  siteName: '淘宝管理后台',
-  siteDescription: '专业的电商平台管理后台',
-  logo: '',
-  icp: ''
-})
 
-// 用户设置
-const userSettings = ref({
-  allowRegister: true,
-  emailVerification: false,
-  phoneVerification: false,
-  defaultAvatar: ''
-})
 
-// 商家设置
-const merchantSettings = ref({
-  allowRegister: true,
-  autoAudit: false,
-  deposit: 1000,
-  commissionRate: 5.0
-})
 
-// 安全设置
-const securitySettings = ref({
-  maxLoginAttempts: 5,
-  passwordStrength: 'medium',
-  sessionTimeout: 120,
-  ipWhitelist: ''
-})
-
-// 系统维护信息
-const lastBackupTime = ref('')
-const cacheSize = ref('')
-const logSize = ref('')
-
-// 保存设置的方法
-const saveBasicSettings = () => {
-  ElMessage.success('基本设置已保存')
-}
-
-const saveUserSettings = () => {
-  ElMessage.success('用户设置已保存')
-}
-
-const saveMerchantSettings = () => {
-  ElMessage.success('商家设置已保存')
-}
-
-const saveSecuritySettings = () => {
-  ElMessage.success('安全设置已保存')
-}
-
-// 文件上传处理
-const beforeLogoUpload = (file: File) => {
-  const isJPG = file.type === 'image/jpeg'
-  const isPNG = file.type === 'image/png'
-  const isLt2M = file.size / 1024 / 1024 < 2
-
-  if (!isJPG && !isPNG) {
-    ElMessage.error('Logo必须是 JPG 或 PNG 格式!')
-    return false
-  }
-  if (!isLt2M) {
-    ElMessage.error('Logo大小不能超过 2MB!')
-    return false
-  }
-  return true
-}
-
-const handleLogoSuccess = (response: any, file: File) => {
-  // 模拟上传成功，实际项目中需要调用后端接口
-  basicSettings.value.logo = URL.createObjectURL(file)
-  ElMessage.success('Logo上传成功')
-}
-
-const beforeAvatarUpload = (file: File) => {
-  const isJPG = file.type === 'image/jpeg'
-  const isPNG = file.type === 'image/png'
-  const isLt1M = file.size / 1024 / 1024 < 1
-
-  if (!isJPG && !isPNG) {
-    ElMessage.error('头像必须是 JPG 或 PNG 格式!')
-    return false
-  }
-  if (!isLt1M) {
-    ElMessage.error('头像大小不能超过 1MB!')
-    return false
-  }
-  return true
-}
-
-const handleAvatarSuccess = (response: any, file: File) => {
-  // 模拟上传成功
-  userSettings.value.defaultAvatar = URL.createObjectURL(file)
-  ElMessage.success('默认头像上传成功')
-}
-
-// 系统维护操作
-const handleMaintenance = async () => {
-  try {
-    await ElMessageBox.confirm(
-      '确定要执行系统维护吗？此操作可能需要几分钟时间。',
-      '系统维护确认',
-      {
-        confirmButtonText: '确定',
-        cancelButtonText: '取消',
-        type: 'warning'
-      }
-    )
-    
-    ElMessage.success('系统维护已完成')
-  } catch {
-    // 用户取消操作
-  }
-}
-
-const backupData = () => {
-  ElMessage.success('数据备份已完成')
-  lastBackupTime.value = new Date().toLocaleString()
-}
-
-const clearCache = () => {
-  ElMessage.success('缓存清理完成')
-  cacheSize.value = '0 MB'
-}
-
-const viewLogs = () => {
-  ElMessage.info('日志查看功能开发中')
-}
 
 // 退出登录
 const handleLogout = async () => {
@@ -193,11 +65,7 @@ const handleLogout = async () => {
   }
 }
 
-onMounted(() => {
-  // 模拟加载系统维护信息
-  cacheSize.value = '256 MB'
-  logSize.value = '128 MB'
-})
+
 </script>
 
 <style scoped lang="scss">

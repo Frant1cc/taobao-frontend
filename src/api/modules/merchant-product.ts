@@ -49,14 +49,14 @@ export const addProductWithImages = (
   
   // 添加主图文件
   if (mainImageFiles && mainImageFiles.length > 0) {
-    mainImageFiles.forEach((file, index) => {
+    mainImageFiles.forEach((file) => {
       formData.append('mainImages', file)
     })
   }
   
   // 添加详情图文件
   if (detailImageFiles && detailImageFiles.length > 0) {
-    detailImageFiles.forEach((file, index) => {
+    detailImageFiles.forEach((file) => {
       formData.append('detailImages', file)
     })
   }

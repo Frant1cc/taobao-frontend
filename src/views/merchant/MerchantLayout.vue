@@ -88,26 +88,20 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
-import { useRouter, useRoute } from 'vue-router'
+import { computed, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/user'
 import { useShopStore } from '@/stores/shop'
 import {
   Monitor,
   Goods,
   Document,
-  Setting,
-  Search,
-  ArrowDown
+  Setting
 } from '@element-plus/icons-vue'
 
 const router = useRouter()
-const route = useRoute()
 const userStore = useUserStore()
 const shopStore = useShopStore()
-
-// 用户信息（从用户仓库获取）
-const userInfo = computed(() => userStore.userInfo)
 
 // 店铺信息（从店铺仓库获取）
 const shopInfo = computed(() => shopStore.currentShop)

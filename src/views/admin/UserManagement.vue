@@ -111,7 +111,7 @@
 <script setup lang="ts">
 import { ref, reactive, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Search, Refresh, Download } from '@element-plus/icons-vue'
+
 import type { FormInstance, FormRules } from 'element-plus'
 import { 
   getCustomerList,
@@ -133,12 +133,6 @@ interface User {
   total_spent?: number
   login_count?: number
 }
-
-// 搜索和筛选
-const searchQuery = ref('')
-const filterStatus = ref('')
-const filterType = ref('')
-const dateRange = ref([])
 
 // 分页
 const pagination = reactive({
@@ -279,21 +273,6 @@ const getStatusText = (status: string) => {
     locked: '锁定'
   }
   return texts[status] || status
-}
-
-// 搜索用户
-const handleSearch = () => {
-  pagination.current = 1
-  loadUsers()
-}
-
-// 重置筛选
-const resetFilters = () => {
-  searchQuery.value = ''
-  filterStatus.value = ''
-  filterType.value = ''
-  dateRange.value = []
-  handleSearch()
 }
 
 // 加载用户列表
@@ -482,10 +461,7 @@ const toggleUserStatus = async (user: User) => {
   }
 }
 
-// 导出用户数据
-const exportUsers = () => {
-  ElMessage.success('导出功能开发中')
-}
+
 
 onMounted(() => {
   loadUsers()

@@ -122,8 +122,7 @@ const router = useRouter()
 const userStore = useUserStore()
 const shopStore = useShopStore()
 
-// 用户信息
-const userInfo = computed(() => userStore.userInfo)
+
 
 // 店铺信息
 const shopInfo = computed(() => shopStore.currentShop)
@@ -215,7 +214,7 @@ const handleLogoUpload = async (options: any) => {
     const logoPath = await shopStore.uploadShopLogo(file)
     
     // 更新前端显示的Logo
-    logoForm.shopLogo = shopLogoUrl.value
+    logoForm.shopLogo = logoPath
     ElMessage.success('店铺Logo上传成功')
   } catch (error) {
     ElMessage.error('上传失败，请重试')

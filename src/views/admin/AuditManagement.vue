@@ -123,13 +123,13 @@ const pendingMerchants = ref<PendingMerchant[]>([])
 
 // 审核列表数据（转换为前端需要的格式）
 const auditItems = computed(() => {
-  return pendingMerchants.value.map((merchant, index) => ({
+  return pendingMerchants.value.map((merchant) => ({
     id: merchant.userId,
     type: 'merchant_register',
     title: `商家注册申请 - ${merchant.username || merchant.account}`,
     applicant: merchant.username || merchant.account,
     applyTime: merchant.createTime,
-    status: 'pending' as const,
+    status: merchant.status as 'pending' | 'approved' | 'rejected',
     icon: '🏪'
   }))
 })

@@ -1,6 +1,6 @@
 // 商家店铺相关API接口
 import request from '@/api/request'
-import type { ShopInfo, UpdateShopParams, ShopStatistics, ShopResponse } from '@/types/shop/index'
+import type { ShopInfo, UpdateShopParams, ShopResponse } from '@/types/shop/index'
 
 // 获取店铺信息
 export function getShopInfo(): Promise<ShopResponse<ShopInfo>> {

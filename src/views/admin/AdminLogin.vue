@@ -61,7 +61,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { adminAPI } from '@/api'
@@ -82,11 +82,6 @@ const showPassword = ref(false)
 // 切换密码显示状态
 const togglePasswordVisibility = () => {
   showPassword.value = !showPassword.value
-}
-
-// 返回首页
-const goToHome = () => {
-  router.push('/home')
 }
 
 // 返回上一页

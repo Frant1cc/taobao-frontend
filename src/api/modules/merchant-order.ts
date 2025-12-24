@@ -2,9 +2,7 @@
 import request from '@/api/request'
 import type { 
   OrderListParams, 
-  OrderListResponse,
-  OrderDetail,
-  ShipOrderParams
+  OrderDetail
 } from '@/types/order'
 import type { ShopResponse } from '@/types/shop'
 

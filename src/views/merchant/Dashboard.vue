@@ -104,47 +104,24 @@
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue'
 import {
-  Money,
   Document,
-  User,
   Goods,
   Setting
 } from '@element-plus/icons-vue'
 import { useUserStore } from '@/stores/user'
-import { useShopStore } from '@/stores/shop'
 import { getOrderList } from '@/api/modules/merchant-order'
 import type { OrderListItem } from '@/types/order'
 
 const userStore = useUserStore()
-const shopStore = useShopStore()
 const currentDate = ref(new Date().toLocaleDateString('zh-CN'))
 
 // 用户信息（从用户仓库获取）
 const userInfo = computed(() => userStore.userInfo)
 
-// 店铺信息（从店铺仓库获取）
-const shopInfo = computed(() => shopStore.currentShop)
-
-// 数据概览（使用模拟数据，因为统计接口不存在）
-const revenue = ref(12568.5)
-const orders = ref(42)
-const visitors = ref(1568)
-const products = ref(28)
-
 // 最近订单数据
 const recentOrders = ref<OrderListItem[]>([])
 
 // 获取用户类型文本
-const getUserTypeText = (userType: string) => {
-  const typeMap: Record<string, string> = {
-    'merchant': '商家',
-    'customer': '普通用户',
-    'operator': '运营人员',
-    'visitor': '访客'
-  }
-  return typeMap[userType] || userType
-}
-
 // 加载数据
 const loadData = async () => {
   try {
@@ -230,10 +207,6 @@ const loadRecentOrders = async () => {
 onMounted(() => {
   loadData()
 })
-
-const formatNumber = (num: number) => {
-  return num.toLocaleString('zh-CN')
-}
 
 // 订单状态映射
 const getStatusType = (status: string) => {

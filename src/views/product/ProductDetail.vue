@@ -248,10 +248,7 @@ const buyNow = () => {
   router.push('/checkout')
 }
 
-// 轮播图切换
-const handleImageChange = (index: number) => {
-  currentImageIndex.value = index
-}
+
 
 // 通过图片选择SKU
 const selectSkuByImage = (sku: ProductSku) => {

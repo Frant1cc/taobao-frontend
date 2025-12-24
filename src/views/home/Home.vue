@@ -14,11 +14,11 @@ let bannerInterval: number | null = null
 
 // 轮播图数据
 const bannerImages = [
-  '/src/assets/image1.png',
-  '/src/assets/image2.png',
-  '/src/assets/image3.png',
-  '/src/assets/image4.png',
-  '/src/assets/image5.png'
+  '/images/image1.png',
+  '/images/image2.png',
+  '/images/image3.png',
+  '/images/image4.png',
+  '/images/image5.png'
 ]
 
 // 商品分类数据
@@ -295,7 +295,7 @@ const handleCategoryClick = async (category: { id: number; name: string }) => {
 <template>
   <div class="home-page">
     <header class="header">
-      <h1>欢迎来到黄启华首页</h1>
+      <h1>欢迎来到淘宝首页</h1>
       <div class="header-actions">
         <router-link to="/merchant/auth" class="auth-btn merchant-btn">商家入口</router-link>
         <template v-if="!userStore.isLoggedIn">

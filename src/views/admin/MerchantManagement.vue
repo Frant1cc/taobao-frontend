@@ -146,7 +146,7 @@
 <script setup lang="ts">
 import { ref, reactive, onMounted, computed } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Search, Refresh, Download } from '@element-plus/icons-vue'
+
 import type { FormInstance, FormRules } from 'element-plus'
 import { adminAPI } from '@/api'
 
@@ -167,12 +167,6 @@ interface Merchant {
   store_address?: string
   business_license?: string
 }
-
-// 搜索和筛选
-const searchQuery = ref('')
-const filterStatus = ref('')
-const filterType = ref('')
-const dateRange = ref([])
 
 // 分页
 const pagination = reactive({
@@ -253,21 +247,6 @@ const auditTitle = computed(() => {
   if (!auditMerchant) return ''
   return `审核商家 - ${auditMerchant.store_name}`
 })
-
-// 搜索商家
-const handleSearch = () => {
-  pagination.current = 1
-  loadMerchants()
-}
-
-// 重置筛选
-const resetFilters = () => {
-  searchQuery.value = ''
-  filterStatus.value = ''
-  filterType.value = ''
-  dateRange.value = []
-  handleSearch()
-}
 
 // 加载商家列表
 const loadMerchants = async () => {
@@ -483,10 +462,7 @@ const toggleMerchantStatus = async (merchant: Merchant, actionType: 'enable' | '
 
 
 
-// 导出商家数据
-const exportMerchants = () => {
-  ElMessage.success('导出功能开发中')
-}
+
 
 onMounted(() => {
   loadMerchants()

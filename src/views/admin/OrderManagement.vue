@@ -185,7 +185,7 @@
 <script setup lang="ts">
 import { ref, reactive, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Search, Refresh } from '@element-plus/icons-vue'
+
 import { getAdminOrderList, getAdminOrderDetail, cancelAdminOrder } from '@/api/modules/admin'
 import type { AdminOrderListItem, AdminOrderDetail } from '@/types/admin'
 
@@ -194,8 +194,6 @@ const loading = ref(false)
 const orderList = ref<AdminOrderListItem[]>([])
 const currentOrder = ref<AdminOrderDetail | null>(null)
 const detailVisible = ref(false)
-const searchQuery = ref('')
-const filterStatus = ref('')
 const selectedOrders = ref<AdminOrderListItem[]>([])
 
 // 分页配置
@@ -373,19 +371,7 @@ const handleCancelOrder = async (order: AdminOrderListItem) => {
   }
 }
 
-// 搜索处理
-const handleSearch = () => {
-  pagination.current = 1
-  loadOrders()
-}
 
-// 重置搜索
-const handleReset = () => {
-  searchQuery.value = ''
-  filterStatus.value = ''
-  pagination.current = 1
-  loadOrders()
-}
 
 // 分页处理
 const handleSizeChange = (size: number) => {

@@ -36,7 +36,7 @@
       <div v-else class="orders-container">
         <div 
           v-for="order in filteredOrders" 
-          :key="order.id"
+          :key="order.orderId"
           class="order-item"
         >
           <!-- 订单头部 -->
@@ -139,7 +139,7 @@ import { useRouter, useRoute } from 'vue-router'
 import { ElMessage, ElPagination } from 'element-plus'
 import { getOrderList, updateOrderStatus } from '@/api/modules/order'
 import { IMAGE_BASE_URL } from '@/api/config'
-import type { GetOrderListRequest, GetOrderListResponse, OrderListItem, UpdateOrderStatusRequest } from '@/types/order'
+import type { GetOrderListRequest, OrderListItem, UpdateOrderStatusRequest } from '@/types/order'
 
 const router = useRouter()
 const route = useRoute()
@@ -192,7 +192,7 @@ const fetchOrders = async () => {
     const params: GetOrderListRequest = {
       pageNum: currentPage.value,
       pageSize: pageSize.value,
-      orderStatus: activeFilter.value as "" | "pending" | "paid" | "shipped" | "completed" | "cancelled" | undefined || undefined
+      status: activeFilter.value as "" | "pending" | "paid" | "shipped" | "completed" | "cancelled" | undefined || undefined
     }
     
     const response = await getOrderList(params)
@@ -204,10 +204,15 @@ const fetchOrders = async () => {
         // 转换API数据以适配前端组件
         allOrders.value = (response.data as { orders: any[] }).orders.map((order: any) => ({
           id: order.orderId?.toString() || '',
-          orderId: order.orderId || '',
+          orderId: order.orderId || 0,
+          orderNo: order.orderNo || `ORD${order.orderId || Date.now()}`,
+          userId: order.userId || 0,
           status: order.status || 'pending',
-          createTime: order.createTime ? new Date(order.createTime).toLocaleString() : new Date().toLocaleString(),
           totalAmount: order.totalAmount || 0,
+          shippingAddress: order.shippingAddress || order.address || '',
+          createTime: order.createTime ? new Date(order.createTime).toLocaleString() : new Date().toLocaleString(),
+          updateTime: order.updateTime || new Date().toLocaleString(),
+          paid: order.paid || false,
           productCount: order.orderItems && Array.isArray(order.orderItems) 
             ? order.orderItems.reduce((count: number, item: any) => count + (item.quantity || 0), 0) 
             : 0,
@@ -233,11 +238,16 @@ const fetchOrders = async () => {
       else if (response.data && typeof response.data === 'object' && Array.isArray(response.data.list)) {
         // 使用后端返回的实际数据结构
         allOrders.value = response.data.list.map(order => ({
-          id: order.id || '',
-          orderId: order.orderId || '',
+          id: order.id || order.orderId?.toString() || '',
+          orderId: order.orderId || 0,
+          orderNo: order.orderNo || `ORD${order.orderId || Date.now()}`,
+          userId: order.userId || 0,
           status: order.status || 'pending',
-          createTime: order.createTime || new Date().toLocaleString(),
           totalAmount: order.totalAmount || 0,
+          shippingAddress: order.shippingAddress || order.address || '',
+          createTime: order.createTime || new Date().toLocaleString(),
+          updateTime: order.updateTime || new Date().toLocaleString(),
+          paid: order.paid || false,
           productCount: order.productCount || 0,
           products: order.products && Array.isArray(order.products) ? order.products : [],
           address: order.address || '',
@@ -252,10 +262,15 @@ const fetchOrders = async () => {
         // 转换API数据以适配前端组件
         allOrders.value = response.data.map((order: any) => ({
           id: order.orderId?.toString() || '',
-          orderId: order.orderId || '',
+          orderId: order.orderId || 0,
+          orderNo: order.orderNo || `ORD${order.orderId || Date.now()}`,
+          userId: order.userId || 0,
           status: order.status || 'pending',
-          createTime: order.createTime ? new Date(order.createTime).toLocaleString() : new Date().toLocaleString(),
           totalAmount: order.totalAmount || 0,
+          shippingAddress: order.shippingAddress || order.address || order.receiverAddress || '',
+          createTime: order.createTime ? new Date(order.createTime).toLocaleString() : new Date().toLocaleString(),
+          updateTime: order.updateTime || new Date().toLocaleString(),
+          paid: order.paid || false,
           productCount: order.orderItems && Array.isArray(order.orderItems) 
             ? order.orderItems.reduce((count: number, item: any) => count + (item.quantity || 0), 0) 
             : (order.products && Array.isArray(order.products) 
@@ -295,7 +310,7 @@ const fetchOrders = async () => {
         total.value = 0
       }
     } else {
-      ElMessage.error('获取订单列表失败: ' + (response.msg || response.msg || '未知错误'))
+      ElMessage.error('获取订单列表失败: ' + (response.message || '未知错误'))
       // 重置数据
       allOrders.value = []
       total.value = 0
@@ -327,7 +342,7 @@ const handlePageChange = (page: number) => {
   fetchOrders() // 重新获取数据
 }
 
-const handleSizeChange = (size: number) => {
+const handleSizeChange = (_size: number) => {
   // 固定每页显示5条记录，不随用户选择改变
   pageSize.value = 5
   currentPage.value = 1 // 重置到第一页
@@ -372,7 +387,7 @@ const payOrder = async (order: any) => {
       // 重新获取订单列表以确保数据同步
       await fetchOrders()
     } else {
-      ElMessage.error('支付失败: ' + (response.msg || '未知错误'))
+      ElMessage.error('支付失败: ' + (response.message || '未知错误'))
     }
   } catch (error) {
     console.error('支付过程中出现错误:', error)
@@ -397,7 +412,7 @@ const cancelOrder = async (order: any) => {
       // 重新获取订单列表以确保数据同步
       await fetchOrders()
     } else {
-      ElMessage.error('取消订单失败: ' + (response.msg || '未知错误'))
+      ElMessage.error('取消订单失败: ' + (response.message || '未知错误'))
     }
   } catch (error) {
     console.error('取消订单过程中出现错误:', error)
@@ -422,22 +437,12 @@ const confirmReceipt = async (order: any) => {
       // 重新获取订单列表以确保数据同步
       await fetchOrders()
     } else {
-      ElMessage.error('确认收货失败: ' + (response.msg || '未知错误'))
+      ElMessage.error('确认收货失败: ' + (response.message || '未知错误'))
     }
   } catch (error) {
     console.error('确认收货过程中出现错误:', error)
     ElMessage.error('确认收货失败: ' + (error instanceof Error ? error.message : '未知错误'))
   }
-}
-
-const viewOrderDetail = (order: any) => {
-  ElMessage.info(`查看订单详情：${order.id}`)
-  // 实际开发中这里会跳转到订单详情页面
-}
-
-const applyRefund = (order: any) => {
-  ElMessage.info(`申请售后：${order.id}`)
-  // 实际开发中这里会跳转到售后申请页面
 }
 
 const goShopping = () => {

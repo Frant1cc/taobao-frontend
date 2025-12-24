@@ -291,7 +291,6 @@ import { ref, computed, onMounted } from 'vue'
 import { ElMessageBox, ElMessage } from 'element-plus'
 import {
   Plus,
-  Upload,
   Delete,
 } from '@element-plus/icons-vue'
 import { 
@@ -301,11 +300,9 @@ import {
   deleteProduct,
   addSku,
   updateSku,
-  deleteSku,
   uploadSkuImage,
   getProductDetails
 } from '@/api/modules/merchant-product'
-import { uploadToOss, batchUploadToOss } from '@/api/modules/oss-upload'
 import type { ProductListItem, AddProductParams, UpdateProductParams, ProductSku, AddSkuParams, UpdateSkuParams } from '@/types/product'
 
 // 搜索和筛选
@@ -404,7 +401,7 @@ const filteredProducts = computed(() => {
 })
 
 // 主图上传成功处理
-const handleMainImageSuccess = (response: any, file: any, fileList: any[]) => {
+const handleMainImageSuccess = (response: any, _file: any, _fileList: any[]) => {
   if (response.code === 200 && response.data) {
     const imagePath = response.data
     if (imagePath) {
@@ -419,12 +416,12 @@ const handleMainImageSuccess = (response: any, file: any, fileList: any[]) => {
 }
 
 // 主图删除处理
-const handleMainImageRemove = (file: any, fileList: any[]) => {
+const handleMainImageRemove = (_file: any, _fileList: any[]) => {
   mainImageUrls.value = []
 }
 
 // 详情图上传成功处理
-const handleDetailImageSuccess = (response: any, file: any, fileList: any[]) => {
+const handleDetailImageSuccess = (response: any, _file: any, _fileList: any[]) => {
   if (response.code === 200 && response.data) {
     const imagePath = response.data
     if (imagePath) {
@@ -439,12 +436,12 @@ const handleDetailImageSuccess = (response: any, file: any, fileList: any[]) => 
 }
 
 // 详情图删除处理
-const handleDetailImageRemove = (file: any, fileList: any[]) => {
+const handleDetailImageRemove = (_file: any, _fileList: any[]) => {
   detailImageUrls.value = []
 }
 
 // 图片上传错误处理
-const handleImageError = (error: any, file: any, fileList: any[]) => {
+const handleImageError = (error: any, _file: any, _fileList: any[]) => {
   console.error('图片上传失败:', error)
   ElMessage.error('图片上传失败，请重试')
 }
