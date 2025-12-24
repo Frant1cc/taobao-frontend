@@ -109,24 +109,17 @@ const shopInfo = computed(() => shopStore.currentShop)
 // 店铺Logo URL（从店铺仓库获取）
 const shopLogoUrl = computed(() => shopStore.shopLogoUrl)
 
-// 获取完整头像URL（通过代理服务器解决跨域问题）
+// 获取完整头像URL（拼接基础图片URL）
 const getFullAvatarUrl = (avatarPath: string) => {
   if (!avatarPath) return 'https://via.placeholder.com/32x32'
   
-  // 如果已经是完整URL，检查是否来自阿里云OSS
+  // 如果已经是完整URL，直接使用
   if (avatarPath.startsWith('http://') || avatarPath.startsWith('https://')) {
-    if (avatarPath.includes('taobao-hqh.oss-cn-beijing.aliyuncs.com')) {
-      // 将阿里云OSS URL转换为本地代理路径
-      const ossPath = avatarPath.replace('https://taobao-hqh.oss-cn-beijing.aliyuncs.com/', '')
-      return `/oss/${ossPath}`
-    } else {
-      // 其他外部URL直接使用
-      return avatarPath
-    }
+    return avatarPath
   }
   
-  // 相对路径，通过代理访问
-  return `/oss/${avatarPath}`
+  // 相对路径，拼接基础图片URL
+  return `${import.meta.env.VITE_IMAGE_BASE_URL}${avatarPath}`
 }
 
 // 计算属性：完整的头像URL（使用店铺头像）

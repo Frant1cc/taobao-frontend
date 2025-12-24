@@ -51,8 +51,8 @@ export const useShopStore = defineStore('shop', {
         }
       }
       
-      // 相对路径，通过代理访问
-      return `/oss/${logoPath}`
+      // 相对路径，拼接基础图片URL
+      return `${import.meta.env.VITE_IMAGE_BASE_URL}${logoPath}`
     }
   },
   
