@@ -121,6 +121,18 @@ const pagination = reactive({
 // 待审核商家列表
 const pendingMerchants = ref<PendingMerchant[]>([])
 
+// 状态映射函数
+const mapStatus = (status: string): 'pending' | 'approved' | 'rejected' => {
+  // 映射后端返回的状态到前端使用的状态
+  const statusMap: Record<string, 'pending' | 'approved' | 'rejected'> = {
+    'pending': 'pending',
+    'inactive': 'pending', // 后端返回的inactive可能表示待审核
+    'active': 'approved',
+    'rejected': 'rejected'
+  }
+  return statusMap[status] || 'pending'
+}
+
 // 审核列表数据（转换为前端需要的格式）
 const auditItems = computed(() => {
   return pendingMerchants.value.map((merchant) => ({
@@ -129,7 +141,7 @@ const auditItems = computed(() => {
     title: `商家注册申请 - ${merchant.username || merchant.account}`,
     applicant: merchant.username || merchant.account,
     applyTime: merchant.createTime,
-    status: merchant.status as 'pending' | 'approved' | 'rejected',
+    status: mapStatus(merchant.status),
     icon: '🏪'
   }))
 })

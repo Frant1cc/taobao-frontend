@@ -122,6 +122,9 @@ const handleLogin = async () => {
     if (data.userType === 'merchant') {
       // 商家用户跳转到商家端主页
       router.push('/merchant/dashboard')
+    } else if (data.userType === 'operator') {
+      // 管理员用户跳转到管理后台
+      router.push('/admin/dashboard')
     } else {
       // 普通用户跳转到用户端主页
       router.push('/home')

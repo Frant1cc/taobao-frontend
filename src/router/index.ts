@@ -237,6 +237,15 @@ router.beforeEach((to: any, _from: any, next: any) => {
       }
     }
     
+    // 如果是管理员用户(operator)，并且当前不在管理端页面，则自动跳转到管理端主页
+    if (userType === 'operator' && !to.path.startsWith('/admin')) {
+      // 排除登录、注册等页面
+      if (!to.path.startsWith('/login') && !to.path.startsWith('/register')) {
+        next('/admin/dashboard')
+        return
+      }
+    }
+    
     // 如果是普通用户，并且当前在商家端页面，则跳转到用户端主页
     // 但允许访问商家登录和注册页面
     if (userType !== 'merchant' && to.path.startsWith('/merchant')) {
@@ -247,6 +256,19 @@ router.beforeEach((to: any, _from: any, next: any) => {
         return
       }
       // 其他商家端页面不允许访问
+      next('/home')
+      return
+    }
+    
+    // 如果是非管理员用户，并且当前在管理端页面，则跳转到用户端主页
+    if (userType !== 'operator' && to.path.startsWith('/admin')) {
+      // 检查是否是管理员登录页面
+      if (to.path === '/admin/login') {
+        // 允许访问管理员登录页面
+        next()
+        return
+      }
+      // 其他管理端页面不允许访问
       next('/home')
       return
     }
