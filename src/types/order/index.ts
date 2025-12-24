@@ -86,17 +86,17 @@ export interface CreateOrderRequest {
   }>
   address: string
   consignee: string
-  iphone: string
+  phone: string
   remark?: string
 }
 
 // 创建订单响应数据
-export interface CreateOrderResponse {
+export type CreateOrderResponse = {
   orderId: number
   orderNo: string
   totalAmount: number
   status: string
-}
+} | number;
 
 // 更新订单状态请求参数
 export interface UpdateOrderStatusRequest {

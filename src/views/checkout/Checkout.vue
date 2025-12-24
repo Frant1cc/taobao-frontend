@@ -6,7 +6,6 @@ import AddressEditor, { type AddressFormData } from '@/components/AddressEditor.
 import { getAddressList, updateAddress, deleteAddress, setDefaultAddress } from '@/api/modules/address';
 import { createOrder, updateOrderStatus } from '@/api/modules/order';
 import { useCartCheckoutStore } from '@/stores/cartCheckout';
-import { useUserStore } from '@/stores/user';
 import type { Address, UpdateAddressRequest } from '@/types/address'
 
 // 结算商品类型定义
@@ -23,7 +22,6 @@ interface CheckoutItem {
 
 const router = useRouter();
 const cartCheckoutStore = useCartCheckoutStore();
-const userStore = useUserStore();
 
 // 订单商品数据（从购物车传递过来）
 const orderItems = ref<CheckoutItem[]>([]);
@@ -186,15 +184,15 @@ const submitOrder = async () => {
 
   // 构造订单数据
   const orderData = {
+    consignee: selectedAddress.value.recipientName,
+    phone: selectedAddress.value.phone,
+    address: selectedAddress.value.fullAddress,
     orderItems: orderItems.value.map(item => ({
       productId: item.productId,
+      skuId: item.skuId,
       quantity: item.quantity,
-      price: item.price,
-      skuId: item.skuId
+      price: item.price
     })),
-    address: selectedAddress.value.fullAddress,
-    consignee: selectedAddress.value.recipientName,
-    iphone: selectedAddress.value.phone,
     remark: '' // 可以从用户输入获取备注
   };
 
@@ -218,9 +216,15 @@ const submitOrder = async () => {
       ElMessage.success('订单提交成功！');
       
       // 根据实际响应结构调整处理逻辑
-      // 响应格式为 { code: 200, data: {orderId, orderNo, totalAmount, status}, msg: "success" }
-      const orderResponse = response.data;
-      const orderId = orderResponse.orderId;
+      // 响应格式为 { code: 200, msg: "success", data: orderId }
+      let orderId: number;
+      if (typeof response.data === 'number') {
+        // 如果响应数据直接是订单ID
+        orderId = response.data;
+      } else {
+        // 如果响应数据是包含订单信息的对象
+        orderId = response.data.orderId;
+      }
       
       // 显示支付确认弹窗
       ElMessageBox.confirm(
